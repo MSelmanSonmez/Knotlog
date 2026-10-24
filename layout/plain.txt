@@ -1,0 +1,10 @@
+inbox	000-Inbox
+dump	000-Inbox/Dump
+command	100-Command-Center
+projects	300-Projects
+knowledge	500-Knowledge
+arsenal	600-Arsenal
+sessions	700-Sessions
+companion	850-Companion
+archive	900-Archive
+templates	Templates

@@ -1,0 +1,74 @@
+#!/bin/sh
+# knotlog:secret-scan — pre-commit sır kapanı (B1, Fornhere devşirme planı).
+# `knotlog install` / `knotlog init --git` bu dosyayı <kasa>/.githooks/pre-commit
+# olarak kurar ve core.hooksPath=.githooks ayarlar. Staged eklenen (+)
+# satırlarda bilinen sır desenlerini arar; bulursa commit'i reddeder.
+# Saf sh + git + grep; bağımlılık yok.
+#
+# Kaçış kapıları (bilinçli ve tek seferlik; kapanı ezmeden geçmek içindir):
+#   KNOTLOG_SKIP_SECRET_SCAN=1 git commit ... — bu commit'te taramayı atlar
+#     (eski adı QUIPU_SKIP_SECRET_SCAN=1 de çalışır)
+#   git commit --no-verify                   — bütün hook'ları atlar
+#
+# PATH'te harici bir `sir-tara` varsa tarama ona devredilir: çıkışı ve
+# çıkış kodu aynen geçirilir (staged diff'i o tarar, bu dosya değil).
+
+set -u
+# LC_ALL=C zorunlu: tr_TR.UTF-8 gibi yerellerde glibc [a-z] sınıfı 'i'
+# harfini dışarıda bırakır (Türkçe I/i/İ/ı çakışması) — desenler ASCII
+# byte tabanlı eşleşmeli, kullanıcı yereline bırakılamaz.
+export LC_ALL=C
+
+if [ "${KNOTLOG_SKIP_SECRET_SCAN:-${QUIPU_SKIP_SECRET_SCAN:-0}}" = "1" ]; then
+    exit 0
+fi
+if command -v sir-tara >/dev/null 2>&1; then
+    exec sir-tara
+fi
+
+# Desen kümesi (ERE, büyük/küçük harf duyarsız): AWS AKIA, OpenAI sk-,
+# GitHub ghp_/github_pat_, Slack xox, Google AIza, PRIVATE KEY blokları ve
+# jenerik "api_key, secret, token, password" atamaları. Token benzeri
+# desenler kelime sınırına bağlanır (risk-..., task-... yakalanmasın);
+# jenerik atamada değer 8+ karakter olmalı ve $ başlı kabuk göndermelerini
+# kapsamamalı (token="${TOKEN}" gürültü olmasın).
+_pat='(^|[^A-Za-z0-9])(AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,}|xox[bposar]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|-----BEGIN [A-Z ]*PRIVATE KEY|(api_?key|secret|token|password)[[:space:]]*=[[:space:]]*['\''"A-Za-z0-9_-]{8,})'
+
+# Hızlı geçiş: hiçbir eklenen satır tutmuyorsa iş yok. '+++' diff
+# başlıkları hariç tutulur — bir yol adına denk gelen desen sır değildir.
+if ! git diff --cached -U0 2>/dev/null | grep -Ev '^[+][+][+]' | grep -Eiq "$_pat"; then
+    exit 0
+fi
+
+# Mesaj dili: kasa config'indeki lang= (varsayılan en).
+_root=$(git rev-parse --show-toplevel 2>/dev/null) || _root=.
+_msg_head='Knotlog secret gate: commit rejected — suspected secret in staged lines:'
+_msg_tail='To commit anyway: git commit --no-verify (or KNOTLOG_SKIP_SECRET_SCAN=1 for this one commit).'
+# .knotlog/config, or .quipu/config in a vault made before the rename.
+_cfg=$_root/.knotlog/config
+[ -f "$_cfg" ] || _cfg=$_root/.quipu/config
+if [ -f "$_cfg" ]; then
+    _lang=$(awk -F= '$1=="lang"{print $2; exit}' "$_cfg")
+    if [ "$_lang" = tr ]; then
+        _msg_head='Knotlog sır kapanı: commit reddedildi — staged satırlarda sır şüphesi:'
+        _msg_tail='Yine de commit etmek için: git commit --no-verify (bu commit için kaçış: KNOTLOG_SKIP_SECRET_SCAN=1).'
+    fi
+fi
+
+# Rapor tamamen stderr'e gider: hook stdout'u git'in kendi çıktısıyla
+# karışmasın ve `2>dosya` ile yakalanabilsin.
+printf '%s\n' "$_msg_head" >&2
+# Yalnız eklenen (+) satırlar: her staged dosyanın kendi diff'inden.
+git diff --cached --name-only --diff-filter=ACMR 2>/dev/null |
+while IFS= read -r _f; do
+    [ -n "$_f" ] || continue
+    git diff --cached -U0 -- "$_f" 2>/dev/null |
+    grep -Ev '^[+][+][+]' |
+    grep -Ei "$_pat" |
+    sed 's/^[+]*//' |
+    while IFS= read -r _ln; do
+        printf '%s: %s\n' "$_f" "$_ln" >&2
+    done
+done
+printf '%s\n' "$_msg_tail" >&2
+exit 1

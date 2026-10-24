@@ -1,0 +1,10 @@
+inbox	📥 Inbox
+dump	🗑️ Trash
+command	🎯 Command Center
+projects	🗂️ Projects
+knowledge	🧠 Knowledge
+arsenal	🛠️ Arsenal
+sessions	📆 Sessions
+companion	🔮 Companion
+archive	📦 Archive
+templates	📋 Templates

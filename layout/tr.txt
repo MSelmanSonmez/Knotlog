@@ -1,0 +1,10 @@
+inbox	📥 Gelen Kutusu
+dump	🗑️ Çöp Kutusu
+command	🎯 Komuta Merkezi
+projects	🗂️ Projeler
+knowledge	🧠 Bilgi
+arsenal	🛠️ Aletler
+sessions	📆 Oturumlar
+companion	🔮 Asistan
+archive	📦 Arşiv
+templates	📋 Şablonlar

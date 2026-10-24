@@ -1,0 +1,75 @@
+# Changelog
+
+All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [1.0.0] - unreleased
+
+### Renamed (from Quipu)
+- The command is `knotlog`. The `quipu` command is gone. Users coming from Quipu install Knotlog and run `knotlog migrate`, which rewrites old `QUIPU_HOOK=1 quipu` hook commands to `knotlog`.
+- New vaults keep their state in `.knotlog/`; a pre-rename `.quipu/` folder still works.
+- Settings use `KNOTLOG_*` environment variables; the old `QUIPU_*` names are still read.
+- Block markers are written as `<!-- knotlog: -->`; legacy `quipu:` markers are still read.
+- User-facing messages, the vault folder (`<user>'s Knotlog`), the Windows install path (`%LOCALAPPDATA%\Knotlog`), the omp hook (`knotlog.ts`), icons, seed files and docs (English and Turkish) say Knotlog.
+- `update` and `rollback` write backups as `<checkout>.knotlog-previous`, `.2`, `.3`; an old `.quipu-previous` chain is carried over.
+- `repair-hooks` takes `--knotlog` (`--quipu` still works) and rewrites both the new and the pre-rename hook prefix.
+
+### Added
+- `knotlog tui`: browse the newest session notes in the terminal (`j`/`k`, `Enter` to open in a built-in pager, `/` to search, `q` to quit); prints a plain list when not on a terminal.
+- `remember` writes one handoff card per hook session (`## date time · client · id8`) instead of overwriting a shared block, so parallel agents no longer erase each other's summary; `init`/`install`/`migrate` add `merge=union` for the last-session file and the journal to `.gitattributes`, and `doctor` warns when a git vault lacks it.
+- Windsurf / Devin Desktop adapter (`knotlog setup windsurf`, alias `devin`, writes `.devin/hooks.json`: `post_write_code` captures, `post_cascade_response` runs `remember` and `index`) and OpenCode adapter (`knotlog setup opencode`, writes `.opencode/plugins/knotlog.js`: `file.edited` captures, `session.idle` runs `remember` and `index`). Both only record; context comes from the `AGENTS.md` bridge. Verified live on Linux on 2026-10-25 with Devin Desktop 3.11.216 and OpenCode 1.19.4; Windows is not verified. Hooks run `knotlog` from the client's environment, so it must be on the PATH the client sees (Devin Desktop uses the login shell's).
+- Notes whose frontmatter says `validity: rejected` are skipped by `search` and `compile`; `search --all` includes them. The index schema moved to 3 (an `index.tsv` with an eighth column), so an older index rebuilds on the next `knotlog index`.
+- `profile=normal|economical|manual` in `.knotlog/config` sets how much context the hooks inject.
+- `doctor` warns when the last-session file or the journal exceeds `companion_max=` bytes (default 40000); `knotlog compact` also moves old session blocks of the last-session file to its archive, keeping the newest 5 (`--keep N`).
+- Session ids that are word slugs, such as Devin's `trajectory_id`, are kept whole in handoff cards instead of cut to 8 characters; the client is also named from Windows transcript paths.
+- `knotlog migrate` brings a pre-rename vault over: state folder, `QUIPU_*` settings, block markers, hook commands. Dry run by default, `--apply` writes, safe to repeat. The AGENTS.md/CLAUDE.md bridge block is refreshed only if it was not edited by hand.
+- `knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode> [--dry-run]` writes one agent's hook file into the vault; a differing file is never overwritten.
+- Antigravity adapter (`.agents/hooks.json`, `context --antigravity`). Covered by tests; not yet verified against a live Antigravity.
+- Gemini adapter (`.gemini/settings.json`) and Cursor adapter (`.cursor/hooks.json`, `context --cursor`).
+- `knotlog mcp`: stdio MCP server with the tools `knotlog_search`, `knotlog_context` and `knotlog_note` (append-only, the same as `knotlog note`). Verified live on Claude Code 2.1.309. Exits at once on SIGINT, SIGTERM and SIGHUP.
+- Checkpoint signal: a reminder on `UserPromptSubmit` and a Stop hook (`agent_end` for omp) when work goes unrecorded; `KNOTLOG_CHECKPOINT_AFTER` sets the threshold.
+- `knotlog note "text"` adds one line to today's reflection block; `note --thread` adds a line to the active threads section.
+- `knotlog compile` builds deterministic derived concept notes (manual; never enters context).
+- `knotlog archive` moves a closed heading out of Threads.md into the archive; `knotlog compact` moves old closed-thread entries there losslessly.
+- `knotlog update --check` / `--apply` and `knotlog rollback`, with up to three rotated backups.
+- `update --apply` (tarball checkout) downloads the release's `knotlog-<version>.tar.gz` and its `.sha256`, and refuses before extracting anything on a mismatch, a missing or wrong-named hash file, or when no SHA-256 tool (`sha256sum`, `shasum`, `openssl`) exists (`--no-verify` skips the check). It also refuses up front when the install directory is not writable, an interrupted update or rollback left its tree behind, or free space is clearly too small. A new release workflow (`.github/workflows/release.yml`) builds the archive and publishes both files when a `v*` tag is pushed.
+- `knotlog tone` and nine tone presets (the last is `kaomoji`).
+- `knotlog digest --since/--until` summarizes a date range.
+- Search reads frontmatter `aliases` (weighted like the title) and a block index (`blocks.tsv`), so text past the 2000-character search field is searchable; results show one row per note.
+- `index_exclude=` config key skips extra folder names when indexing.
+- Zero-level protocols are printed in the AGENTS.md/CLAUDE.md bridge; `companion.md` tone is injected into context.
+- Threads file: pinned block, and a note saying how many bytes were cropped; doctor warns when the file exceeds the injection budget.
+- `doctor` warns when PATH's `bash` is the WSL one, and nudges when today has many events but an empty reflection block.
+
+### Changed
+- Installer and `update` now use github.com/MSelmanSonmez/Knotlog; default install dir is `~/.local/share/knotlog`. The banner moves to `icon/knotlog-banner.png`.
+- README is now a landing page; the manual moved to `docs/REFERENCE.md`; Turkish README added.
+- The index rebuilds in full when the Knotlog version changes.
+- Capture skips temporary and scratchpad paths; the fixed activity section is capped at 20% of the context budget.
+- JSON string fields decode `\uXXXX` escapes to UTF-8, including surrogate pairs.
+- Start-up no longer needs an external `dirname`.
+
+### Fixed
+- `remember` printed to stdout in hook mode and broke the SessionStart JSON; it is now silent. Every adapter's SessionStart emits one JSON object.
+- Antigravity runs `remember` before `context` at SessionStart (30 s timeout).
+- `update` treats a `.git` file (worktree, submodule) as a git checkout.
+- `update` runs a tarball `--apply` from a copy outside the checkout, keeps the checkout across an interrupted swap, and undoes the backup rotation if the first swap fails.
+- `update` refuses a release `tag_name` that is not a plain version token.
+- CRLF files: frontmatter is read like LF, and `archive` and `compact` keep CR bytes.
+- `note` reports `err_note_write` and leaves the file unchanged when it cannot write.
+- Doctor path scan runs under `LC_ALL=C` and skips command invocations; compile status marks no longer depend on the awk locale.
+- `remember` writes the session file that `doctor` reads, in the vault's language.
+- omp adapter imports `HookAPI` from the hooks subpath; its `agent_end` injects only the checkpoint reason.
+- Gemini adapter drops `AfterAgent`, whose output is not documented to reach the model.
+
+### Moving from Quipu
+There is no update path from Quipu 2.7.3 (it has no `update` command, and Knotlog lives in a new repo). Install Knotlog from the new repo, then run in your vault:
+
+```sh
+knotlog migrate           # dry run: shows what would change
+knotlog migrate --apply   # writes the changes
+```
+
+Old Quipu checkouts and vaults keep working until you migrate.
+
+[1.0.0]: https://github.com/MSelmanSonmez/Knotlog

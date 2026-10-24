@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      { "command": "KNOTLOG_HOOK=1 knotlog remember && KNOTLOG_HOOK=1 knotlog context --json SessionStart --cursor" }
+    ],
+    "afterFileEdit": [
+      { "command": "KNOTLOG_HOOK=1 knotlog capture" }
+    ]
+  }
+}

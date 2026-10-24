@@ -1,0 +1,4 @@
+goals	⚔️ Goals
+money	💰 Money
+body	🫀 Body
+mind	🧘 Mind

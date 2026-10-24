@@ -1,0 +1,26 @@
+name: release
+# Builds knotlog-<version>.tar.gz from the tag and publishes it with its
+# .sha256, the pair `knotlog update --apply` downloads and verifies.
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build archive and checksum
+        run: |
+          v=${GITHUB_REF_NAME#v}
+          git archive --format=tar --prefix="Knotlog-$v/" HEAD | gzip -n > "knotlog-$v.tar.gz"
+          sha256sum "knotlog-$v.tar.gz" > "knotlog-$v.tar.gz.sha256"
+          cat "knotlog-$v.tar.gz.sha256"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=${GITHUB_REF_NAME#v}
+          gh release create "$GITHUB_REF_NAME" --title "Knotlog $v" --generate-notes \
+            "knotlog-$v.tar.gz" "knotlog-$v.tar.gz.sha256"

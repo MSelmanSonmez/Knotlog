@@ -1,0 +1,7 @@
+.quipu/
+docs/PLAN.md
+activity.log
+capture-*.jsonl
+.claude/faz0/
+.claude/
+ORCHESTRATOR_LOG.md

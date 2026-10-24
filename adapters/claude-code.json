@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "shell": "bash",
+                     "command": "KNOTLOG_HOOK=1 knotlog remember && KNOTLOG_HOOK=1 knotlog context --json SessionStart",
+                     "timeout": 10 } ] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command", "shell": "bash",
+                     "command": "KNOTLOG_HOOK=1 knotlog context --json UserPromptSubmit",
+                     "timeout": 10 } ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Edit|Write|NotebookEdit|Read",
+        "hooks": [ { "type": "command", "shell": "bash",
+                     "command": "KNOTLOG_HOOK=1 knotlog capture",
+                     "timeout": 10, "async": true } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "shell": "bash",
+                     "command": "KNOTLOG_HOOK=1 knotlog context --json Stop",
+                     "timeout": 10 } ] }
+    ],
+    "SessionEnd": [
+      { "hooks": [ { "type": "command", "shell": "bash",
+                     "command": "KNOTLOG_HOOK=1 knotlog remember && KNOTLOG_HOOK=1 knotlog index",
+                     "timeout": 30 } ] }
+    ]
+  }
+}

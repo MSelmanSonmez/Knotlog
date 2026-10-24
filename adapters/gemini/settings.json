@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "matcher": "*",
+        "hooks": [ { "name": "knotlog-session-start", "type": "command",
+                     "command": "KNOTLOG_HOOK=1 knotlog remember && KNOTLOG_HOOK=1 knotlog context --json SessionStart",
+                     "timeout": 10000 } ] }
+    ],
+    "BeforeAgent": [
+      { "matcher": "*",
+        "hooks": [ { "name": "knotlog-before-agent", "type": "command",
+                     "command": "KNOTLOG_HOOK=1 knotlog context --json BeforeAgent",
+                     "timeout": 10000 } ] }
+    ],
+    "AfterTool": [
+      { "matcher": "write_file|replace|read_file",
+        "hooks": [ { "name": "knotlog-capture", "type": "command",
+                     "command": "KNOTLOG_HOOK=1 knotlog capture",
+                     "timeout": 10000 } ] }
+    ],
+    "SessionEnd": [
+      { "matcher": "*",
+        "hooks": [ { "name": "knotlog-session-end", "type": "command",
+                     "command": "KNOTLOG_HOOK=1 knotlog remember && KNOTLOG_HOOK=1 knotlog index",
+                     "timeout": 30000 } ] }
+    ]
+  }
+}

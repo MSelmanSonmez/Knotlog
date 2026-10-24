@@ -1,0 +1,13 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.sed text eol=lf
+*.awk text eol=lf
+*.ps1 text eol=crlf
+persona/*.md text eol=lf
+*.txt text eol=lf
+/knotlog text eol=lf
+/repair-hooks text eol=lf
+/hooks/pre-commit text eol=lf
+
+.github/ export-ignore
+tests/ export-ignore

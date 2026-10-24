@@ -1,0 +1,36 @@
+{
+  "description": "knotlog memory hooks for Codex CLI",
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command",
+                     "command": "KNOTLOG_HOOK=1 knotlog remember && KNOTLOG_HOOK=1 knotlog context --json SessionStart",
+                     "commandWindows": "set KNOTLOG_HOOK=1&& knotlog remember&& set KNOTLOG_HOOK=1&& knotlog context --json SessionStart",
+                     "timeout": 10 } ] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command",
+                     "command": "KNOTLOG_HOOK=1 knotlog context --json UserPromptSubmit",
+                     "commandWindows": "set KNOTLOG_HOOK=1&& knotlog context --json UserPromptSubmit",
+                     "timeout": 10 } ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "apply_patch",
+        "hooks": [ { "type": "command",
+                     "command": "KNOTLOG_HOOK=1 knotlog capture",
+                     "commandWindows": "set KNOTLOG_HOOK=1&& knotlog capture",
+                     "timeout": 10 } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command",
+                     "command": "KNOTLOG_HOOK=1 knotlog context --json Stop",
+                     "commandWindows": "set KNOTLOG_HOOK=1&& knotlog context --json Stop",
+                     "timeout": 10 } ] }
+    ],
+    "SessionEnd": [
+      { "hooks": [ { "type": "command",
+                     "command": "KNOTLOG_HOOK=1 knotlog remember && KNOTLOG_HOOK=1 knotlog index",
+                     "commandWindows": "set KNOTLOG_HOOK=1&& knotlog remember&& set KNOTLOG_HOOK=1&& knotlog index",
+                     "timeout": 3 } ] }
+    ]
+  }
+}

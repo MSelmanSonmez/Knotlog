@@ -1,0 +1,1 @@
+{"session_id":"0000-masked","hook_event_name":"PostToolUse","tool_name":"apply_patch","tool_input":{},"tool_response":{"success":true,"command":"*** Begin Patch\n*** Delete File: alice/demo/trap.md\n*** End Patch","file_path":"alice/demo/trap-too.md"}}

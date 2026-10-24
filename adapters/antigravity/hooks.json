@@ -1,0 +1,10 @@
+{
+  "knotlog": {
+    "SessionStart": [
+      { "command": "KNOTLOG_HOOK=1 knotlog remember && KNOTLOG_HOOK=1 knotlog context --json SessionStart --antigravity", "timeout": 30 }
+    ],
+    "Stop": [
+      { "command": "KNOTLOG_HOOK=1 knotlog context --json Stop --antigravity", "timeout": 10 }
+    ]
+  }
+}

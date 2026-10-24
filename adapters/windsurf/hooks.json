@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "post_write_code": [
+      { "command": "KNOTLOG_HOOK=1 knotlog capture; exit 0",
+        "powershell": "$env:KNOTLOG_HOOK='1'; knotlog capture; exit 0",
+        "show_output": false }
+    ],
+    "post_cascade_response": [
+      { "command": "KNOTLOG_HOOK=1 knotlog remember; KNOTLOG_HOOK=1 knotlog index; exit 0",
+        "powershell": "$env:KNOTLOG_HOOK='1'; knotlog remember; knotlog index; exit 0",
+        "show_output": false }
+    ]
+  }
+}

@@ -1,0 +1,149 @@
+#!/bin/sh
+# Repair Claude hooks and folder icons after a vault or Knotlog checkout move.
+set -eu
+
+_q_vault=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
+_q_quipu=${KNOTLOG_HOME:-${QUIPU_HOME:-}}
+_q_metadata=0
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --knotlog|--quipu)
+      [ "$#" -ge 2 ] || { printf '%s\n' 'usage: repair-hooks --knotlog CHECKOUT' >&2; exit 2; }
+      _q_quipu=$2
+      shift 2
+      ;;
+    --metadata-only)
+      _q_metadata=1
+      shift
+      ;;
+    -*)
+      printf '%s\n' 'usage: repair-hooks --knotlog CHECKOUT [--metadata-only]' >&2
+      exit 2
+      ;;
+    *)
+      printf '%s\n' 'usage: repair-hooks --knotlog CHECKOUT [--metadata-only]' >&2
+      exit 2
+      ;;
+  esac
+done
+[ -n "$_q_quipu" ] || { printf '%s\n' 'repair-hooks needs --knotlog CHECKOUT' >&2; exit 2; }
+case "$_q_quipu" in
+  [A-Za-z]:*)
+    if command -v cygpath >/dev/null 2>&1; then
+      _q_quipu=$(cygpath -u "$_q_quipu")
+    fi
+    ;;
+esac
+if [ -d "$_q_quipu" ]; then
+  _q_home=$_q_quipu
+elif [ -f "$_q_quipu" ]; then
+  _q_home=$(dirname -- "$_q_quipu")
+else
+  printf '%s\n' 'repair-hooks: --knotlog path does not exist' >&2
+  exit 2
+fi
+_q_home=$(CDPATH='' cd -- "$_q_home" && pwd -P)
+# The command is knotlog; a checkout from before the rename has only quipu.
+_q_source="$_q_home/knotlog"
+[ -f "$_q_source" ] || _q_source="$_q_home/quipu"
+[ -f "$_q_source" ] || { printf '%s\n' 'checkout does not contain knotlog' >&2; exit 2; }
+_q_repair="$_q_home/lib/repair.awk"
+_q_metadata_awk="$_q_home/lib/metadata.awk"
+_q_icon_source="$_q_home/icon/Knotlog.png"
+_q_ico_source="$_q_home/icon/Knotlog.ico"
+[ -r "$_q_repair" ] && [ -r "$_q_metadata_awk" ] && [ -r "$_q_icon_source" ] && [ -r "$_q_ico_source" ] || {
+  printf '%s\n' 'Knotlog checkout is missing repair or icon assets' >&2
+  exit 2
+}
+case "$_q_source" in *'"'*|*\\*|*[[:cntrl:]]*) printf '%s\n' 'Knotlog checkout path contains unsupported quote or control bytes' >&2; exit 2 ;; esac
+_q_cmd=$(printf '%s\n' "$_q_source")
+if command -v cygpath >/dev/null 2>&1; then
+  _q_cmd=$(cygpath -u "$_q_source")
+else
+  case "$_q_cmd" in
+    [A-Za-z]:/*) _q_cmd="/${_q_cmd%:*}"${_q_cmd#*:} ;;
+  esac
+fi
+mkdir -p "$_q_vault/.icon"
+if ! cmp -s "$_q_icon_source" "$_q_vault/.icon/knotlog.png"; then
+  cp -- "$_q_icon_source" "$_q_vault/.icon/knotlog.png"
+fi
+if ! cmp -s "$_q_ico_source" "$_q_vault/.icon/Knotlog.ico"; then
+  cp -- "$_q_ico_source" "$_q_vault/.icon/Knotlog.ico"
+fi
+_q_update_meta() {
+  _q_kind=$1
+  _q_value=$2
+  _q_file=$3
+  _q_meta=$(mktemp "${TMPDIR:-/tmp}/quipu-repair-meta-XXXXXX") || exit 1
+  _q_tmp=$(mktemp "${TMPDIR:-/tmp}/quipu-repair-meta-out-XXXXXX") || { rm -f "$_q_meta"; exit 1; }
+  printf '%s\t%s\n' "$_q_kind" "$_q_value" > "$_q_meta"
+  if [ -f "$_q_file" ]; then
+    awk -f "$_q_metadata_awk" "$_q_meta" "$_q_file" > "$_q_tmp"
+  else
+    : > "$_q_tmp"
+    awk -f "$_q_metadata_awk" "$_q_meta" /dev/null >> "$_q_tmp"
+  fi
+  cat "$_q_tmp" > "$_q_file"
+  rm -f "$_q_meta" "$_q_tmp"
+}
+if [ ! -f "$_q_vault/.directory" ]; then
+  {
+    printf '%s\n' '[Desktop Entry]'
+    printf '%s\n' 'Type=Directory'
+  } > "$_q_vault/.directory"
+fi
+_q_update_meta directory "$_q_vault/.icon/knotlog.png" "$_q_vault/.directory"
+_q_win_icon="$_q_vault/.icon/Knotlog.ico"
+if command -v cygpath >/dev/null 2>&1; then
+  _q_win_icon=$(cygpath -w "$_q_win_icon")
+fi
+if [ ! -f "$_q_vault/desktop.ini" ]; then
+  printf '%s\n' '[.ShellClassInfo]' > "$_q_vault/desktop.ini"
+fi
+_q_update_meta desktop "$_q_win_icon" "$_q_vault/desktop.ini"
+if command -v attrib >/dev/null 2>&1; then
+  # attrib.exe is a native Windows program: it does not understand POSIX
+  # paths, and worse, it silently no-ops (exit 0, "Parameter format not
+  # correct -") on a POSIX path instead of failing loudly. MSYS/Git Bash
+  # auto-translates plain POSIX paths in argv for native exes, but that
+  # translation breaks on paths containing characters like an apostrophe
+  # (e.g. "Ada's Knotlog"), so convert explicitly instead of relying on it.
+  _q_attrib_vault=$_q_vault
+  _q_attrib_ini="$_q_vault/desktop.ini"
+  if command -v cygpath >/dev/null 2>&1; then
+    _q_attrib_vault=$(cygpath -w "$_q_vault")
+    _q_attrib_ini=$(cygpath -w "$_q_vault/desktop.ini")
+  fi
+  attrib +s "$_q_attrib_vault" >/dev/null 2>&1 || true
+  attrib +h +s "$_q_attrib_ini" >/dev/null 2>&1 || true
+  # attrib's exit code is 0 even when it silently failed above, so verify
+  # the System attribute actually landed and warn (without failing the
+  # install) if it did not; the folder icon is cosmetic, not functional.
+  case $(attrib "$_q_attrib_vault" 2>/dev/null) in
+    *S*) ;;
+    *)
+      printf '%s\n' "warning: could not set the folder icon attribute on $_q_vault (Windows Explorer only honors desktop.ini when the folder has the System attribute); the custom folder icon may not appear" >&2
+      ;;
+  esac
+fi
+if [ "$_q_metadata" -eq 0 ]; then
+  _q_settings="$_q_vault/.claude/settings.json"
+  _q_adapter="$_q_home/adapters/claude-code.json"
+  mkdir -p "$_q_vault/.claude"
+  if [ ! -f "$_q_settings" ]; then
+    [ -r "$_q_adapter" ] || { printf '%s\n' 'Claude Code adapter is missing' >&2; exit 2; }
+    cp -- "$_q_adapter" "$_q_settings"
+  fi
+  _q_path=$(mktemp "${TMPDIR:-/tmp}/quipu-repair-path-XXXXXX") || exit 1
+  _q_tmp=$(mktemp "${TMPDIR:-/tmp}/quipu-repair-settings-XXXXXX") || { rm -f "$_q_path"; exit 1; }
+  trap 'rm -f "$_q_path" "$_q_tmp"' EXIT HUP INT TERM
+  printf '%s\n' "$_q_cmd" > "$_q_path"
+  awk -f "$_q_repair" "$_q_path" "$_q_settings" > "$_q_tmp"
+  if ! cmp -s "$_q_tmp" "$_q_settings"; then
+    cat "$_q_tmp" > "$_q_settings"
+  fi
+  printf '%s\n' "repaired Claude hooks and folder icons in $_q_vault"
+else
+  printf '%s\n' "repaired folder icons in $_q_vault"
+fi

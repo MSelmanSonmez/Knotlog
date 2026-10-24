@@ -1,0 +1,4 @@
+active	🟢
+progress	🟡
+blocked	🔴
+paused	⚪

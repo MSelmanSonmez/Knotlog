@@ -1,0 +1,1 @@
+{"session_id":"0000-masked","hook_event_name":"PostToolUse","tool_name":"apply_patch","tool_input":{"command":"--- a/alice/demo/legacy-a.md\n+++ b/alice/demo/legacy-a.md\n@@ -1 +1 @@\n-old\n+new\n--- /dev/null\n+++ b/alice/demo/legacy-b.md\n@@ -0,0 +1 @@\n+new\n"},"tool_response":{"success":true}}
