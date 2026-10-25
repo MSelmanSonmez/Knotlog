@@ -129,12 +129,79 @@ _q_lang() {
   if [ -z "$_q_lang_l" ]; then
     _q_lang_l=${LC_ALL:-${LANG:-}}
     _q_lang_l=${_q_lang_l%%.*}
-    _q_lang_l=${_q_lang_l%%_*}
   fi
   if [ -z "$_q_lang_l" ]; then
     _q_lang_l=en
   fi
+  # Codes are lowercase file names (pt-br, zh-cn): fold case and the locale
+  # underscore (pt_BR), then let a region without a file of its own (en-us,
+  # tr_TR) fall back to its language. An unsupported code stays as it is.
+  case "$_q_lang_l" in
+    *[A-Z_]*) _q_lang_l=$(printf '%s' "$_q_lang_l" | tr 'A-Z_' 'a-z-') ;;
+  esac
+  [ -f "$_q_HOME/i18n/$_q_lang_l.txt" ] || _q_lang_l=${_q_lang_l%%-*}
   printf '%s\n' "$_q_lang_l"
+}
+
+_q_langs() {
+  # THE list of supported languages: one code per i18n/<code>.txt file, en
+  # first (menu default), the rest in glob order. Nothing else names a language.
+  printf 'en\n'
+  for _q_ls_f in "$_q_HOME"/i18n/*.txt; do
+    [ -f "$_q_ls_f" ] || continue
+    _q_ls_c=${_q_ls_f##*/}
+    _q_ls_c=${_q_ls_c%.txt}
+    [ "$_q_ls_c" = en ] || printf '%s\n' "$_q_ls_c"
+  done
+}
+
+_q_lang_has() {
+  # Is $1 a supported language code?
+  case "$1" in '' | */* | .*) return 1 ;; esac
+  [ -f "$_q_HOME/i18n/$1.txt" ]
+}
+
+_q_lang_eff() {
+  # The active language when it is supported, else en (unsupported codes act
+  # as English, as they always did).
+  _q_le=$(_q_lang)
+  _q_lang_has "$_q_le" || _q_le=en
+  printf '%s\n' "$_q_le"
+}
+
+_q_lang_alt() {
+  # The "other" language whose spellings stay accepted as legacy file names:
+  # tr for an English vault, en for everything else.
+  if [ "$(_q_lang_eff)" = en ]; then
+    printf 'tr\n'
+  else
+    printf 'en\n'
+  fi
+}
+
+_q_lang_pick() {
+  # Language to read a per-language asset from: the active one when
+  # $_q_HOME/$1<lang>$2 exists, else en (templates, tone, persona fall back
+  # to English). $1 prefix, $2 suffix.
+  _q_lp=$(_q_lang)
+  [ -e "$_q_HOME/$1$_q_lp$2" ] || _q_lp=en
+  printf '%s\n' "$_q_lp"
+}
+
+_q_layout_ok() {
+  # Is $1 a shipped layout (layout/<name>.txt with folder names)?
+  case "$1" in '' | */* | .* | status | scope-*) return 1 ;; esac
+  [ -f "$_q_HOME/layout/$1.txt" ]
+}
+
+_q_fold_for_lang() {
+  # THE language -> fold profile mapping: tr has its own, Latin-script
+  # languages with accents use latin, everything else default.
+  case "$(_q_lang)" in
+    tr) printf 'tr\n' ;;
+    es | pt-br) printf 'latin\n' ;;
+    *) printf 'default\n' ;;
+  esac
 }
 
 _q_fold_prof() {
@@ -148,11 +215,7 @@ _q_fold_prof() {
     _q_fp=$(awk -F= -v k=fold '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_fp_v/$_q_SD/config" 2>/dev/null || true)
   fi
   if [ -z "$_q_fp" ]; then
-    if [ "$(_q_lang)" = tr ]; then
-      _q_fp='tr'
-    else
-      _q_fp=default
-    fi
+    _q_fp=$(_q_fold_for_lang)
   fi
   printf '%s\n' "$_q_fp"
 }
@@ -314,7 +377,7 @@ _q_tui_sessions() {
   # Newest-first session notes (vault-relative paths, at most 20). The sort is
   # by file name, i.e. by date; awk does the cap so `sort` never sees SIGPIPE.
   _q_ts_lay=$(awk -F= '$1=="layout"{print $2;exit}' "$_q_v/$_q_SD/config" 2>/dev/null || true)
-  case "$_q_ts_lay" in emoji|plain|tr|en) : ;; *) _q_ts_lay=emoji ;; esac
+  _q_layout_ok "$_q_ts_lay" || _q_ts_lay=emoji
   _q_ts_dir=$(awk -F"$(printf '\t')" '$1=="sessions"{print $2;exit}' "$_q_HOME/layout/$_q_ts_lay.txt" 2>/dev/null || true)
   [ -n "$_q_ts_dir" ] || _q_ts_dir='📆 700-Sessions'
   for _q_ts_f in "$_q_v/$_q_ts_dir"/*.md; do
@@ -468,7 +531,10 @@ _q_cmd_help() {
     1)
       case "$1" in
         --en) ;;
-        --tr) _q_help_lang='tr' ;;
+        --*)
+          _q_lang_has "${1#--}" || _q_die err_help_args 2
+          _q_help_lang=${1#--}
+          ;;
         *) _q_die err_help_args 2 ;;
       esac
       ;;
@@ -551,7 +617,7 @@ _q_mdlist() {
   # the fold profile correctly leaves untouched -- they were never meant to
   # be searched in the first place, so keep them out of the index entirely.
   _q_ml_layout=$(awk -F= '$1=="layout"{print $2;exit}' "$_q_SD/config" 2>/dev/null || true)
-  case "$_q_ml_layout" in emoji|plain|tr|en) : ;; *) _q_ml_layout=emoji ;; esac
+  _q_layout_ok "$_q_ml_layout" || _q_ml_layout=emoji
   _q_ml_tab=$(printf '\t')
   _q_ml_tpl=$(awk -F"$_q_ml_tab" -v k=templates '$1==k{print $2;exit}' "$_q_HOME/layout/$_q_ml_layout.txt" 2>/dev/null || true)
   _q_ml_know=$(awk -F"$_q_ml_tab" '$1=="knowledge"{print $2;exit}' "$_q_HOME/layout/$_q_ml_layout.txt" 2>/dev/null || true)
@@ -712,10 +778,7 @@ _q_rules_path() {
     # D1's pri/sec pattern: the fallback spelling is the OTHER language's
     # rules_file value, so a Turkish vault holding Rules.md and an English
     # vault holding Kurallar.md both keep resolving.
-    case "$(_q_lang)" in
-      tr) _q_rp_other=$(_q_i18n_key "$_q_HOME/i18n/en.txt" rules_file) ;;
-      *) _q_rp_other=$(_q_i18n_key "$_q_HOME/i18n/tr.txt" rules_file) ;;
-    esac
+    _q_rp_other=$(_q_i18n_key "$_q_HOME/i18n/$(_q_lang_alt).txt" rules_file)
     if [ -n "$_q_rp_other" ] && [ -f "$1/$_q_rp_other" ]; then
       printf '%s\n' "$1/$_q_rp_other"
     else
@@ -745,7 +808,7 @@ _q_archive_path() {
   # single way. $1: vault root.
   _q_apl_tab=$(printf '\t')
   _q_ap_lay=$(awk -F= '$1=="layout"{print $2;exit}' "$1/$_q_SD/config" 2>/dev/null || true)
-  case "$_q_ap_lay" in emoji|plain|tr|en) : ;; *) _q_ap_lay=emoji ;; esac
+  _q_layout_ok "$_q_ap_lay" || _q_ap_lay=emoji
   _q_ap_dir=$(awk -F"$_q_apl_tab" -v k=archive '$1==k{print $2;exit}' "$_q_HOME/layout/$_q_ap_lay.txt" 2>/dev/null || true)
   [ -n "$_q_ap_dir" ] || _q_ap_dir=Archive
   _q_ap_local=$(_q_msg threads_archive_file)
@@ -753,10 +816,7 @@ _q_archive_path() {
   if [ -f "$1/$_q_ap_dir/$_q_ap_local" ]; then
     printf '%s\n' "$1/$_q_ap_dir/$_q_ap_local"
   else
-    case "$(_q_lang)" in
-      tr) _q_ap_other=$(_q_i18n_key "$_q_HOME/i18n/en.txt" threads_archive_file) ;;
-      *) _q_ap_other=$(_q_i18n_key "$_q_HOME/i18n/tr.txt" threads_archive_file) ;;
-    esac
+    _q_ap_other=$(_q_i18n_key "$_q_HOME/i18n/$(_q_lang_alt).txt" threads_archive_file)
     if [ -n "$_q_ap_other" ] && [ -f "$1/$_q_ap_dir/$_q_ap_other" ]; then
       printf '%s\n' "$1/$_q_ap_dir/$_q_ap_other"
     else
@@ -770,7 +830,7 @@ _q_compiled_path() {
   # name is localized data, never a hardcoded path, and is not user memory.
   _q_cp_tab=$(printf '\t')
   _q_cp_lay=$(awk -F= '$1=="layout"{print $2;exit}' "$1/$_q_SD/config" 2>/dev/null || true)
-  case "$_q_cp_lay" in emoji|plain|tr|en) : ;; *) _q_cp_lay=emoji ;; esac
+  _q_layout_ok "$_q_cp_lay" || _q_cp_lay=emoji
   _q_cp_know=$(awk -F"$_q_cp_tab" '$1=="knowledge"{print $2;exit}' "$_q_HOME/layout/$_q_cp_lay.txt" 2>/dev/null || true)
   [ -n "$_q_cp_know" ] || _q_cp_know='🧠 Knowledge'
   _q_cp_name=$(_q_msg compiled_dir)
@@ -812,10 +872,7 @@ _q_plans_dir_path() {
   if [ -d "$1/$_q_pd_local" ]; then
     printf '%s\n' "$1/$_q_pd_local"
   else
-    case "$(_q_lang)" in
-      tr) _q_pd_other=$(_q_i18n_key "$_q_HOME/i18n/en.txt" plans_dir) ;;
-      *) _q_pd_other=$(_q_i18n_key "$_q_HOME/i18n/tr.txt" plans_dir) ;;
-    esac
+    _q_pd_other=$(_q_i18n_key "$_q_HOME/i18n/$(_q_lang_alt).txt" plans_dir)
     if [ -n "$_q_pd_other" ] && [ -d "$1/$_q_pd_other" ]; then
       printf '%s\n' "$1/$_q_pd_other"
     else
@@ -840,10 +897,7 @@ _q_facts_path() {
   if [ -f "$1/$_q_fp_local" ]; then
     printf '%s\n' "$1/$_q_fp_local"
   else
-    case "$(_q_lang)" in
-      tr) _q_fp_other=$(_q_i18n_key "$_q_HOME/i18n/en.txt" facts_file) ;;
-      *) _q_fp_other=$(_q_i18n_key "$_q_HOME/i18n/tr.txt" facts_file) ;;
-    esac
+    _q_fp_other=$(_q_i18n_key "$_q_HOME/i18n/$(_q_lang_alt).txt" facts_file)
     if [ -n "$_q_fp_other" ] && [ -f "$1/$_q_fp_other" ]; then
       printf '%s\n' "$1/$_q_fp_other"
     else
@@ -894,10 +948,7 @@ _q_companion_path() {
   if [ -f "$1/$_q_SD/config" ]; then
     _q_cp_lay=$(awk -F= -v k=layout '$1==k{sub(/^[^=]*=/,"");print;exit}' "$1/$_q_SD/config" 2>/dev/null || true)
   fi
-  case "$_q_cp_lay" in
-    emoji|plain|tr|en) : ;;
-    *) _q_cp_lay=emoji ;;
-  esac
+  _q_layout_ok "$_q_cp_lay" || _q_cp_lay=emoji
   _q_cp_tab=$(printf '\t')
   _q_cp_comp=$(awk -F"$_q_cp_tab" '$1=="companion"{print $2;exit}' "$_q_HOME/layout/$_q_cp_lay.txt" 2>/dev/null || true)
   if [ -n "$_q_cp_comp" ] && [ -f "$1/$_q_cp_comp/companion.md" ]; then
@@ -919,16 +970,8 @@ _q_tone_extract() {
   _q_tone_found=0
   _q_tone_body=
   [ -f "$1" ] || return 0
-  case "$(_q_lang)" in
-    tr)
-      _q_th_pri=$(_q_i18n_key "$_q_HOME/i18n/tr.txt" persona_tone_heading)
-      _q_th_sec=$(_q_i18n_key "$_q_HOME/i18n/en.txt" persona_tone_heading)
-      ;;
-    *)
-      _q_th_pri=$(_q_i18n_key "$_q_HOME/i18n/en.txt" persona_tone_heading)
-      _q_th_sec=$(_q_i18n_key "$_q_HOME/i18n/tr.txt" persona_tone_heading)
-      ;;
-  esac
+  _q_th_pri=$(_q_i18n_key "$_q_HOME/i18n/$(_q_lang_eff).txt" persona_tone_heading)
+  _q_th_sec=$(_q_i18n_key "$_q_HOME/i18n/$(_q_lang_alt).txt" persona_tone_heading)
   [ -n "$_q_th_pri" ] || _q_th_pri=Tone
   [ -n "$_q_th_sec" ] || _q_th_sec=Üslup
   _q_tone_body=$(awk -v h1="## $_q_th_pri" -v h2="## $_q_th_sec" '
@@ -969,10 +1012,11 @@ _q_tone_resolve() {
   _q_tres_valid=0
   _q_tres_source=none
   _q_tres_body=
-  if [ -n "$_q_tres_slug" ] && [ -f "$_q_HOME/tone/$(_q_lang)/$_q_tres_slug.md" ]; then
+  _q_tres_tl=$(_q_lang_pick tone/ "/$_q_tres_slug.md")
+  if [ -n "$_q_tres_slug" ] && [ -f "$_q_HOME/tone/$_q_tres_tl/$_q_tres_slug.md" ]; then
     _q_tres_valid=1
     _q_tres_source=preset
-    _q_tres_body=$(cat "$_q_HOME/tone/$(_q_lang)/$_q_tres_slug.md")
+    _q_tres_body=$(cat "$_q_HOME/tone/$_q_tres_tl/$_q_tres_slug.md")
   fi
   if [ "$_q_tres_source" = none ]; then
     _q_tres_cp=$(_q_companion_path "$_q_tres_v")
@@ -1067,14 +1111,11 @@ _q_session_file() {
     _q_sf_lay=$(awk -F= -v k=layout '$1==k{sub(/^[^=]*=/,"");print;exit}' "$1/$_q_SD/config" 2>/dev/null || true)
   fi
   _q_sf_comp=
-  case "$_q_sf_lay" in
-    emoji|plain|tr|en) _q_sf_comp=$(awk -F"$_q_sf_tab" '$1=="companion"{print $2;exit}' "$_q_HOME/layout/$_q_sf_lay.txt" 2>/dev/null || true) ;;
-  esac
-  _q_sf_pri="en"
-  _q_sf_sec="tr"
-  case "$(_q_lang)" in
-    tr) _q_sf_pri="tr"; _q_sf_sec="en" ;;
-  esac
+  if _q_layout_ok "$_q_sf_lay"; then
+    _q_sf_comp=$(awk -F"$_q_sf_tab" '$1=="companion"{print $2;exit}' "$_q_HOME/layout/$_q_sf_lay.txt" 2>/dev/null || true)
+  fi
+  _q_sf_pri=$(_q_lang_eff)
+  _q_sf_sec=$(_q_lang_alt)
   _q_sf_a=$(_q_i18n_key "$_q_HOME/i18n/$_q_sf_pri.txt" mem_session)
   _q_sf_b=$(_q_i18n_key "$_q_HOME/i18n/$_q_sf_sec.txt" mem_session)
   _q_sf=$(_q_mem_find "$1" "$_q_sf_comp" "$_q_sf_a" "$_q_sf_b")
@@ -1093,7 +1134,15 @@ _q_union_lines() {
   # them) and not the AGENTS.md/CLAUDE.md blocks (rewritten in place).
   _q_ul_sf=$(_q_session_file "$1")
   _q_ul_dir=${_q_ul_sf%/*}
-  for _q_ul_f in "$_q_ul_sf" "$_q_ul_dir/$(_q_i18n_key "$_q_HOME/i18n/en.txt" mem_journal)" "$_q_ul_dir/$(_q_i18n_key "$_q_HOME/i18n/tr.txt" mem_journal)"; do
+  _q_ul_seen='|'
+  for _q_ul_c in '' $(_q_langs); do
+    if [ -z "$_q_ul_c" ]; then
+      _q_ul_f=$_q_ul_sf
+    else
+      _q_ul_f="$_q_ul_dir/$(_q_i18n_key "$_q_HOME/i18n/$_q_ul_c.txt" mem_journal)"
+    fi
+    case "$_q_ul_seen" in *"|$_q_ul_f|"*) continue ;; esac
+    _q_ul_seen="$_q_ul_seen$_q_ul_f|"
     [ "$_q_ul_f" = "$_q_ul_sf" ] || [ -f "$_q_ul_f" ] || continue
     _q_ul_r=${_q_ul_f#"$1"/}
     case "$_q_ul_r" in
@@ -1188,7 +1237,26 @@ _q_doctor() {
     _q_line fail awk "$(_q_msg doc_awk_bs)"
   fi
 
-  for _q_f in fold/tr.sed fold/latin.sed fold/default.sed i18n/en.txt i18n/tr.txt layout/emoji.txt layout/plain.txt layout/tr.txt layout/en.txt layout/status.txt layout/scope-en.txt layout/scope-tr.txt lib/compile.awk lib/import.awk lib/repair.awk lib/metadata.awk repair-hooks repair-hooks.ps1 icon/Knotlog.png icon/Knotlog.ico persona/en.md persona/tr.md templates/en/note.md templates/en/project.md templates/en/session.md templates/en/rules.md templates/en/plan.md templates/en/facts.md templates/tr/note.md templates/tr/project.md templates/tr/session.md templates/tr/rules.md templates/tr/plan.md templates/tr/facts.md tone/en/varsayilan.md tone/en/profesyonel.md tone/en/dostane.md tone/en/icten.md tone/en/siradisi.md tone/en/etkili.md tone/en/sivridilli.md tone/en/ogretici.md tone/en/kaomoji.md tone/tr/varsayilan.md tone/tr/profesyonel.md tone/tr/dostane.md tone/tr/icten.md tone/tr/siradisi.md tone/tr/etkili.md tone/tr/sivridilli.md tone/tr/ogretici.md tone/tr/kaomoji.md; do
+  # Language-independent files are listed; per-language files come from the
+  # language list (_q_langs). English must ship every asset; another language
+  # may omit one (it falls back to English) but not ship it half-way.
+  _q_shipped="fold/tr.sed fold/latin.sed fold/default.sed layout/emoji.txt layout/plain.txt layout/status.txt lib/compile.awk lib/import.awk lib/repair.awk lib/metadata.awk repair-hooks repair-hooks.ps1 icon/Knotlog.png icon/Knotlog.ico"
+  for _q_lc in $(_q_langs); do
+    _q_shipped="$_q_shipped i18n/$_q_lc.txt"
+    for _q_lf in persona/$_q_lc.md layout/$_q_lc.txt layout/scope-$_q_lc.txt; do
+      if [ "$_q_lc" = en ] || [ -f "$_q_HOME/$_q_lf" ]; then
+        _q_shipped="$_q_shipped $_q_lf"
+      fi
+    done
+    for _q_ld in templates tone; do
+      if [ "$_q_lc" = en ] || [ -d "$_q_HOME/$_q_ld/$_q_lc" ]; then
+        for _q_lt in "$_q_HOME/$_q_ld/en"/*; do
+          _q_shipped="$_q_shipped $_q_ld/$_q_lc/${_q_lt##*/}"
+        done
+      fi
+    done
+  done
+  for _q_f in $_q_shipped; do
     if [ -f "$_q_HOME/$_q_f" ]; then
       _q_line ok "$_q_f" "-"
     else
@@ -1369,12 +1437,12 @@ _q_doctor() {
     if [ -f "$_q_v/$_q_SD/config" ]; then
       _q_tone_cfg=$(awk -F= -v k=tone '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_v/$_q_SD/config" 2>/dev/null || true)
     fi
-    if [ -n "$_q_tone_cfg" ] && [ ! -f "$_q_HOME/tone/$(_q_lang)/$_q_tone_cfg.md" ]; then
+    if [ -n "$_q_tone_cfg" ] && [ ! -f "$_q_HOME/tone/$(_q_lang_pick tone/ "/$_q_tone_cfg.md")/$_q_tone_cfg.md" ]; then
       # shellcheck disable=SC2059
       _q_line warn tone "$(printf "$(_q_msg doc_tone_invalid)" "$_q_tone_cfg")"
     fi
     # FAZ 2 (spec 4.6 B-22): companion check, only for a known layout.
-    if [ "$_q_lay" = emoji ] || [ "$_q_lay" = plain ] || [ "$_q_lay" = tr ] || [ "$_q_lay" = en ]; then
+    if _q_layout_ok "$_q_lay"; then
       _q_comp=$(awk -F"$_q_tab" '$1=="companion"{print $2;exit}' "$_q_HOME/layout/$_q_lay.txt" 2>/dev/null || true)
       if [ -n "$_q_comp" ] && [ ! -f "$_q_v/$_q_comp/companion.md" ]; then
         _q_line warn companion "$(_q_msg doc_companion_missing)"
@@ -1524,20 +1592,17 @@ _q_doctor() {
       _q_mlay=$(awk -F= -v k=layout '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_mv/$_q_SD/config" 2>/dev/null || true)
     fi
     _q_mcomp=
-    case "$_q_mlay" in
-      emoji|plain|tr|en) _q_mcomp=$(awk -F"$_q_tab" '$1=="companion"{print $2;exit}' "$_q_HOME/layout/$_q_mlay.txt" 2>/dev/null || true) ;;
-    esac
+    if _q_layout_ok "$_q_mlay"; then
+      _q_mcomp=$(awk -F"$_q_tab" '$1=="companion"{print $2;exit}' "$_q_HOME/layout/$_q_mlay.txt" 2>/dev/null || true)
+    fi
 
     # D1: the four narrative files are named after the vault language
     # (i18n keys mem_*), with the other language's spelling kept as the
     # legacy fallback -- vaults renamed in the field and vaults that predate
     # localization must both keep resolving. Root wins over companion
     # folder; the threads file keeps its own resolver (threads_file).
-    _q_pri="en"
-    _q_sec="tr"
-    case "$(_q_lang)" in
-      tr) _q_pri="tr"; _q_sec="en" ;;
-    esac
+    _q_pri=$(_q_lang_eff)
+    _q_sec=$(_q_lang_alt)
     _q_nm_ses_a=$(_q_i18n_key "$_q_HOME/i18n/$_q_pri.txt" mem_session)
     _q_nm_ses_b=$(_q_i18n_key "$_q_HOME/i18n/$_q_sec.txt" mem_session)
     _q_nm_rul_a=$(_q_i18n_key "$_q_HOME/i18n/$_q_pri.txt" mem_rules)
@@ -1853,10 +1918,7 @@ _q_doctor() {
       fi
       if [ "$_q_nev" -gt "$_q_nn" ]; then
         _q_nlay=${_q_mlay:-}
-        case "$_q_nlay" in
-          emoji|plain|tr|en) : ;;
-          *) _q_nlay=emoji ;;
-        esac
+        _q_layout_ok "$_q_nlay" || _q_nlay=emoji
         _q_tab=$(printf '\t')
         _q_nsess=$(awk -F"$_q_tab" '$1=="sessions"{print $2;exit}' "$_q_HOME/layout/$_q_nlay.txt" 2>/dev/null || true)
         _q_reflect_filled "$_q_mv/$_q_nsess/$_q_nd.md"
@@ -1931,12 +1993,12 @@ _q_doctor() {
   _q_lay=${_q_lay:-}
   _q_v=$(_q_vault)
   # PLAN 4.9: the emoji-folder risk applies when the active layout uses
-  # emoji folder names (emoji and the localized tr/en tables), and also
+  # emoji folder names (emoji and the localized language tables), and also
   # when no layout is resolved yet - the next `init` defaults to emoji.
   _q_lay_emoji=0
-  case "$_q_lay" in
-    ''|emoji|tr|en) _q_lay_emoji=1 ;;
-  esac
+  if [ -z "$_q_lay" ] || { [ "$_q_lay" != plain ] && _q_layout_ok "$_q_lay"; }; then
+    _q_lay_emoji=1
+  fi
   if [ "$_q_lay" != plain ]; then
     case "$_q_HOME" in
       *OneDrive*) _q_line warn path "$(_q_msg doc_onedrive)" ;;
@@ -2350,10 +2412,7 @@ _q_cmd_init() {
     _q_cfg=$(awk -F= -v k=layout '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_v/$_q_SD/config" 2>/dev/null || true)
   fi
   if [ -n "$_q_cfg" ]; then
-    case "$_q_cfg" in
-      emoji|plain|tr|en) : ;;
-      *) _q_die err_layout_unknown 2 ;;
-    esac
+    _q_layout_ok "$_q_cfg" || _q_die err_layout_unknown 2
     if [ "$_q_plain" -eq 1 ] && [ "$_q_cfg" = emoji ]; then
       _q_die err_layout_conflict 2
     fi
@@ -2416,11 +2475,7 @@ _q_cmd_init() {
   # invalidates the whole index, and the user may have hand-written a value
   # (e.g. fold=latin). To change it: edit the config, then run `index --full`.
   if ! grep -q '^fold=' "$_q_v/$_q_SD/config"; then
-    if [ "$(_q_lang)" = tr ]; then
-      _q_fold='tr'
-    else
-      _q_fold=default
-    fi
+    _q_fold=$(_q_fold_for_lang)
     printf 'fold=%s\n' "$_q_fold" >> "$_q_v/$_q_SD/config"
     _q_changed=1
   fi
@@ -2447,11 +2502,8 @@ _q_cmd_init() {
   # stdin line meant for the next one (AB-6/T-224). The old purpose question
   # left the interactive flow on a maintainer decision (2026-09-02): --purpose
   # and purpose= config stay, the question is never asked. --tone (2026-09-05)
-  # follows the same precedent for the same reason: the arrow-key menu below
-  # install's --ask-lang question is hardcoded to a two-item en/tr choice
-  # (install_menu_lang_name_<code> keys, 'en tr' item list baked into
-  # _q_install_menu_lang) -- generalizing it to an eight-item picker is a
-  # separate feature, not a one-line reuse, and an unasked question that
+  # follows the same precedent for the same reason: a picker over the tone
+  # presets is a separate feature, and an unasked question that
   # defaults to companion.md's existing Tone section is never a silent
   # failure (the fallback IS the pre-preset behavior). --tone/tone= exist
   # for scripted use (install --tone, --no-prompt, QUIPU_HOOK).
@@ -2567,10 +2619,8 @@ _q_cmd_init() {
   done < "$_q_HOME/layout/$_q_layout.txt"
   # Optional scope folders are additive and data-driven. `full` expands to all
   # four definitions; `core` intentionally adds none.
-  _q_scope_lang=en
-  if [ "$_q_layout" = tr ]; then
-    _q_scope_lang='tr'
-  fi
+  _q_scope_lang=$_q_layout
+  [ -f "$_q_HOME/layout/scope-$_q_scope_lang.txt" ] || _q_scope_lang=en
   for _q_scope in goals money body mind; do
     if _q_scope_has full || _q_scope_has "$_q_scope"; then
       _q_scope_name=$(awk -F"$_q_tab" -v k="$_q_scope" '$1==k{print $2;exit}' "$_q_HOME/layout/scope-$_q_scope_lang.txt")
@@ -3175,7 +3225,7 @@ _q_install_menu_lang() {
   # source, and the modulo below is driven by the actual option count --
   # not a literal 2 -- so a third profile (README promises "other languages
   # via profiles") would not silently break up/down.
-  _q_menu_codes='en tr'
+  _q_menu_codes=$(_q_langs | tr '\n' ' ')
   # Word-splitting on this list is deliberate: it is a fixed space-separated
   # set of plain ASCII codes (no globs, no embedded spaces), the standard
   # POSIX sh idiom for an ad hoc list where real arrays are unavailable.
@@ -3450,11 +3500,8 @@ _q_cmd_install() {
   # Interactive answers are forwarded so all guided values reach config.
   if [ "$_q_i_lang_set" -eq 1 ]; then
 
-    if [ "$_q_i_lang" = tr ]; then
-      _q_i_layout='tr'
-    else
-      _q_i_layout=en
-    fi
+    _q_i_layout=$_q_i_lang
+    _q_layout_ok "$_q_i_layout" || _q_i_layout=en
     QUIPU_LANG=$_q_i_lang
   else
     _q_i_layout=en
@@ -3477,17 +3524,14 @@ _q_cmd_install() {
       _q_install_set_step_totals 1
       _q_install_page install_step_lang 1 "$_q_i_total_steps"
       _q_install_page_flush
-      printf '%s ' "$(_q_msg install_ask_lang)"
+      # shellcheck disable=SC2059
+      printf "$(_q_msg install_ask_lang) " "$(_q_langs | paste -sd/ -)"
       IFS= read -r _q_i_ans || _q_i_ans=
-      if [ -z "$_q_i_ans" ] || [ "$_q_i_ans" = en ]; then
-        _q_i_lang=en
-        _q_i_layout=en
-      elif [ "$_q_i_ans" = tr ]; then
-        _q_i_lang='tr'
-        _q_i_layout='tr'
-      else
-        _q_die err_install_lang_invalid 2 "$_q_i_ans"
-      fi
+      [ -n "$_q_i_ans" ] || _q_i_ans=en
+      _q_lang_has "$_q_i_ans" || _q_die err_install_lang_invalid 2 "$_q_i_ans" "$(_q_langs | paste -sd/ -)"
+      _q_i_lang=$_q_i_ans
+      _q_i_layout=$_q_i_lang
+      _q_layout_ok "$_q_i_layout" || _q_i_layout=en
       _q_i_lang_set=1
       QUIPU_LANG=$_q_i_lang
     fi
@@ -4875,10 +4919,7 @@ _q_checkpoint_due() {
   if [ -f "$_q_cd_v/$_q_SD/config" ]; then
     _q_cd_lay=$(awk -F= -v k=layout '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_cd_v/$_q_SD/config" 2>/dev/null || true)
   fi
-  case "$_q_cd_lay" in
-    emoji|plain|tr|en) : ;;
-    *) _q_cd_lay=emoji ;;
-  esac
+  _q_layout_ok "$_q_cd_lay" || _q_cd_lay=emoji
   _q_cd_tab=$(printf '\t')
   _q_cd_sess=$(awk -F"$_q_cd_tab" '$1=="sessions"{print $2;exit}' "$_q_HOME/layout/$_q_cd_lay.txt" 2>/dev/null || true)
 
@@ -5044,10 +5085,7 @@ _q_cmd_context() {
       if [ -f "$_q_v/$_q_SD/config" ]; then
         _q_lay=$(awk -F= -v k=layout '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_v/$_q_SD/config" 2>/dev/null || true)
       fi
-      case "$_q_lay" in
-        emoji|plain|tr|en) : ;;
-        *) _q_lay=emoji ;;
-      esac
+      _q_layout_ok "$_q_lay" || _q_lay=emoji
       _q_tab=$(printf '\t')
       _q_sess=$(awk -F"$_q_tab" '$1=="sessions"{print $2;exit}' "$_q_HOME/layout/$_q_lay.txt" 2>/dev/null || true)
       # shellcheck disable=SC2059
@@ -5102,10 +5140,7 @@ ${_q_text}"
     if [ -f "$_q_v/$_q_SD/config" ]; then
       _q_lay=$(awk -F= -v k=layout '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_v/$_q_SD/config" 2>/dev/null || true)
     fi
-    case "$_q_lay" in
-      emoji|plain|tr|en) : ;;
-      *) _q_lay=emoji ;;
-    esac
+    _q_layout_ok "$_q_lay" || _q_lay=emoji
     _q_tab=$(printf '\t')
     _q_sess=$(awk -F"$_q_tab" '$1=="sessions"{print $2;exit}' "$_q_HOME/layout/$_q_lay.txt" 2>/dev/null || true)
     _q_day=$(date +%Y-%m-%d)
@@ -6214,7 +6249,7 @@ _q_cmd_digest() {
   trap 'rm -f "$_q_tmp" "$_q_body"' EXIT HUP INT TERM
   _q_tab=$(printf '\t')
   _q_layout=$(awk -F= '$1=="layout"{print $2;exit}' "$_q_v/$_q_SD/config" 2>/dev/null || true)
-  case "$_q_layout" in emoji|plain|tr|en) : ;; *) _q_layout=emoji ;; esac
+  _q_layout_ok "$_q_layout" || _q_layout=emoji
   if [ "$_q_range" -eq 1 ]; then
     # Range: session-note file names YYYY-MM-DD.md inside the sessions folder
     # select the days (string order = date order); each day prints the same
@@ -6296,7 +6331,7 @@ _q_cmd_import() {
     _q_die err_import_format 2 "$_q_file"
   fi
   _q_layout=$(awk -F= '$1=="layout"{print $2;exit}' "$_q_v/$_q_SD/config" 2>/dev/null || true)
-  case "$_q_layout" in emoji|plain|tr|en) : ;; *) _q_layout=emoji ;; esac
+  _q_layout_ok "$_q_layout" || _q_layout=emoji
   _q_tab=$(printf '\t')
   _q_sessions=$(awk -F"$_q_tab" '$1=="sessions"{print $2;exit}' "$_q_HOME/layout/$_q_layout.txt")
   [ -n "$_q_sessions" ] || _q_sessions='📆 700-Sessions'
@@ -6361,10 +6396,7 @@ _q_cmd_plan() {
   # counts as resolved; anything else is an error, never a guess.
   _q_pl_tab=$(printf '\t')
   _q_pl_lay=$(awk -F= -v k=layout '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_v/$_q_SD/config" 2>/dev/null || true)
-  case "$_q_pl_lay" in
-    emoji|plain|tr|en) : ;;
-    *) _q_pl_lay=emoji ;;
-  esac
+  _q_layout_ok "$_q_pl_lay" || _q_pl_lay=emoji
   _q_pl_pdir=$(awk -F"$_q_pl_tab" -v k=projects '$1==k{print $2;exit}' "$_q_HOME/layout/$_q_pl_lay.txt" 2>/dev/null || true)
   if [ -z "$_q_pl_proj" ]; then
     _q_pl_pwd=$PWD
@@ -6731,10 +6763,12 @@ _q_cmd_compact() {
 
   # Both languages' spelling of the closed heading are accepted, like the
   # file-name resolvers do (a vault whose language changed keeps working).
-  _q_cp_ca=$(_q_i18n_key "$_q_HOME/i18n/en.txt" threads_head_closed)
-  _q_cp_cb=$(_q_i18n_key "$_q_HOME/i18n/tr.txt" threads_head_closed)
+  _q_cp_cl='|'
+  for _q_cp_c in $(_q_langs); do
+    _q_cp_cl="$_q_cp_cl$(_q_i18n_key "$_q_HOME/i18n/$_q_cp_c.txt" threads_head_closed)|"
+  done
 
-  _q_cp_res=$(awk -v keep="$_q_cp_keep" -v ca="$_q_cp_ca" -v cb="$_q_cp_cb" '
+  _q_cp_res=$(awk -v keep="$_q_cp_keep" -v cl="$_q_cp_cl" '
     function trim(s) {
       while (substr(s, 1, 1) == " " || substr(s, 1, 1) == tab) s = substr(s, 2)
       while (substr(s, length(s), 1) == " " || substr(s, length(s), 1) == tab) s = substr(s, 1, length(s) - 1)
@@ -6752,7 +6786,7 @@ _q_cmd_compact() {
       if (h > 0 && substr(l, h + 1, 1) != " ") h = 0
       if (!found && h > 0) {
         t = trim(substr(l, h + 1))
-        if (t == ca || t == cb) { found = 1; clvl = h; insec = 1; next }
+        if (index(cl, "|" t "|")) { found = 1; clvl = h; insec = 1; next }
       }
       if (!insec) next
       if ((index(l, "<!-- knotlog:pin:start -->") == 1 || index(l, "<!-- quipu:pin:start -->") == 1)) { insec = 0; next }
