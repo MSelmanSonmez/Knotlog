@@ -12249,7 +12249,7 @@ t; assert_eq "T-1000: every i18n/*.txt has the key set of en.txt" '' \
      done)"
 XXH="$TMP/xxhome"
 mkdir -p "$XXH"
-for _d in lib i18n fold layout persona templates tone icon hooks adapters; do cp -r "$ROOT/$_d" "$XXH/$_d"; done
+for _d in lib i18n fold layout persona templates tone flair icon hooks adapters; do cp -r "$ROOT/$_d" "$XXH/$_d"; done
 cp "$ROOT/knotlog" "$ROOT/repair-hooks" "$ROOT/repair-hooks.ps1" "$XXH/"
 sed 's/^usage_help=.*/&  XXMARK/' "$ROOT/i18n/en.txt" > "$XXH/i18n/xx.txt"
 xx_run() { # language vault args...
