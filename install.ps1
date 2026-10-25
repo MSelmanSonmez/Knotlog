@@ -1,5 +1,6 @@
 ﻿[CmdletBinding()]
 param(
+    [switch] $Force,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]] $QuipuArguments
 )
@@ -257,7 +258,20 @@ $shimText = "@echo off`r`n`"$bashForCmd`" `"$knotlogForCmd`" %*`r`n"
 if (Test-Path -LiteralPath $shim -PathType Leaf) {
     $existing = [IO.File]::ReadAllText($shim)
     if ($existing -ne $shimText) {
-        Fail "refusing to overwrite an existing command shim: $shim"
+        # A stale knotlog shim (another checkout) may be replaced on -Force or
+        # a yes; any other file is never ours to overwrite.
+        $ours = $existing -like '@echo off*knotlog*%*'
+        $replace = $false
+        if ($ours -and $Force) {
+            $replace = $true
+        } elseif ($ours -and -not $hasNoPrompt) {
+            try { $replace = (Read-Host "$shim points at another Knotlog checkout. Replace it? [y/N]") -match '^(y|yes)$' } catch { }
+        }
+        if (-not $replace) {
+            if ($ours) { Fail "an existing command shim points elsewhere: $shim. Rerun with -Force to replace it, or remove it yourself." }
+            Fail "$shim is not a shim Knotlog made; it is never replaced. Remove it yourself."
+        }
+        [IO.File]::WriteAllText($shim, $shimText, [Text.Encoding]::ASCII)
     }
 } else {
     [IO.File]::WriteAllText($shim, $shimText, [Text.Encoding]::ASCII)
@@ -293,7 +307,7 @@ if (Test-Path -LiteralPath $posixShim -PathType Leaf) {
     # fails.
     $existingNormalized = $existing -replace "`r`n", "`n"
     if ($existingNormalized -ne $posixShimText) {
-        Fail "refusing to overwrite an existing command shim: $posixShim"
+        Fail "$posixShim is not a shim Knotlog made; it is never replaced. Remove it yourself."
     } elseif ($existing -ne $posixShimText) {
         [IO.File]::WriteAllText($posixShim, $posixShimText, [Text.Encoding]::ASCII)
     }

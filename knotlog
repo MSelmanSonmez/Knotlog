@@ -312,6 +312,9 @@ _q_die() {
   # (FAZ 7 J-2). Legacy `key [code]` calls behave exactly as before.
   _q_dk=$1
   shift
+  # An install in progress owns a dot animation on the current line: end it
+  # first so the message starts on its own line instead of gluing onto it.
+  [ -z "${_q_busy_pid:-}" ] || _q_install_busy_stop
   _q_dc=${1:-1}
   [ "$#" -eq 0 ] || shift
   if [ "$#" -gt 0 ]; then
@@ -1182,7 +1185,7 @@ _q_HOME=$(_q_home)
 # `update --check` (comparing the shipped version against the latest
 # release) both read this instead of each carrying their own copy of the
 # literal, which is what let the two drift apart before this existed.
-_q_version=1.1.0
+_q_version=1.1.1
 
 # ---- doctor -----------------------------------------------------------------
 
@@ -3396,6 +3399,8 @@ _q_cmd_install() {
   _q_i_git=1
   _q_i_git_explicit=0
   _q_i_no_link=0
+  _q_i_force=0
+  _q_i_link_replace=0
   _q_i_noprompt=0
   _q_i_lang_set=0
   _q_i_user=
@@ -3416,6 +3421,7 @@ _q_cmd_install() {
       --git) _q_i_git=1; _q_i_git_explicit=1; shift ;;
       --no-git) _q_i_git=0; _q_i_git_explicit=1; shift ;;
       --no-link) _q_i_no_link=1; shift ;;
+      --force) _q_i_force=1; shift ;;
       --no-prompt) _q_i_noprompt=1; shift ;;
       --lang)
         [ "$#" -ge 2 ] || _q_die err_missing_arg 2
@@ -3761,10 +3767,27 @@ _q_cmd_install() {
          [ "$_q_i_link_resolved" = "$_q_i_source" ]; then
         _q_i_link_same=1
       else
-        _q_die err_install_link_occupied 2 "$_q_i_link"
+        # A foreign symlink may be replaced (never its target): --force, or a
+        # yes on an interactive install; otherwise refuse and name the remedy.
+        # shellcheck disable=SC2012
+        # (ls: find has no portable link-target print)
+        _q_i_tgt=$(ls -ld "$_q_i_link" | sed 's/.* -> //')
+        if [ "$_q_i_force" -eq 1 ]; then
+          _q_i_link_replace=1
+        elif [ "$_q_i_interactive" -eq 1 ]; then
+          _q_install_busy_stop
+          # shellcheck disable=SC2059
+          printf "$(_q_msg install_ask_link_replace) " "$_q_i_link" "$_q_i_tgt"
+          IFS= read -r _q_i_ans || _q_i_ans=
+          case $_q_i_ans in
+            y | Y | yes | Yes | YES) _q_i_link_replace=1 ;;
+          esac
+          _q_install_busy_start
+        fi
+        [ "$_q_i_link_replace" -eq 1 ] || _q_die err_install_link_symlink 2 "$_q_i_link" "$_q_i_tgt"
       fi
     elif [ -e "$_q_i_link" ]; then
-      _q_die err_install_link_occupied 2 "$_q_i_link"
+      _q_die err_install_link_file 2 "$_q_i_link"
     fi
 
     if [ "$_q_i_link_same" -eq 0 ]; then
@@ -3838,6 +3861,7 @@ _q_cmd_install() {
   } > "$_q_i_target/.directory"
 
   if [ "$_q_i_no_link" -eq 0 ] && [ "$_q_i_link_same" -eq 0 ]; then
+    [ "$_q_i_link_replace" -eq 0 ] || rm -f -- "$_q_i_link"
     if ! _q_create_verified_link "$_q_i_source" "$_q_i_link"; then
       _q_die_install_link "$_q_i_link"
     fi

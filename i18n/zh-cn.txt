@@ -7,7 +7,7 @@ usage_index=  index     构建/更新 .knotlog/index.tsv（增量）
 usage_compile=  compile   构建确定性的派生概念笔记（手动；不会进入上下文）
 usage_search=  search    在索引上进行折叠词法 + BM25 搜索（--brief：120 字节摘要；--tag/--status：按 frontmatter 缩小范围；--all：包含 validity: rejected 的笔记）
 usage_init=  init      创建 .knotlog/ 和 AGENTS.md 桥接块（--scope core|goals|money|body|mind|full；可重复）
-usage_install=  install   创建 <user> 的 Knotlog 知识库，并将此检出链接到 PATH（--no-link 用于包装脚本；--no-git 不把知识库初始化为 git 仓库；--tone <slug> 设置语气预设；创建知识库本地的 repair-hooks 入口）
+usage_install=  install   创建 <user> 的 Knotlog 知识库，并将此检出链接到 PATH（--no-link 用于包装脚本；--force 替换他人的命令链接；--no-git 不把知识库初始化为 git 仓库；--tone <slug> 设置语气预设；创建知识库本地的 repair-hooks 入口）
 usage_uninstall=  uninstall 从 PATH 中移除 `knotlog` 命令；绝不触碰你的知识库（--dry-run 仅预览）
 usage_context=  context   为智能体打印会话记忆上下文
 help_profile=            config：profile=normal|economical|manual 用于精简钩子上下文（见 REFERENCE）
@@ -176,6 +176,7 @@ install_ask_location_head=要把知识库安装在哪里？
 install_ask_location_default=什么都不输入直接按 Enter，即安装到默认目录。[%s]
 install_ask_location_move=之后你也可以把知识库移动到任何位置。
 install_ask_location_prompt=: 
+install_ask_link_replace=%s 是指向 %s 的符号链接。是否替换该链接（不会改动其目标）？[y/N]
 install_location_selected=父目录：%s
 install_busy=正在安装
 install_step_identity=[%d/%d] 身份
@@ -214,6 +215,8 @@ err_install_claude_source=Claude Code 适配器缺失或不可读：%s
 err_install_asset_source=安装资源缺失或不可读：%s
 err_install_claude_parent=Claude Code 设置目录被一个非目录项占用：%s
 err_install_link_occupied=拒绝覆盖已有命令：%s
+err_install_link_symlink=%s 是指向 %s 的符号链接，未替换。请加 --force 重新运行以替换该链接（不会改动其目标），或加 --no-link 跳过命令链接
+err_install_link_file=%s 已存在，且不是 Knotlog 创建的链接，不会被替换。请自行删除，或加 --no-link 重新运行
 err_install_link_unusable=install 无法创建可用的符号链接；请启用符号链接支持后重试：%s
 warn_install_metadata_failed=文件夹图标元数据未能完成（知识库和命令不受影响）：%s
 # persona

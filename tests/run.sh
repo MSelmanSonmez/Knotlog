@@ -206,7 +206,7 @@ fi
 # ---- cli skeleton ----
 
 t; VERSION=$(sh "$ROOT/knotlog" --version)
-t; assert_eq "knotlog --version prints knotlog 1.1.0" 'knotlog 1.1.0' "$VERSION"
+t; assert_eq "knotlog --version prints knotlog 1.1.1" 'knotlog 1.1.1' "$VERSION"
 
 mkdir -p "$TMP/empty"
 t; (cd "$TMP/empty" && "$ROOT/knotlog" doctor) >"$TMP/empty.out" 2>&1; RC=$?
@@ -3957,7 +3957,7 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
     "$([ -L "$IBIN/knotlog" ] && [ -f "$IBIN/knotlog" ] \
        && [ -x "$IBIN/knotlog" ] && [ ! -e "$ILATER/knotlog" ] && printf yes || printf no)"
   t; IVERSION=$(PATH="$IBIN:$INSTALL_TOOLS" "$IBIN/knotlog" --version)
-  assert_eq "install: installed symlink executes the real knotlog script" 'knotlog 1.1.0' "$IVERSION"
+  assert_eq "install: installed symlink executes the real knotlog script" 'knotlog 1.1.1' "$IVERSION"
 
   # Existing matching vault/link is idempotent and preserves user-authored text.
   touch -t 200001010101 "$ITARGET/.claude/settings.json"
@@ -6850,14 +6850,14 @@ t; assert_eq "B7 T-378: the default URL is the pinned GitHub release archive" 'y
 t; assert_eq "B7 T-378: README leads Install with the one-line command" 'yes' \
   "$(grep -qF 'curl -fsSL https://raw.githubusercontent.com/MSelmanSonmez/Knotlog/main/install.sh | sh' \
      "$ROOT/README.md" && printf yes || printf no)"
-t; assert_eq "release 1.1.0: update defaults point at MSelmanSonmez/Knotlog" 'yes' \
+t; assert_eq "release 1.1.1: update defaults point at MSelmanSonmez/Knotlog" 'yes' \
   "$(grep -qF 'https://api.github.com/repos/MSelmanSonmez/Knotlog/releases/latest' "$ROOT/knotlog" \
      && grep -qF 'https://github.com/MSelmanSonmez/Knotlog/releases/download/v$_q_up_latest/knotlog-$_q_up_latest.tar.gz' "$ROOT/knotlog" \
-     && grep -qF 'archive/refs/tags/v1.1.0.tar.gz' "$INST" && printf yes || printf no)"
-t; assert_eq "release 1.1.0: no shipped file mentions SelmanBuilds" '' \
+     && grep -qF 'archive/refs/tags/v1.1.1.tar.gz' "$INST" && printf yes || printf no)"
+t; assert_eq "release 1.1.1: no shipped file mentions SelmanBuilds" '' \
   "$(cd "$ROOT" && grep -rIil selmanbuilds . --exclude-dir=.git --exclude-dir=tests \
      --exclude=ORCHESTRATOR_LOG.md --exclude='CHANGELOG*' 2>/dev/null)"
-t; assert_eq "release 1.1.0: the banner is icon/knotlog-banner.png" 'yes' \
+t; assert_eq "release 1.1.1: the banner is icon/knotlog-banner.png" 'yes' \
   "$([ -f "$ROOT/icon/knotlog-banner.png" ] && [ ! -e "$ROOT/icon/quipu-banner.png" ] \
      && grep -qF 'icon/knotlog-banner.png' "$ROOT/README.md" && printf yes || printf no)"
 
@@ -8911,7 +8911,7 @@ t; UPD509=$(QUIPU_LANG=en QUIPU_RELEASE_API_URL="$FIXURL/release-current.json" \
   sh "$ROOT/knotlog" update --check); RC509=$?
 t; assert_eq "T-509: already up to date exits 0" '0' "$RC509"
 t; assert_eq "T-509: up-to-date names the current version" 'yes' \
-  "$(printf '%s\n' "$UPD509" | grep -qF '1.1.0' && printf yes || printf no)"
+  "$(printf '%s\n' "$UPD509" | grep -qF '1.1.1' && printf yes || printf no)"
 t; assert_eq "T-509: up-to-date identifies this checkout as git" 'yes' \
   "$(printf '%s\n' "$UPD509" | grep -qF 'git' && printf yes || printf no)"
 
@@ -8938,7 +8938,7 @@ t; UPD510=$(QUIPU_LANG=en QUIPU_RELEASE_API_URL="$FIXURL/release-newer.json" \
   sh "$ROOT/knotlog" update --check); RC510=$?
 t; assert_eq "T-510: newer release exits 0" '0' "$RC510"
 t; assert_eq "T-510: newer release names the current version" 'yes' \
-  "$(printf '%s\n' "$UPD510" | grep -qF '1.1.0' && printf yes || printf no)"
+  "$(printf '%s\n' "$UPD510" | grep -qF '1.1.1' && printf yes || printf no)"
 t; assert_eq "T-510: newer release names the new version" 'yes' \
   "$(printf '%s\n' "$UPD510" | grep -qF '2.8.0' && printf yes || printf no)"
 
@@ -8952,7 +8952,7 @@ t; assert_eq "T-510: newer release names the new version" 'yes' \
 # in the scratch copy differs from the real script.
 VERPATCH="$TMP/verpatch"
 mkdir -p "$VERPATCH"
-sed 's/^_q_version=1\.1\.0$/_q_version=2.9.0/' "$ROOT/knotlog" > "$VERPATCH/knotlog"
+sed 's/^_q_version=1\.1\.1$/_q_version=2.9.0/' "$ROOT/knotlog" > "$VERPATCH/knotlog"
 t; assert_eq "T-511 setup: the scratch copy's version constant was patched" 'yes' \
   "$(grep -qF '_q_version=2.9.0' "$VERPATCH/knotlog" && printf yes || printf no)"
 t; UPD511=$(QUIPU_LANG=en QUIPU_HOME="$ROOT" \
@@ -8962,7 +8962,7 @@ t; assert_eq "T-511: double-digit component correctly compares as available" 'ye
   "$(printf '%s\n' "$UPD511" | grep -qF '2.10.0' && printf yes || printf no)"
 t; UPD511B=$(QUIPU_LANG=en QUIPU_HOME="$ROOT" \
   QUIPU_RELEASE_API_URL="$FIXURL/release-current.json" sh "$VERPATCH/knotlog" update --check)
-t; assert_eq "T-511: 2.9.0 vs 1.1.0 correctly stays noop (older release)" 'yes' \
+t; assert_eq "T-511: 2.9.0 vs 1.1.1 correctly stays noop (older release)" 'yes' \
   "$(printf '%s\n' "$UPD511B" | grep -qF '2.9.0' && printf yes || printf no)"
 
 # T-512: a tarball checkout (install.sh's shape, no .git) is identified as
@@ -12311,6 +12311,85 @@ for _l13_f in "$ROOT"/i18n/*.txt; do
   (cd "$TMP/l13-$_l13_c" && env -u LANG -u LC_ALL QUIPU_VAULT="$TMP/l13-$_l13_c" QUIPU_LANG="$_l13_c" sh "$ROOT/knotlog" doctor </dev/null >"$TMP/l13-$_l13_c.out" 2>&1) || _l13="$_l13 $_l13_c"
 done
 t; assert_eq "T-1013: doctor passes on a fresh vault in every shipped language" '' "$_l13"
+
+# ---- install over an occupied command: replace a foreign symlink, never a file (T-1020..T-1026) ----
+# Seen live: `curl | sh` stopped on ~/.local/bin/knotlog (a symlink to a dev
+# checkout) with no remedy, and the message glued onto the spinner line.
+if [ "$TRUE_SYMLINKS" -eq 1 ]; then
+  _l20_setup() { # name -> prepares $L20_BIN/$L20_PAR with a foreign symlink
+    L20_BIN="$TMP/l20-$1-bin"; L20_PAR="$TMP/l20-$1-par"; L20_TGT="$TMP/l20-$1-target"
+    mkdir -p "$L20_BIN" "$L20_PAR"
+    printf 'dev checkout\n' > "$L20_TGT"
+    make_true_symlink "$L20_TGT" "$L20_BIN/knotlog" || exit 1
+  }
+  _l20_setup a
+  t; PATH="$L20_BIN:$INSTALL_TOOLS" HOME="$TMP/l20-a-home" QUIPU_LANG=en sh "$ROOT/knotlog" install "$L20_PAR" \
+    --no-prompt --user L20 --force >"$TMP/l20-a.out" 2>"$TMP/l20-a.err"; IRC=$?
+  assert_install_rc "T-1020: --force replaces a foreign symlink (exit 0)" '0' "$IRC" "$TMP/l20-a.err"
+  t; assert_eq "T-1020: the link now runs this knotlog; its old target is untouched" 'yes' \
+    "$([ -L "$L20_BIN/knotlog" ] && [ "$(PATH="$L20_BIN:$INSTALL_TOOLS" "$L20_BIN/knotlog" --version)" = 'knotlog 1.1.1' ] \
+       && [ "$(cat "$L20_TGT")" = 'dev checkout' ] && printf yes || printf no)"
+
+  _l20_setup b
+  t; PATH="$L20_BIN:$INSTALL_TOOLS" HOME="$TMP/l20-b-home" QUIPU_LANG=en sh "$ROOT/knotlog" install "$L20_PAR" \
+    --no-prompt --user L20 >"$TMP/l20-b.out" 2>"$TMP/l20-b.err"; IRC=$?
+  assert_install_rc "T-1021: a foreign symlink without --force exits 2" '2' "$IRC" "$TMP/l20-b.err"
+  t; assert_eq "T-1021: the refusal names --force and --no-link, shows the target; nothing changed" 'yes' \
+    "$(grep -qF -- '--force' "$TMP/l20-b.err" && grep -qF -- '--no-link' "$TMP/l20-b.err" \
+       && grep -qF "$L20_TGT" "$TMP/l20-b.err" && [ -L "$L20_BIN/knotlog" ] \
+       && [ ! -e "$L20_PAR/L20's Knotlog" ] && printf yes || printf no)"
+
+  _l20_setup c
+  t; printf 'en\nL20\n\nn\n' | PATH="$L20_BIN:$INSTALL_TOOLS" HOME="$TMP/l20-c-home" QUIPU_LANG=en QUIPU_FORCE_TTY=1 \
+    sh "$ROOT/knotlog" install "$L20_PAR" >"$TMP/l20-c.out" 2>"$TMP/l20-c.err"; IRC=$?
+  assert_install_rc "T-1022: interactive answer n refuses (exit 2)" '2' "$IRC" "$TMP/l20-c.err"
+  t; assert_eq "T-1022: the question showed the target and the link is unchanged" 'yes' \
+    "$(grep -qF "$L20_TGT" "$TMP/l20-c.out" && grep -qF '[y/N]' "$TMP/l20-c.out" \
+       && [ "$(readlink "$L20_BIN/knotlog")" = "$L20_TGT" ] && printf yes || printf no)"
+
+  _l20_setup d
+  t; printf 'en\nL20\n\ny\n' | PATH="$L20_BIN:$INSTALL_TOOLS" HOME="$TMP/l20-d-home" QUIPU_LANG=en QUIPU_FORCE_TTY=1 \
+    sh "$ROOT/knotlog" install "$L20_PAR" >"$TMP/l20-d.out" 2>"$TMP/l20-d.err"; IRC=$?
+  assert_install_rc "T-1023: interactive answer y replaces the link (exit 0)" '0' "$IRC" "$TMP/l20-d.err"
+  t; assert_eq "T-1023: link replaced, old target untouched" 'yes' \
+    "$([ "$(readlink "$L20_BIN/knotlog")" != "$L20_TGT" ] && [ "$(cat "$L20_TGT")" = 'dev checkout' ] && printf yes || printf no)"
+fi
+
+# A regular file is never replaced, with or without --force.
+L20_BIN="$TMP/l20-e-bin"; L20_PAR="$TMP/l20-e-par"; mkdir -p "$L20_BIN" "$L20_PAR"
+printf 'mine\n' > "$L20_BIN/knotlog"
+t; PATH="$L20_BIN:$INSTALL_TOOLS" HOME="$TMP/l20-e-home" QUIPU_LANG=en sh "$ROOT/knotlog" install "$L20_PAR" \
+  --no-prompt --user L20 --force >"$TMP/l20-e.out" 2>"$TMP/l20-e.err"; IRC=$?
+assert_install_rc "T-1024: a regular file is refused even with --force (exit 2)" '2' "$IRC" "$TMP/l20-e.err"
+t; assert_eq "T-1024: the file is untouched and the message says how to resolve" 'yes' \
+  "$([ ! -L "$L20_BIN/knotlog" ] && [ "$(cat "$L20_BIN/knotlog")" = mine ] \
+     && grep -qF -- '--no-link' "$TMP/l20-e.err" && ! grep -qF -- 'Rerun with --force' "$TMP/l20-e.err" && printf yes || printf no)"
+
+# The error starts on its own line, not glued to the busy dots (needs a pty).
+if [ "$TRUE_SYMLINKS" -eq 1 ] && command -v python3 >/dev/null 2>&1; then
+  _l20_setup g
+  PATH="$L20_BIN:$INSTALL_TOOLS" HOME="$TMP/l20-g-home" QUIPU_LANG=en TERM=xterm L20_ROOT="$ROOT" L20_PAR="$L20_PAR" \
+    python3 -I -c '
+import os, pty, sys
+out = []
+def rd(fd):
+    d = os.read(fd, 4096)
+    out.append(d)
+    return d
+pid_status = pty.spawn(["sh", os.environ["L20_ROOT"] + "/knotlog", "install", os.environ["L20_PAR"], "--user", "L20", "--lang", "en"], rd, lambda fd: b"\n")
+sys.stdout.buffer.write(b"".join(out))' </dev/null >"$TMP/l20-g.raw" 2>/dev/null
+  # Any CR-terminated erase must come before the message: the message line
+  # itself must not be preceded by dots on the same line.
+  t; assert_eq "T-1025: the refusal is not glued to the busy line" 'yes' \
+    "$(tr '\r' '\n' < "$TMP/l20-g.raw" | grep -F 'not replaced' | grep -vq '\.\.' \
+       && tr '\r' '\n' < "$TMP/l20-g.raw" | grep -qF -- '--force' && printf yes || printf no)"
+else
+  t; skip "T-1025: busy line not glued" "needs symlinks and python3 for a pty"
+fi
+
+# Help line and version.
+t; assert_eq "T-1026: usage_install mentions --force in every language" '' \
+  "$(for _f in "$ROOT"/i18n/*.txt; do grep -q '^usage_install=.*--force' "$_f" || printf '%s ' "$_f"; done)"
 
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1

@@ -7,7 +7,7 @@ usage_index=  index     cria/atualiza o .knotlog/index.tsv (incremental)
 usage_compile=  compile   gera notas de conceito derivadas e determinísticas (manual; nunca entra no contexto)
 usage_search=  search    busca lexical normalizada + BM25 sobre o índice (--brief: trecho de 120 bytes; --tag/--status: filtra pelo frontmatter; --all: inclui notas com validity: rejected)
 usage_init=  init      cria o .knotlog/ e o bloco de ponte do AGENTS.md (--scope core|goals|money|body|mind|full; repetível)
-usage_install=  install   cria o cofre Knotlog de <user> e liga este checkout ao PATH (--no-link para wrappers; --no-git para não tornar o cofre um repositório git; --tone <slug> para definir um preset de tom; cria os pontos de entrada repair-hooks locais do cofre)
+usage_install=  install   cria o cofre Knotlog de <user> e liga este checkout ao PATH (--no-link para wrappers; --force substitui um link de comando alheio; --no-git para não tornar o cofre um repositório git; --tone <slug> para definir um preset de tom; cria os pontos de entrada repair-hooks locais do cofre)
 usage_uninstall=  uninstall remove o comando `knotlog` do PATH; nunca toca no seu cofre (--dry-run para simular)
 usage_context=  context   imprime o contexto de memória da sessão para o agente
 help_profile=            config: profile=normal|economical|manual reduz o contexto dos hooks (veja REFERENCE)
@@ -176,6 +176,7 @@ install_ask_location_head=Onde seu cofre deve ser instalado?
 install_ask_location_default=Pressione Enter sem digitar nada para instalar no diretório padrão. [%s]
 install_ask_location_move=Se quiser, você pode mover o cofre para onde preferir.
 install_ask_location_prompt=: 
+install_ask_link_replace=%s é um link simbólico para %s. Substituir o link (o destino não é tocado)? [y/N]
 install_location_selected=Pasta pai: %s
 install_busy=Instalando
 install_step_identity=[%d/%d] Identidade
@@ -214,6 +215,8 @@ err_install_claude_source=o adaptador do Claude Code está ausente ou ilegível:
 err_install_asset_source=um recurso de instalação está ausente ou ilegível: %s
 err_install_claude_parent=o diretório de configurações do Claude Code está ocupado por algo que não é um diretório: %s
 err_install_link_occupied=recusando sobrescrever o comando existente: %s
+err_install_link_symlink=%s é um link simbólico para %s; não foi substituído. Execute novamente com --force para substituir o link (o destino não é tocado) ou com --no-link para pular o link do comando
+err_install_link_file=%s existe e não é um link criado pelo Knotlog; nunca é substituído. Remova-o você mesmo ou execute novamente com --no-link
 err_install_link_unusable=o install não conseguiu criar um link simbólico utilizável; ative o suporte a links simbólicos e tente de novo: %s
 warn_install_metadata_failed=os metadados do ícone da pasta não puderam ser concluídos (o cofre e o comando não foram afetados): %s
 # persona

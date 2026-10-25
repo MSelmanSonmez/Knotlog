@@ -7,7 +7,7 @@ usage_index=  index     crea o actualiza .knotlog/index.tsv (incremental)
 usage_compile=  compile   genera notas de conceptos derivadas y deterministas (manual; nunca entra en el contexto)
 usage_search=  search    búsqueda léxica con plegado y BM25 sobre el índice (--brief: fragmento de 120 bytes; --tag/--status: filtra por frontmatter; --all: incluye notas con validity: rejected)
 usage_init=  init      crea .knotlog/ y el bloque puente de AGENTS.md (--scope core|goals|money|body|mind|full; repetible)
-usage_install=  install   crea la bóveda Knotlog de <usuario> y enlaza esta copia en el PATH (--no-link para wrappers; --no-git para no convertir la bóveda en repositorio git; --tone <slug> para fijar un preset de tono; crea los puntos de entrada repair-hooks de la bóveda)
+usage_install=  install   crea la bóveda Knotlog de <usuario> y enlaza esta copia en el PATH (--no-link para wrappers; --force reemplaza un enlace de comando ajeno; --no-git para no convertir la bóveda en repositorio git; --tone <slug> para fijar un preset de tono; crea los puntos de entrada repair-hooks de la bóveda)
 usage_uninstall=  uninstall quita el comando `knotlog` del PATH; nunca toca tu bóveda (--dry-run para previsualizar)
 usage_context=  context   imprime el contexto de memoria de sesión para el agente
 help_profile=            config: profile=normal|economical|manual recorta el contexto de los hooks (ver REFERENCE)
@@ -176,6 +176,7 @@ install_ask_location_head=¿Dónde quieres instalar tu bóveda?
 install_ask_location_default=Pulsa Intro sin escribir nada para instalarla en el directorio por defecto. [%s]
 install_ask_location_move=Si quieres, puedes mover la bóveda a donde prefieras.
 install_ask_location_prompt=: 
+install_ask_link_replace=%s es un enlace simbólico a %s. ¿Reemplazar el enlace (su destino no se toca)? [y/N]
 install_location_selected=Directorio padre: %s
 install_busy=Instalando
 install_step_identity=[%d/%d] Identidad
@@ -214,6 +215,8 @@ err_install_claude_source=el adaptador de Claude Code no existe o no se puede le
 err_install_asset_source=el recurso de instalación no existe o no se puede leer: %s
 err_install_claude_parent=el directorio de ajustes de Claude Code está ocupado por algo que no es un directorio: %s
 err_install_link_occupied=me niego a sobrescribir un comando existente: %s
+err_install_link_symlink=%s es un enlace simbólico a %s; no se reemplazó. Vuelve a ejecutar con --force para reemplazar el enlace (su destino no se toca) o con --no-link para omitir el enlace del comando
+err_install_link_file=%s existe y no es un enlace creado por Knotlog; nunca se reemplaza. Elimínalo tú mismo o vuelve a ejecutar con --no-link
 err_install_link_unusable=install no pudo crear un enlace simbólico utilizable; activa la compatibilidad con enlaces simbólicos y vuelve a intentarlo: %s
 warn_install_metadata_failed=no se pudieron terminar los metadatos del icono de carpeta (la bóveda y el comando no se ven afectados): %s
 # persona

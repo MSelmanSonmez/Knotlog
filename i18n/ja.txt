@@ -7,7 +7,7 @@ usage_index=  index     .knotlog/index.tsv を構築/更新 (増分)
 usage_compile=  compile   決定的な派生コンセプトノートを生成 (手動実行。コンテキストには入らない)
 usage_search=  search    インデックスに対する正規化字句検索 + BM25 検索 (--brief: 120 バイトのスニペット; --tag/--status: フロントマターで絞り込み; --all: validity: rejected のノートも含める)
 usage_init=  init      .knotlog/ と AGENTS.md のブリッジブロックを作成 (--scope core|goals|money|body|mind|full; 複数指定可)
-usage_install=  install   <user> の Knotlog ボールトを作成し、このチェックアウトを PATH にリンク (--no-link: ラッパー用; --no-git: ボールトを git リポジトリにしない; --tone <slug>: トーンプリセットを設定; ボールト内に repair-hooks のエントリポイントを作成)
+usage_install=  install   <user> の Knotlog ボールトを作成し、このチェックアウトを PATH にリンク (--no-link: ラッパー用; --force: 他のコマンドリンクを置き換え; --no-git: ボールトを git リポジトリにしない; --tone <slug>: トーンプリセットを設定; ボールト内に repair-hooks のエントリポイントを作成)
 usage_uninstall=  uninstall PATH から `knotlog` コマンドを削除。ボールトには一切触れません (--dry-run: プレビュー)
 usage_context=  context   エージェント向けにセッションのメモリコンテキストを出力
 help_profile=            config: profile=normal|economical|manual でフックのコンテキストを調整 (REFERENCE を参照)
@@ -176,6 +176,7 @@ install_ask_location_head=ボールトをどこにインストールしますか
 install_ask_location_default=何も入力せずに Enter を押すと既定のディレクトリにインストールします。[%s]
 install_ask_location_move=ボールトは後から好きな場所へ移動できます。
 install_ask_location_prompt=: 
+install_ask_link_replace=%s は %s へのシンボリックリンクです。リンクを置き換えますか（リンク先は変更しません）？ [y/N]
 install_location_selected=親ディレクトリ: %s
 install_busy=インストール中
 install_step_identity=[%d/%d] アイデンティティ
@@ -214,6 +215,8 @@ err_install_claude_source=Claude Code アダプターがないか読み取れま
 err_install_asset_source=インストール用アセットがないか読み取れません: %s
 err_install_claude_parent=Claude Code の設定ディレクトリの場所にディレクトリ以外のものがあります: %s
 err_install_link_occupied=既存のコマンドを上書きしません: %s
+err_install_link_symlink=%s は %s へのシンボリックリンクのため置き換えませんでした。--force で再実行するとリンクを置き換え（リンク先は変更しません）、--no-link でコマンドリンクを省略します
+err_install_link_file=%s は Knotlog が作成したリンクではないため置き換えません。自分で削除するか、--no-link で再実行してください
 err_install_link_unusable=使用可能なシンボリックリンクを作成できませんでした; シンボリックリンクのサポートを有効にして再試行してください: %s
 warn_install_metadata_failed=フォルダーアイコンのメタデータを完了できませんでした (ボールトとコマンドには影響ありません): %s
 # persona
