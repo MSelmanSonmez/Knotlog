@@ -12366,7 +12366,8 @@ t; assert_eq "T-1024: the file is untouched and the message says how to resolve"
      && grep -qF -- '--no-link' "$TMP/l20-e.err" && ! grep -qF -- 'Rerun with --force' "$TMP/l20-e.err" && printf yes || printf no)"
 
 # The error starts on its own line, not glued to the busy dots (needs a pty).
-if [ "$TRUE_SYMLINKS" -eq 1 ] && command -v python3 >/dev/null 2>&1; then
+# Linux only: Windows Python has no pty, and on macOS this spawn loop hung the CI job for hours (2026-10-25).
+if [ "$TRUE_SYMLINKS" -eq 1 ] && [ "$(uname -s)" = Linux ] && command -v python3 >/dev/null 2>&1; then
   _l20_setup g
   PATH="$L20_BIN:$INSTALL_TOOLS" HOME="$TMP/l20-g-home" QUIPU_LANG=en TERM=xterm L20_ROOT="$ROOT" L20_PAR="$L20_PAR" \
     python3 -I -c '
@@ -12384,7 +12385,7 @@ sys.stdout.buffer.write(b"".join(out))' </dev/null >"$TMP/l20-g.raw" 2>/dev/null
     "$(tr '\r' '\n' < "$TMP/l20-g.raw" | grep -F 'not replaced' | grep -vq '\.\.' \
        && tr '\r' '\n' < "$TMP/l20-g.raw" | grep -qF -- '--force' && printf yes || printf no)"
 else
-  t; skip "T-1025: busy line not glued" "needs symlinks and python3 for a pty"
+  t; skip "T-1025: busy line not glued" "needs Linux, symlinks and python3 for a pty"
 fi
 
 # Help line and version.
