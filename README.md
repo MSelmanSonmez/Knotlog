@@ -76,7 +76,7 @@ git clone https://github.com/MSelmanSonmez/Knotlog.git && cd Knotlog
 
 Setup asks four things — language, vault location, your name, and optionally a companion name and vault purpose — then creates the vault, wires it for Claude Code and omp, and ends with one next step: open the vault folder and run `knotlog doctor`. That is all a new user needs.
 
-Then read the user guide — [docs/GUIDE.md](docs/GUIDE.md) ([Türkçe](docs/GUIDE.tr.md)) — for the daily loop and the commands you type by hand. Not sure it is for you yet? [docs/WHY.md](docs/WHY.md) ([Türkçe](docs/WHY.tr.md)) makes the case in one read.
+Then read the user guide — [docs/GUIDE.md](docs/GUIDE.md) ([Türkçe](docs/GUIDE.tr.md) · [Español](docs/GUIDE.es.md) · [Português](docs/GUIDE.pt-BR.md) · [日本語](docs/GUIDE.ja.md) · [简体中文](docs/GUIDE.zh-CN.md)) — for the daily loop and the commands you type by hand. Not sure it is for you yet? [docs/WHY.md](docs/WHY.md) ([Türkçe](docs/WHY.tr.md) · [Español](docs/WHY.es.md) · [Português](docs/WHY.pt-BR.md) · [日本語](docs/WHY.ja.md) · [简体中文](docs/WHY.zh-CN.md)) makes the case in one read.
 
 ## How it works
 
@@ -217,8 +217,8 @@ The complete list, including what each adapter does *not* capture, is in [docs/R
 
 ## Documentation
 
-- [User guide](docs/GUIDE.md) ([Türkçe](docs/GUIDE.tr.md)) — the daily loop, the folders, the commands you type by hand.
-- [Why Knotlog](docs/WHY.md) ([Türkçe](docs/WHY.tr.md)) — the case for it in one read.
+- [User guide](docs/GUIDE.md) ([Türkçe](docs/GUIDE.tr.md) · [Español](docs/GUIDE.es.md) · [Português](docs/GUIDE.pt-BR.md) · [日本語](docs/GUIDE.ja.md) · [简体中文](docs/GUIDE.zh-CN.md)) — the daily loop, the folders, the commands you type by hand.
+- [Why Knotlog](docs/WHY.md) ([Türkçe](docs/WHY.tr.md) · [Español](docs/WHY.es.md) · [Português](docs/WHY.pt-BR.md) · [日本語](docs/WHY.ja.md) · [简体中文](docs/WHY.zh-CN.md)) — the case for it in one read.
 - [Reference](docs/REFERENCE.md) — install internals, every command, each adapter, vault layout, search, update and rollback.
 - [Usage runbook](docs/USAGE.md) — step-by-step setup written for a coding agent to follow; locked by tests, so it cannot drift from the real command surface.
 
