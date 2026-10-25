@@ -12424,14 +12424,14 @@ QUIPU_VAULT="$TMP/vfl7" sh "$ROOT/knotlog" init --no-prompt --flair kaomoji >/de
 QUIPU_VAULT="$TMP/vfl7" sh "$ROOT/knotlog" init --no-prompt --flair loud >/dev/null 2>"$TMP/vfl7.err"; FRC=$?
 t; assert_eq "T-1035: init --flair writes flair=; an unknown value exits 2" 'yes 2' \
   "$(grep -qx 'flair=kaomoji' "$TMP/vfl7/.knotlog/config" && printf yes) $FRC"
-fl_mk vfl8 es; printf 'flair=kaomoji\n' >> "$TMP/vfl8/.knotlog/config"
-t; assert_eq "T-1036: a language without flair files (es) falls back to the English text" 'yes' \
-  "$(fl_ctx vfl8 | grep -qF -- "$(head -1 "$ROOT/flair/en/kaomoji.md")" && printf yes || printf no)"
+mkdir -p "$TMP/lg-fl"; xx_run xx "$TMP/lg-fl" init --no-prompt --lang xx --flair kaomoji >/dev/null
+t; assert_eq "T-1036: a language without flair files (the xx fixture) falls back to the English text" 'yes' \
+  "$(xx_run xx "$TMP/lg-fl" context | grep -qF -- "$(head -1 "$ROOT/flair/en/kaomoji.md")" && printf yes || printf no)"
 fl_mk vfl9 en; printf 'tone=kaomoji\n' >> "$TMP/vfl9/.knotlog/config"
 t; assert_eq "T-1037: tone=kaomoji still works and adds no flair section" 'yes yes' \
   "$(fl_ctx vfl9 | grep -qF -- "$(head -1 "$ROOT/tone/en/kaomoji.md")" && printf yes) $(! fl_ctx vfl9 | grep -qF "$(men ctx_flair)" && printf yes)"
 
-t; assert_eq "T-1038: doctor lists the four shipped flair files as ok" '4' \
+t; assert_eq "T-1038: doctor lists every shipped flair file as ok" "$(find "$ROOT/flair" -name '*.md' -type f | wc -l | tr -d ' ')" \
   "$(QUIPU_VAULT="$TMP/vfl0" sh "$ROOT/knotlog" doctor 2>&1 | awk -F"$TAB" -v s="$(men doc_ok)" 'index($2,"flair/")==1 && $1==s{n++} END{print n+0}')"
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
