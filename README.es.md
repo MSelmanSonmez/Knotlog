@@ -78,7 +78,7 @@ git clone https://github.com/MSelmanSonmez/Knotlog.git && cd Knotlog
 
 La instalación pregunta cuatro cosas (idioma, ubicación del vault, tu nombre y, opcionalmente, el nombre de un compañero y el propósito del vault), luego crea el vault, lo conecta con Claude Code y omp, y termina con un único paso siguiente: abrir la carpeta del vault y ejecutar `knotlog doctor`. Eso es todo lo que necesita un usuario nuevo.
 
-Después lee la guía de usuario — [docs/GUIDE.md](docs/GUIDE.md) ([Türkçe](docs/GUIDE.tr.md)) — para el ciclo diario y los comandos que se escriben a mano. ¿Aún no estás seguro de que sea para ti? [docs/WHY.md](docs/WHY.md) ([Türkçe](docs/WHY.tr.md)) lo argumenta en una sola lectura.
+Después lee la guía de usuario — [docs/GUIDE.es.md](docs/GUIDE.es.md) ([English](docs/GUIDE.md)) — para el ciclo diario y los comandos que se escriben a mano. ¿Aún no estás seguro de que sea para ti? [docs/WHY.es.md](docs/WHY.es.md) ([English](docs/WHY.md)) lo argumenta en una sola lectura.
 
 ## Cómo funciona
 
@@ -220,8 +220,8 @@ La lista completa, incluido lo que cada adaptador *no* captura, está en [docs/R
 
 ## Documentación
 
-- [Guía de usuario](docs/GUIDE.md) ([Türkçe](docs/GUIDE.tr.md)) — el ciclo diario, las carpetas, los comandos que se escriben a mano.
-- [Por qué Knotlog](docs/WHY.md) ([Türkçe](docs/WHY.tr.md)) — el argumento a su favor en una sola lectura.
+- [Guía de usuario](docs/GUIDE.es.md) ([English](docs/GUIDE.md)) — el ciclo diario, las carpetas, los comandos que se escriben a mano.
+- [Por qué Knotlog](docs/WHY.es.md) ([English](docs/WHY.md)) — el argumento a su favor en una sola lectura.
 - [Referencia](docs/REFERENCE.md) — detalles internos de la instalación, cada comando, cada adaptador, estructura del vault, búsqueda, actualización y reversión.
 - [Manual de uso](docs/USAGE.md) — configuración paso a paso escrita para que la siga un agente de programación; fijada por pruebas, de modo que no puede desviarse de los comandos reales.
 

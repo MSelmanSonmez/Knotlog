@@ -78,7 +78,7 @@ git clone https://github.com/MSelmanSonmez/Knotlog.git && cd Knotlog
 
 A configuração pergunta quatro coisas — idioma, local do vault, seu nome e, opcionalmente, o nome de um companheiro e a finalidade do vault — depois cria o vault, conecta-o ao Claude Code e ao omp e termina com um único próximo passo: abrir a pasta do vault e executar `knotlog doctor`. É tudo o que um novo usuário precisa.
 
-Depois, leia o guia do usuário — [docs/GUIDE.md](docs/GUIDE.md) ([Türkçe](docs/GUIDE.tr.md)) — para conhecer o ciclo diário e os comandos que você digita à mão. Ainda não tem certeza se é para você? [docs/WHY.md](docs/WHY.md) ([Türkçe](docs/WHY.tr.md)) defende a ideia em uma só leitura.
+Depois, leia o guia do usuário — [docs/GUIDE.pt-BR.md](docs/GUIDE.pt-BR.md) ([English](docs/GUIDE.md) · [Türkçe](docs/GUIDE.tr.md)) — para conhecer o ciclo diário e os comandos que você digita à mão. Ainda não tem certeza se é para você? [docs/WHY.pt-BR.md](docs/WHY.pt-BR.md) ([English](docs/WHY.md) · [Türkçe](docs/WHY.tr.md)) defende a ideia em uma só leitura.
 
 ## Como funciona
 
@@ -220,8 +220,8 @@ A lista completa, incluindo o que cada adaptador *não* captura, está em [docs/
 
 ## Documentação
 
-- [Guia do usuário](docs/GUIDE.md) ([Türkçe](docs/GUIDE.tr.md)) — o ciclo diário, as pastas, os comandos que você digita à mão.
-- [Por que o Knotlog](docs/WHY.md) ([Türkçe](docs/WHY.tr.md)) — o argumento a favor em uma só leitura.
+- [Guia do usuário](docs/GUIDE.pt-BR.md) ([English](docs/GUIDE.md) · [Türkçe](docs/GUIDE.tr.md)) — o ciclo diário, as pastas, os comandos que você digita à mão.
+- [Por que o Knotlog](docs/WHY.pt-BR.md) ([English](docs/WHY.md) · [Türkçe](docs/WHY.tr.md)) — o argumento a favor em uma só leitura.
 - [Referência](docs/REFERENCE.md) — detalhes internos da instalação, cada comando, cada adaptador, layout do vault, busca, atualização e rollback.
 - [Runbook de uso](docs/USAGE.md) — configuração passo a passo escrita para um agente de código seguir; travada por testes, então não pode se desviar da superfície real de comandos.
 

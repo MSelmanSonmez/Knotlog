@@ -76,7 +76,7 @@ git clone https://github.com/MSelmanSonmez/Knotlog.git && cd Knotlog
 
 Kurulum dört şey sorar — dil, kasanın yeri, adın ve istersen asistanının adı ile kasanın amacı — sonra kasayı oluşturur, Claude Code ve omp için bağlar ve tek bir sonraki adımla biter: kasa klasörünü aç ve `knotlog doctor` çalıştır. Yeni başlayan biri için bu kadarı yeter.
 
-Ardından kullanım kılavuzunu oku — [docs/GUIDE.tr.md](docs/GUIDE.tr.md) ([English](docs/GUIDE.md)) — günlük döngüyü ve elle yazdığın komutları anlatır. Sana göre olup olmadığından emin değil misin? [docs/WHY.tr.md](docs/WHY.tr.md) ([English](docs/WHY.md)) tek okumada derdini anlatır.
+Ardından kullanım kılavuzunu oku — [docs/GUIDE.tr.md](docs/GUIDE.tr.md) ([English](docs/GUIDE.md) · [Español](docs/GUIDE.es.md) · [Português](docs/GUIDE.pt-BR.md) · [日本語](docs/GUIDE.ja.md) · [简体中文](docs/GUIDE.zh-CN.md)) — günlük döngüyü ve elle yazdığın komutları anlatır. Sana göre olup olmadığından emin değil misin? [docs/WHY.tr.md](docs/WHY.tr.md) ([English](docs/WHY.md) · [Español](docs/WHY.es.md) · [Português](docs/WHY.pt-BR.md) · [日本語](docs/WHY.ja.md) · [简体中文](docs/WHY.zh-CN.md)) tek okumada derdini anlatır.
 
 ## Nasıl çalışır
 
@@ -211,8 +211,8 @@ Her adaptörün neyi *yakalamadığı* dahil tam liste [docs/REFERENCE.md](docs/
 
 ## Belgeler
 
-- [Kullanım kılavuzu](docs/GUIDE.tr.md) ([English](docs/GUIDE.md)) — günlük döngü, klasörler, elle yazdığın komutlar.
-- [Neden Knotlog](docs/WHY.tr.md) ([English](docs/WHY.md)) — tek okumada gerekçesi.
+- [Kullanım kılavuzu](docs/GUIDE.tr.md) ([English](docs/GUIDE.md) · [Español](docs/GUIDE.es.md) · [Português](docs/GUIDE.pt-BR.md) · [日本語](docs/GUIDE.ja.md) · [简体中文](docs/GUIDE.zh-CN.md)) — günlük döngü, klasörler, elle yazdığın komutlar.
+- [Neden Knotlog](docs/WHY.tr.md) ([English](docs/WHY.md) · [Español](docs/WHY.es.md) · [Português](docs/WHY.pt-BR.md) · [日本語](docs/WHY.ja.md) · [简体中文](docs/WHY.zh-CN.md)) — tek okumada gerekçesi.
 - [Başvuru](docs/REFERENCE.md) (İngilizce) — kurulumun iç işleyişi, bütün komutlar, her adaptör, kasa düzeni, arama, güncelleme ve geri alma.
 - [Kullanım runbook'u](docs/USAGE.md) (İngilizce) — bir kodlama ajanının izlemesi için yazılmış adım adım kurulum; testlerle kilitli, gerçek komut yüzeyinden kopamaz.
 
