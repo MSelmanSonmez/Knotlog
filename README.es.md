@@ -108,7 +108,7 @@ Claude Code lee `CLAUDE.md`, la mayoría de los demás agentes leen `AGENTS.md`;
 - **Cero dependencias**: solo POSIX sh + sed + awk + grep + tr + git (sin Python, Node ni jq).
 - **100 % sin conexión**, **gratis**: nada sale de tu equipo, sin claves de API, coste cero en tokens.
 - **Multiplataforma**: Windows, macOS, Linux — verificado por CI en los tres.
-- **Multilingüe**: turco e inglés de primera clase; otros idiomas mediante perfiles.
+- **Multilingüe**: la interfaz se distribuye en seis idiomas (English, Türkçe, Español, Português (Brasil), 日本語, 简体中文). Elige uno con `--lang <código>` (`en`, `tr`, `es`, `pt-br`, `ja`, `zh-cn`), `lang=` en la configuración o el asistente de instalación. El inglés y el turco se mantienen a mano; las demás traducciones están asistidas por máquina y las correcciones son bienvenidas.
 - **Almacenamiento**: Markdown plano, sin base de datos — tus archivos, sin dependencia de un proveedor.
 - **Control de secretos, activado por defecto**: el vault es un repositorio git con un escáner pre-commit que rechaza un commit que contenga la forma de un secreto conocido.
 - **Un contrato de comportamiento, no solo notas**: `Rules.md` y `Facts.md` se inyectan al inicio de cada sesión — una corrección que escribes una vez se mantiene en la siguiente sesión en lugar de repetirse.
@@ -127,7 +127,7 @@ Los que realmente vas a escribir; la tabla completa está en [docs/REFERENCE.md]
 | `knotlog context` | muestra lo que ve el agente al inicio de la sesión |
 | `knotlog tui` | explora en la terminal las notas de sesión más recientes |
 | `knotlog plan <name> --proje <Project>` | abre una nota de plan dentro de un proyecto |
-| `knotlog help [--tr]` | ayuda en inglés, o en turco con `--tr` |
+| `knotlog help [--<código>]` | ayuda en inglés, o en otro idioma incluido con `--<código>` (p. ej. `--tr`) |
 
 ## Una primera sesión
 
@@ -165,7 +165,7 @@ La línea del control de secretos es lo último que imprime `init`: instala
 `.githooks/pre-commit` cuando el vault es la raíz de un repositorio git, y lo
 indica cuando no lo es.
 
-Pasa `--lang tr` a `init` para obtener la salida en turco.
+Pasa `--lang <código>` a `init` (p. ej. `--lang tr`) para obtener la salida en otro idioma.
 
 ## Preguntas frecuentes
 

@@ -106,7 +106,7 @@ Claude Code reads `CLAUDE.md`, most other agents read `AGENTS.md`; Knotlog write
 - **Zero dependencies**: POSIX sh + sed + awk + grep + tr + git only (no Python, Node, jq).
 - **100% offline**, **free**: nothing leaves your machine, no API keys, zero token cost.
 - **Cross-platform**: Windows, macOS, Linux — CI-verified on all three.
-- **Multilingual**: Turkish and English first-class; other languages via profiles.
+- **Multilingual**: the interface ships in six languages (English, Türkçe, Español, Português (Brazil), 日本語, 简体中文). Pick one with `--lang <code>` (`en`, `tr`, `es`, `pt-br`, `ja`, `zh-cn`), `lang=` in the config, or the install wizard. English and Turkish are maintained by hand; the other translations are machine-assisted, and corrections are welcome.
 - **Storage**: plain Markdown, no database — your files, no lock-in.
 - **Secret gate, on by default**: the vault is a git repository with a pre-commit scanner that rejects a commit carrying a known secret shape.
 - **A behavior contract, not just notes**: `Rules.md` and `Facts.md` are injected at every session start — a correction you write once holds in the next session instead of being repeated.
@@ -125,7 +125,7 @@ The ones you will actually type; the full table is in [docs/REFERENCE.md](docs/R
 | `knotlog context` | print what the agent sees at session start |
 | `knotlog tui` | browse the newest session notes in the terminal |
 | `knotlog plan <name> --proje <Project>` | open a plan note inside a project |
-| `knotlog help [--tr]` | help in English, or Turkish with `--tr` |
+| `knotlog help [--<code>]` | help in English, or in another shipped language with `--<code>` (e.g. `--tr`) |
 
 ## A first session
 
@@ -162,7 +162,7 @@ own — narrow the terms, or filter with `--tag`/`--status`. The secret-gate lin
 is the last thing `init` prints: it installs `.githooks/pre-commit` when the
 vault is a git repository root, and says so when it is not.
 
-Pass `--lang tr` to `init` for Turkish output instead.
+Pass `--lang <code>` to `init` (e.g. `--lang tr`) for output in another language.
 
 ## FAQ
 

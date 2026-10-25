@@ -109,7 +109,7 @@ Claude Code 读取 `CLAUDE.md`，其他大多数智能体读取 `AGENTS.md`；Kn
 - **零依赖**：仅需 POSIX sh + sed + awk + grep + tr + git（无需 Python、Node、jq）。
 - **100% 离线**、**免费**：没有任何内容离开你的机器，无需 API 密钥，零 token 成本。
 - **跨平台**：Windows、macOS、Linux——三者均经 CI 验证。
-- **多语言**：土耳其语和英语为一等支持；其他语言通过配置档（profile）支持。
+- **多语言**：界面提供六种语言（English、Türkçe、Español、Português (Brasil)、日本語、简体中文）。可用 `--lang <代码>`（`en`、`tr`、`es`、`pt-br`、`ja`、`zh-cn`）、配置中的 `lang=` 或安装向导选择。英语和土耳其语由人工维护，其余翻译为机器辅助，欢迎提出修正。
 - **存储**：纯 Markdown，无数据库——文件归你所有，无厂商锁定。
 - **默认开启的密钥关卡**：保险库是一个 git 仓库，带有 pre-commit 扫描器，会拒绝包含已知密钥形态的提交。
 - **不只是笔记，更是行为契约**：`Rules.md` 和 `Facts.md` 在每次会话开始时注入——你写下一次的纠正会在下一次会话中继续生效，而不必反复重复。
@@ -128,7 +128,7 @@ Claude Code 读取 `CLAUDE.md`，其他大多数智能体读取 `AGENTS.md`；Kn
 | `knotlog context` | 打印智能体在会话开始时看到的内容 |
 | `knotlog tui` | 在终端中浏览最新的会话笔记 |
 | `knotlog plan <name> --proje <Project>` | 在项目内打开一份计划笔记 |
-| `knotlog help [--tr]` | 显示英文帮助，加 `--tr` 显示土耳其语帮助 |
+| `knotlog help [--<代码>]` | 显示英文帮助，加 `--<代码>` 显示其他随附语言的帮助（例如 `--tr`） |
 
 ## 第一次会话
 
@@ -161,7 +161,7 @@ summary: 139 ok, 3 warn, 0 fail
 
 预置的 `Rules.md`、`Facts.md` 和 `companion.md` 都是普通笔记，会和其他笔记一样被索引，所以范围宽泛的查询会把它们和你自己的笔记一起返回——请缩小搜索词，或用 `--tag`/`--status` 过滤。密钥关卡那一行是 `init` 打印的最后一行：当保险库是 git 仓库根目录时，它会安装 `.githooks/pre-commit`；不是时则会如此提示。
 
-给 `init` 传入 `--lang tr` 可改为土耳其语输出。
+给 `init` 传入 `--lang <代码>`（例如 `--lang tr`）可改为其他语言输出。
 
 ## 常见问题
 

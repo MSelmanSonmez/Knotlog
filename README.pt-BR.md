@@ -108,7 +108,7 @@ O Claude Code lê o `CLAUDE.md`, a maioria dos outros agentes lê o `AGENTS.md`;
 - **Zero dependências**: apenas POSIX sh + sed + awk + grep + tr + git (sem Python, Node ou jq).
 - **100% offline** e **gratuito**: nada sai da sua máquina, sem chaves de API, custo zero de tokens.
 - **Multiplataforma**: Windows, macOS, Linux — verificado por CI nos três.
-- **Multilíngue**: turco e inglês de primeira classe; outros idiomas via perfis.
+- **Multilíngue**: a interface vem em seis idiomas (English, Türkçe, Español, Português (Brasil), 日本語, 简体中文). Escolha um com `--lang <código>` (`en`, `tr`, `es`, `pt-br`, `ja`, `zh-cn`), `lang=` na configuração ou o assistente de instalação. Inglês e turco são mantidos à mão; as demais traduções são assistidas por máquina e correções são bem-vindas.
 - **Armazenamento**: Markdown simples, sem banco de dados — seus arquivos, sem dependência de fornecedor.
 - **Barreira de segredos, ativada por padrão**: o vault é um repositório git com um scanner de pre-commit que rejeita um commit que carregue um formato conhecido de segredo.
 - **Um contrato de comportamento, não apenas notas**: `Rules.md` e `Facts.md` são injetados no início de cada sessão — uma correção que você escreve uma vez vale na sessão seguinte, em vez de ser repetida.
@@ -127,7 +127,7 @@ Os que você realmente vai digitar; a tabela completa está em [docs/REFERENCE.m
 | `knotlog context` | exibe o que o agente vê no início da sessão |
 | `knotlog tui` | navega pelas notas de sessão mais recentes no terminal |
 | `knotlog plan <name> --proje <Project>` | abre uma nota de plano dentro de um projeto |
-| `knotlog help [--tr]` | ajuda em inglês, ou em turco com `--tr` |
+| `knotlog help [--<código>]` | ajuda em inglês, ou em outro idioma incluído com `--<código>` (ex.: `--tr`) |
 
 ## Uma primeira sessão
 
@@ -165,7 +165,7 @@ ampla os devolve junto com as suas — restrinja os termos ou filtre com
 `init` exibe: ele instala `.githooks/pre-commit` quando o vault é a raiz de um
 repositório git e avisa quando não é.
 
-Passe `--lang tr` ao `init` para obter a saída em turco.
+Passe `--lang <código>` ao `init` (ex.: `--lang tr`) para obter a saída em outro idioma.
 
 ## FAQ
 
