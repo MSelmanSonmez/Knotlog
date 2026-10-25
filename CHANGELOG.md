@@ -3,7 +3,7 @@
 All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.1.0] - unreleased
+## [1.1.0] - 2026-10-25
 
 ### Added
 - Six interface languages: English, Türkçe, Español (`es`), Português do Brasil (`pt-br`), 日本語 (`ja`) and 简体中文 (`zh-cn`). Messages live in `i18n/<code>.txt`; templates, tone presets and persona files are per language under `templates/`, `tone/` and `persona/`. The non-English/Turkish translations are machine-assisted; corrections are welcome.
