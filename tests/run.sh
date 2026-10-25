@@ -8005,9 +8005,9 @@ t; assert_eq "T-469: tiny ctx_max truncates the threads section (control: it IS 
 t; assert_eq "T-470: doctor derives the tone/ paths of every language from the language list" 'yes' \
   "$(_t470ok=yes; grep -qF 'for _q_ld in templates tone; do' "$ROOT/knotlog" || _t470ok=no; for _t470l in tr en; do for _t470s in $TONE_SLUGS; do \
        [ -f "$ROOT/tone/$_t470l/$_t470s.md" ] || _t470ok=no; done; done; printf '%s' "$_t470ok")"
-t; assert_eq "T-470: doctor reports all eighteen tone files ok on a stock checkout" 'yes' \
+t; assert_eq "T-470: doctor reports every shipped tone file ok on a stock checkout" 'yes' \
   "$( (cd "$TMP/vt469" && "$ROOT/knotlog" doctor) 2>&1 | \
-     awk -F"$TAB" -v s="$(mtr doc_ok)" 'index($2,"tone/")==1 && $1==s{n++} END{print (n==18?"yes":"no")}')"
+     awk -F"$TAB" -v s="$(mtr doc_ok)" -v want="$(find "$ROOT/tone" -name "*.md" -type f | wc -l | tr -d ' ')" 'index($2,"tone/")==1 && $1==s{n++} END{print (n==want+0 && want>=18?"yes":"no")}')"
 
 # T-471: `knotlog init --tone <slug>` writes tone= directly (no interactive
 # question -- same precedent as --purpose), and `install`'s --no-prompt
