@@ -12222,6 +12222,66 @@ t; assert_eq "T-995: a Devin slug id stays whole in the card and a second respon
 t; assert_eq "T-996: install.sh hands knotlog install the terminal when stdin is a pipe" 'yes yes' \
   "$(grep -qF 'if [ ! -t 0 ] && (: </dev/tty) 2>/dev/null; then' "$ROOT/install.sh" && printf yes || printf no) $(grep -qF 'exec "$_dest/knotlog" install "$@" </dev/tty' "$ROOT/install.sh" && printf yes || printf no)"
 
+# ---- generic languages: the i18n/*.txt files ARE the language list (T-1000) --
+# `xx` is a fixture language: en.txt plus a marker, created in a private copy of
+# the repo and never committed. It ships no template/tone/persona/layout, so
+# every one of those must fall back to English.
+t; assert_eq "T-1000: every i18n/*.txt has the key set of en.txt" '' \
+  "$(awk -F= 'NF >= 1 && $1 !~ /^#/ {print $1}' "$ROOT/i18n/en.txt" | sort > "$TMP/en.keys"
+     for _f in "$ROOT"/i18n/*.txt; do
+       awk -F= 'NF >= 1 && $1 !~ /^#/ {print $1}' "$_f" | sort | cmp -s - "$TMP/en.keys" || printf '%s ' "${_f##*/}"
+     done)"
+XXH="$TMP/xxhome"
+mkdir -p "$XXH"
+for _d in lib i18n fold layout persona templates tone icon hooks adapters; do cp -r "$ROOT/$_d" "$XXH/$_d"; done
+cp "$ROOT/knotlog" "$ROOT/repair-hooks" "$ROOT/repair-hooks.ps1" "$XXH/"
+sed 's/^usage_help=.*/&  XXMARK/' "$ROOT/i18n/en.txt" > "$XXH/i18n/xx.txt"
+xx_run() { # language vault args...
+  _xl=$1; _xv=$2; shift 2
+  (cd "$_xv" && env -u LANG -u LC_ALL QUIPU_VAULT="$_xv" QUIPU_LANG="$_xl" sh "$XXH/knotlog" "$@" </dev/null 2>&1)
+}
+mkdir -p "$TMP/vxx" "$TMP/ven" "$TMP/vzz" "$TMP/vxl"
+t; xx_run xx "$TMP/vxx" init --no-prompt --lang xx >/dev/null; XRC=$?
+t; assert_eq "T-1001: init --lang xx exits 0 and pins lang=xx, fold=default" '0 yes yes' \
+  "$XRC $(grep -q '^lang=xx$' "$TMP/vxx/.knotlog/config" && printf yes || printf no) $(grep -q '^fold=default$' "$TMP/vxx/.knotlog/config" && printf yes || printf no)"
+xx_run en "$TMP/ven" init --no-prompt --lang en >/dev/null
+t; assert_eq "T-1002: an xx vault is byte-identical to an en one (persona, rules, facts, templates by fallback)" '' \
+  "$(diff -rq -x .knotlog -x .git "$TMP/vxx" "$TMP/ven")"
+t; assert_eq "T-1003: doctor on an xx vault reports no failure" '0' \
+  "$(xx_run xx "$TMP/vxx" doctor | awk -F"$TAB" '$1 == "fail" {n++} END {print n + 0}')"
+t; assert_eq "T-1004: context works in xx" 'yes' \
+  "$(xx_run xx "$TMP/vxx" context | grep -q . && printf yes || printf no)"
+printf 'tone=dostane\n' >> "$TMP/vxx/.knotlog/config"
+t; assert_eq "T-1005: a tone preset falls back to the English preset in xx" 'yes' \
+  "$(xx_run xx "$TMP/vxx" context | grep -qF -- "$(sed -n 1p "$ROOT/tone/en/dostane.md")" && printf yes || printf no)"
+t; assert_eq "T-1006: help --xx prints the xx file and --en stays English" '1 0' \
+  "$(xx_run xx "$TMP/vxx" help --xx | grep -c XXMARK) $(xx_run xx "$TMP/vxx" help --en | grep -c XXMARK)"
+xx_run zz "$TMP/vzz" init --no-prompt >/dev/null
+t; assert_eq "T-1007: an unsupported code acts as English" 'yes' \
+  "$(cmp -s "$TMP/vzz/Rules.md" "$TMP/ven/Rules.md" && printf yes || printf no)"
+mkdir -p "$TMP/vxl2"
+xx_run xx "$TMP/vxl" init --no-prompt --lang xx --layout en --scope full >/dev/null
+xx_run en "$TMP/vxl2" init --no-prompt --lang en --layout en --scope full >/dev/null
+t; assert_eq "T-1008: --layout en --scope full gives the same folders in xx as in en" '' \
+  "$(diff -rq -x .knotlog -x .git "$TMP/vxl" "$TMP/vxl2")"
+mkdir -p "$TMP/ixp" "$TMP/ixb"
+t; printf 'xx\nAda\n\n\n' | PATH="$TMP/ixb:$INSTALL_TOOLS" QUIPU_FORCE_TTY=1 sh "$XXH/knotlog" install "$TMP/ixp" >"$TMP/ix.out" 2>&1
+t; assert_eq "T-1009: the install language prompt lists xx and accepts it" 'yes yes' \
+  "$(grep -qF 'Language / Dil (en/tr/xx)' "$TMP/ix.out" && printf yes || printf no) $(cat "$TMP"/ixp/*/.knotlog/config 2>/dev/null | grep -q '^lang=xx$' && printf yes || printf no)"
+t; assert_eq "T-1010: no hard-coded language or layout-name list is left in knotlog" '0' \
+  "$(grep -cE 'emoji\|plain\|tr\|en|menu_codes=.en tr.|i18n/tr\.txt' "$ROOT/knotlog")"
+# Fold profile by language, and locale spellings mapping onto lowercase codes.
+for _c in es:latin pt-br:latin ja:default zh-cn:default tr:tr en:default; do
+  cp "$ROOT/i18n/en.txt" "$XXH/i18n/${_c%%:*}.txt" 2>/dev/null
+  mkdir -p "$TMP/vf-${_c%%:*}"
+  xx_run "${_c%%:*}" "$TMP/vf-${_c%%:*}" init --no-prompt >/dev/null
+  t; assert_eq "T-1011: fold profile for ${_c%%:*}" "${_c##*:}" "$(awk -F= '$1 == "fold" {print $2}' "$TMP/vf-${_c%%:*}/.knotlog/config")"
+done
+mkdir -p "$TMP/vloc"
+(cd "$TMP/vloc" && env -u LC_ALL -u QUIPU_LANG LANG=pt_BR.UTF-8 QUIPU_VAULT="$TMP/vloc" sh "$XXH/knotlog" init --no-prompt </dev/null >/dev/null 2>&1)
+t; assert_eq "T-1012: LANG=pt_BR.UTF-8 and --lang PT-BR both resolve to pt-br (fold latin)" 'latin latin' \
+  "$(awk -F= '$1 == "fold" {print $2}' "$TMP/vloc/.knotlog/config") $(mkdir -p "$TMP/vloc2"; xx_run PT-BR "$TMP/vloc2" init --no-prompt --lang PT-BR >/dev/null; awk -F= '$1 == "fold" {print $2}' "$TMP/vloc2/.knotlog/config")"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
