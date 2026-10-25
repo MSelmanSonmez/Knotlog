@@ -8019,7 +8019,7 @@ t; assert_eq "T-469: tiny ctx_max truncates the threads section (control: it IS 
 # doctor while `knotlog tone --list` (and every preset) silently has nothing
 # to show.
 t; assert_eq "T-470: doctor derives the tone/ paths of every language from the language list" 'yes' \
-  "$(_t470ok=yes; grep -qF 'for _q_ld in templates tone; do' "$ROOT/knotlog" || _t470ok=no; for _t470l in tr en; do for _t470s in $TONE_SLUGS; do \
+  "$(_t470ok=yes; grep -qF 'for _q_ld in templates tone flair; do' "$ROOT/knotlog" || _t470ok=no; for _t470l in tr en; do for _t470s in $TONE_SLUGS; do \
        [ -f "$ROOT/tone/$_t470l/$_t470s.md" ] || _t470ok=no; done; done; printf '%s' "$_t470ok")"
 t; assert_eq "T-470: doctor reports every shipped tone file ok on a stock checkout" 'yes' \
   "$( (cd "$TMP/vt469" && "$ROOT/knotlog" doctor) 2>&1 | \
@@ -12392,6 +12392,47 @@ fi
 t; assert_eq "T-1026: usage_install mentions --force in every language" '' \
   "$(for _f in "$ROOT"/i18n/*.txt; do grep -q '^usage_install=.*--force' "$_f" || printf '%s ' "$_f"; done)"
 
+# ---- flair: reply decoration independent of tone (T-1030..T-1037) ----
+fl_ctx() { QUIPU_VAULT="$TMP/$1" sh "$ROOT/knotlog" context 2>&1 | sed 's/[0-9:T-]\{16\}//g'; }
+fl_mk() { # name lang [extra config lines]
+  mkvault "$1"; printf 'lang=%s\n' "$2" > "$TMP/$1/.knotlog/config"
+  QUIPU_VAULT="$TMP/$1" sh "$ROOT/knotlog" init --no-prompt >/dev/null 2>&1
+}
+fl_mk vfl0 en; fl_mk vfl1 en; fl_mk vfl2 en; fl_mk vfl3 en
+printf 'flair=none\n' >> "$TMP/vfl1/.knotlog/config"
+t; assert_eq "T-1030: flair unset and flair=none give the same context, with no flair section" 'yes' \
+  "$([ "$(fl_ctx vfl0)" = "$(fl_ctx vfl1)" ] && ! fl_ctx vfl0 | grep -qF "$(men ctx_flair)" && printf yes || printf no)"
+printf 'flair=kaomoji\n' >> "$TMP/vfl2/.knotlog/config"
+printf 'flair=emoji\n' >> "$TMP/vfl3/.knotlog/config"
+t; assert_eq "T-1031: kaomoji and emoji text reach context after the tone priority note" 'yes yes' \
+  "$(for _f in vfl2:kaomoji vfl3:emoji; do _v=${_f%:*}; _k=${_f#*:}; fl_ctx "$_v" | awk -v p="$(men ctx_tone_priority)" -v h="$(men ctx_flair)" -v b="$(head -1 "$ROOT/flair/en/$_k.md")" \
+       '$0==p{a=NR} $0==h{c=NR} $0==b{d=NR} END{exit !(a && c>a && d>c)}' && printf 'yes '; done | sed 's/ $//')"
+fl_mk vfl4 en; printf 'tone=dostane\nflair=kaomoji\n' >> "$TMP/vfl4/.knotlog/config"
+t; assert_eq "T-1032: tone=dostane and flair=kaomoji are both in context" 'yes yes' \
+  "$(fl_ctx vfl4 | grep -qF -- "$(head -1 "$ROOT/tone/en/dostane.md")" && printf yes) $(fl_ctx vfl4 | grep -qF -- "$(head -1 "$ROOT/flair/en/kaomoji.md")" && printf yes)"
+fl_mk vfl5 en; printf 'flair=bogus\n' >> "$TMP/vfl5/.knotlog/config"
+t; assert_eq "T-1033: an invalid flair acts as none and doctor warns once" 'yes 1' \
+  "$([ "$(fl_ctx vfl5)" = "$(fl_ctx vfl0)" ] && printf yes) $(QUIPU_VAULT="$TMP/vfl5" sh "$ROOT/knotlog" doctor | awk -F"$TAB" '$1=="warn" && $2=="flair"{n++} END{print n+0}')"
+fl_mk vfl6 en
+FL_B=$(cd "$TMP/vfl6" && QUIPU_VAULT="$TMP/vfl6" sh "$ROOT/knotlog" flair)
+FL_L=$(cd "$TMP/vfl6" && QUIPU_VAULT="$TMP/vfl6" sh "$ROOT/knotlog" flair --list)
+FL_S=$(cd "$TMP/vfl6" && QUIPU_VAULT="$TMP/vfl6" sh "$ROOT/knotlog" flair emoji)
+t; assert_eq "T-1034: flair shows none, --list marks it, setting writes a single flair=" 'yes yes yes yes' \
+  "$([ "$FL_B" = "$(memfmt en flair_current none)" ] && printf yes) $(printf '%s\n' "$FL_L" | grep -qF "* none" && printf yes) $(grep -qx 'flair=emoji' "$TMP/vfl6/.knotlog/config" && [ "$FL_S" = "$(memfmt en flair_set emoji)" ] && printf yes) $(QUIPU_VAULT="$TMP/vfl6" sh "$ROOT/knotlog" flair none >/dev/null; grep -qx 'flair=none' "$TMP/vfl6/.knotlog/config" && [ "$(grep -c '^flair=' "$TMP/vfl6/.knotlog/config")" = 1 ] && printf yes)"
+mkvault vfl7; printf 'lang=en\n' > "$TMP/vfl7/.knotlog/config"
+QUIPU_VAULT="$TMP/vfl7" sh "$ROOT/knotlog" init --no-prompt --flair kaomoji >/dev/null 2>&1
+QUIPU_VAULT="$TMP/vfl7" sh "$ROOT/knotlog" init --no-prompt --flair loud >/dev/null 2>"$TMP/vfl7.err"; FRC=$?
+t; assert_eq "T-1035: init --flair writes flair=; an unknown value exits 2" 'yes 2' \
+  "$(grep -qx 'flair=kaomoji' "$TMP/vfl7/.knotlog/config" && printf yes) $FRC"
+fl_mk vfl8 es; printf 'flair=kaomoji\n' >> "$TMP/vfl8/.knotlog/config"
+t; assert_eq "T-1036: a language without flair files (es) falls back to the English text" 'yes' \
+  "$(fl_ctx vfl8 | grep -qF -- "$(head -1 "$ROOT/flair/en/kaomoji.md")" && printf yes || printf no)"
+fl_mk vfl9 en; printf 'tone=kaomoji\n' >> "$TMP/vfl9/.knotlog/config"
+t; assert_eq "T-1037: tone=kaomoji still works and adds no flair section" 'yes yes' \
+  "$(fl_ctx vfl9 | grep -qF -- "$(head -1 "$ROOT/tone/en/kaomoji.md")" && printf yes) $(! fl_ctx vfl9 | grep -qF "$(men ctx_flair)" && printf yes)"
+
+t; assert_eq "T-1038: doctor lists the four shipped flair files as ok" '4' \
+  "$(QUIPU_VAULT="$TMP/vfl0" sh "$ROOT/knotlog" doctor 2>&1 | awk -F"$TAB" -v s="$(men doc_ok)" 'index($2,"flair/")==1 && $1==s{n++} END{print n+0}')"
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0

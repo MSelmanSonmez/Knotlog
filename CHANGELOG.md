@@ -3,6 +3,11 @@
 All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.0] - unreleased
+
+### Added
+- `flair=none|kaomoji|emoji` config key and `knotlog flair [--list | none|kaomoji|emoji]`: a reply decoration independent of the tone preset, appended after the tone block in `knotlog context`. `init --flair` and `install --flair` set it. English and Turkish text ship under `flair/`; other languages use the English text. `doctor` warns on an invalid value. `tone=kaomoji` is unchanged.
+
 ## [1.1.1] - 2026-10-25
 
 ### Fixed

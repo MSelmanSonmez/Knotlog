@@ -306,7 +306,7 @@ context 对它保持沉默。当文件存在时，`doctor` 会打印一行
 只有出现失败时才为 1。
 
 ```
-summary: 139 ok, 3 warn, 0 fail
+summary: 143 ok, 3 warn, 0 fail
 ```
 
 **记忆的哪一部分会被审计？** 知识库中并非每个文件都按同一标准要求。

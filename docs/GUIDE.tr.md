@@ -327,7 +327,7 @@ kasalarda sessizdir.
 uyarı varsa 0, bir şey başarısızsa 1 ile çıkar.
 
 ```
-özet: 139 ok, 3 uyarı, 0 hata
+özet: 143 ok, 3 uyarı, 0 hata
 ```
 
 **Hafızanın hangi kısmı denetlenir?** Kasadaki her dosya aynı standartta

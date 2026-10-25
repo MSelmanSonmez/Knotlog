@@ -197,6 +197,7 @@ left it says so and changes nothing.
 | `knotlog import FILE` | convert a local JSON export with role/content messages (Claude transcript, ChatGPT export, or JSONL) into a session note (`--date YYYY-MM-DD`) |
 | `knotlog plan <name> --proje <Project>` | open a plan note under `<projects>/<Project>/<Plans>/` from the localized front-matter template; a missing project folder is an error, never auto-created |
 | `knotlog tone [--list\|<slug>]` | show which tone is active and why (preset or companion.md); `--list` browses the nine shipped presets; `<slug>` writes `tone=` to `.knotlog/config` (never touches companion.md) |
+| `knotlog flair [--list\|none\|kaomoji\|emoji]` | show or set the reply flair (`flair=` in `.knotlog/config`), independent of the tone; `init --flair` and `install --flair` set it too (never touches companion.md) |
 | `knotlog compact [--keep N] [--apply]` | move old `Closed threads` entries of `Threads.md` into the archive, losslessly; dry run unless `--apply`; the newest `--keep N` (default 20) stay; also trims the last-session file (newest 5 `## ` blocks stay, or `--keep N`); see Session reflection |
 | `knotlog update --check` | compare this checkout's version against the latest GitHub release; network read only, touches no file |
 | `knotlog update --apply [--no-verify]` | update this checkout in place (tarball checkout: download, SHA-256 check, atomic swap; git-clone checkout: `git fetch` + checkout `<tag>`); bare `knotlog update` errors on purpose |
@@ -415,6 +416,15 @@ before presets existed — an invalid `tone=` is never a hard error, only a
 and why. `init --tone <slug>` and `install --tone <slug>` set the same key
 without an interactive question — like `--purpose`, there is no prompt for
 it, only the flag.
+
+**Flair.** `flair=none|kaomoji|emoji` in `.knotlog/config` adds a reply
+decoration on top of whatever tone is active, so `tone=dostane` and
+`flair=kaomoji` combine (the `kaomoji` tone preset keeps working unchanged).
+The text lives in `flair/<lang>/<value>.md` (English and Turkish ship; other
+languages use the English text) and is appended right after the tone block
+in `knotlog context`, inside the same fixed part of the context budget.
+Absent or invalid means `none`; `doctor` warns once on an invalid value.
+`knotlog flair` shows the active value, `--list` browses.
 
 ## Notes: frontmatter and wikilinks
 
