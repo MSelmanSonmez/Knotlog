@@ -78,7 +78,7 @@ git clone https://github.com/MSelmanSonmez/Knotlog.git && cd Knotlog
 
 セットアップでは、言語、vault の場所、あなたの名前、そして任意でコンパニオン名と vault の目的の四つを尋ねます。その後 vault を作成し、Claude Code と omp に接続して、次の一手を一つだけ示して終わります。vault フォルダを開き、`knotlog doctor` を実行してください。新規ユーザーに必要なのはこれだけです。
 
-次にユーザーガイド [docs/GUIDE.md](docs/GUIDE.md)([Türkçe](docs/GUIDE.tr.md))で、日々の流れと手で入力するコマンドを確認してください。自分に合うかまだ分からない場合は、[docs/WHY.md](docs/WHY.md)([Türkçe](docs/WHY.tr.md))が一度読めば分かる形でその理由を説明しています。
+次にユーザーガイド [docs/GUIDE.ja.md](docs/GUIDE.ja.md)([English](docs/GUIDE.md) · [Türkçe](docs/GUIDE.tr.md))で、日々の流れと手で入力するコマンドを確認してください。自分に合うかまだ分からない場合は、[docs/WHY.ja.md](docs/WHY.ja.md)([English](docs/WHY.md) · [Türkçe](docs/WHY.tr.md))が一度読めば分かる形でその理由を説明しています。
 
 ## 仕組み
 
@@ -220,8 +220,8 @@ Claude Code です。そのアダプターは実セッションで検証済み�
 
 ## ドキュメント
 
-- [ユーザーガイド](docs/GUIDE.md)([Türkçe](docs/GUIDE.tr.md)) — 日々の流れ、フォルダ、手で入力するコマンド。
-- [Why Knotlog](docs/WHY.md)([Türkçe](docs/WHY.tr.md)) — 一度読めば分かる導入理由。
+- [ユーザーガイド](docs/GUIDE.ja.md)([English](docs/GUIDE.md) · [Türkçe](docs/GUIDE.tr.md)) — 日々の流れ、フォルダ、手で入力するコマンド。
+- [Why Knotlog](docs/WHY.ja.md)([English](docs/WHY.md) · [Türkçe](docs/WHY.tr.md)) — 一度読めば分かる導入理由。
 - [リファレンス](docs/REFERENCE.md) — インストールの内部、全コマンド、各アダプター、vault のレイアウト、検索、アップデートとロールバック。
 - [利用ランブック](docs/USAGE.md) — コーディングエージェントが従うために書かれた手順付きセットアップ。テストで固定されているため、実際のコマンド体系とずれません。
 
