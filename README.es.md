@@ -12,6 +12,10 @@
   <b>Cierra la sesión, reinicia el equipo, pregunta "¿qué hicimos ayer?" y recupera tu ayer.</b>
 </p>
 
+<p align="center">
+  <img src="docs/demo.gif" alt="Claude Code without and with Knotlog: same question, the Knotlog side remembers who it is" width="830">
+</p>
+
 *Esta es una traducción de README.md; la versión en inglés es la referencia.*
 
 <p align="center">

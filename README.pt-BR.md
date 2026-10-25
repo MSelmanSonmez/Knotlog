@@ -12,6 +12,10 @@
   <b>Feche a sessão, reinicie a máquina, pergunte "o que fizemos ontem?" — e receba o seu ontem de volta.</b>
 </p>
 
+<p align="center">
+  <img src="docs/demo.gif" alt="Claude Code without and with Knotlog: same question, the Knotlog side remembers who it is" width="830">
+</p>
+
 <p align="center"><i>Esta é uma tradução do README.md; a versão em inglês é a referência.</i></p>
 
 <p align="center">

@@ -11,3 +11,5 @@ persona/*.md text eol=lf
 
 .github/ export-ignore
 tests/ export-ignore
+# README media: shown on GitHub, kept out of the release tarball install.sh downloads
+docs/demo.gif export-ignore

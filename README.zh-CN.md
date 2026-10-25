@@ -13,6 +13,10 @@
 </p>
 
 <p align="center">
+  <img src="docs/demo.gif" alt="Claude Code without and with Knotlog: same question, the Knotlog side remembers who it is" width="830">
+</p>
+
+<p align="center">
   <i>本文是 README.md 的中文翻译，以英文版为准。</i>
 </p>
 

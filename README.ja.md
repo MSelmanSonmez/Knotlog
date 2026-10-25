@@ -12,6 +12,10 @@
   <b>セッションを閉じ、マシンを再起動し、「昨日は何をした?」と尋ねる。すると、あなたの昨日が戻ってきます。</b>
 </p>
 
+<p align="center">
+  <img src="docs/demo.gif" alt="Claude Code without and with Knotlog: same question, the Knotlog side remembers who it is" width="830">
+</p>
+
 *これは README.md の日本語訳です。基準となるのは英語版です。*
 
 <p align="center">
