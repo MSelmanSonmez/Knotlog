@@ -3,7 +3,7 @@
 All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.0.0] - unreleased
+## [1.0.0] - 2026-10-25
 
 ### Renamed (from Quipu)
 - The command is `knotlog`. The `quipu` command is gone. Users coming from Quipu install Knotlog and run `knotlog migrate`, which rewrites old `QUIPU_HOOK=1 quipu` hook commands to `knotlog`.
