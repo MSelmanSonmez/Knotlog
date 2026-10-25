@@ -253,7 +253,7 @@ t; (cd "$TMP/help-tr" && sh "$ROOT/knotlog" help --zz) \
   >"$TMP/help-unknown.out" 2>"$TMP/help-unknown.err"; RC=$?
 assert_eq "help: unknown language exits 2" '2' "$RC"
 t; assert_eq "help: invalid argument gives a localized clear error" \
-  'help argüman kabul etmez; yalnızca --en veya --tr kullanılabilir' \
+  'help argüman kabul etmez; yalnızca gönderilen bir dilin --<kod> bayrağı kullanılabilir (örn. --en, --tr)' \
   "$(cat "$TMP/help-unknown.err")"
 t; (cd "$TMP/help-tr" && sh "$ROOT/knotlog" nonsense) >"$TMP/help-fallback.out" \
   2>"$TMP/help-fallback.err"; RC=$?

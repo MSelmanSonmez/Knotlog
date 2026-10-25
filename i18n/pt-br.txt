@@ -1,6 +1,6 @@
 # core
 usage_head=Uso: knotlog COMANDO [opções]
-usage_help=  help      mostra esta ajuda em inglês (--tr para turco)
+usage_help=  help      mostra a ajuda (--<código> para outro idioma, ex.: --tr)
 usage_doctor=  doctor    verifica o ambiente: ferramentas, dialetos, cofre, agentes
 usage_capture=  capture   acrescenta um evento de uso de ferramenta ao activity.log (lê o stdin)
 usage_index=  index     cria/atualiza o .knotlog/index.tsv (incremental)
@@ -32,7 +32,7 @@ err_note_write=não foi possível gravar %s; o arquivo não foi alterado
 err_thread_nofile=o arquivo de threads não existe: %s; execute knotlog init ou knotlog remember primeiro; nada foi gravado
 err_thread_nosection=o bloco de threads não tem seção ativa (knotlog:threads:start/end com um título ativo); nada foi gravado
 err_thread_pinned=a seção ativa termina dentro do bloco fixado; nada foi gravado
-err_help_args=help aceita nenhum argumento ou exatamente --en / --tr
+err_help_args=help aceita nenhum argumento ou exatamente --<código> de um idioma incluído (ex.: --en, --tr)
 # doctor
 doc_head=knotlog doctor - verificação do ambiente
 doc_ok=ok

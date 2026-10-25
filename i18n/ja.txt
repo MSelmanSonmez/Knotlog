@@ -1,6 +1,6 @@
 # core
 usage_head=使い方: knotlog コマンド [オプション]
-usage_help=  help      この英語のヘルプを表示 (--tr でトルコ語)
+usage_help=  help      ヘルプを表示 (--<コード> で他の言語、例: --tr)
 usage_doctor=  doctor    環境を確認: ツール、方言、ボールト、エージェント
 usage_capture=  capture   ツール使用イベントを activity.log に追記 (標準入力から読み取り)
 usage_index=  index     .knotlog/index.tsv を構築/更新 (増分)
@@ -32,7 +32,7 @@ err_note_write=%s に書き込めませんでした; ファイルは変更され
 err_thread_nofile=スレッドファイルがありません: %s; 先に knotlog init か knotlog remember を実行してください; 何も書き込みませんでした
 err_thread_nosection=スレッドブロックに進行中のセクションがありません (進行中の見出しを持つ knotlog:threads:start/end); 何も書き込みませんでした
 err_thread_pinned=進行中のセクションがピンブロックの内側で終わっています; 何も書き込みませんでした
-err_help_args=help は引数なし、または --en / --tr のみ指定できます
+err_help_args=help は引数なし、または同梱言語の --<コード> のみ指定できます (例: --en, --tr)
 # doctor
 doc_head=knotlog doctor - 環境チェック
 doc_ok=ok
