@@ -5100,7 +5100,7 @@ fi
 t; assert_eq "install.ps1 discovers Git and provides both Windows/Bash shims" 'yes' \
   "$(grep -qF "install' '--no-link'" "$ROOT/install.ps1" \
      && grep -qF "\$forward = @()" "$ROOT/install.ps1" \
-     && grep -qF "Read-Host 'Language / Dil (en/tr)'" "$ROOT/install.ps1" \
+     && grep -qF 'Read-Host $langPrompt' "$ROOT/install.ps1" \
      && grep -qF "Read-Host \$userPrompt" "$ROOT/install.ps1" \
      && grep -qF 'function Find-GitExecutable' "$ROOT/install.ps1" \
      && grep -qF 'GitForWindows' "$ROOT/install.ps1" \
@@ -5596,7 +5596,7 @@ assert_eq "T-315: uninstall.ps1 ships and contains no vault deletion" 'yes' \
 # user-name prompt line in the file.
 t
 assert_eq "T-316: install.ps1 asks language before user name" 'yes' \
-  "$(_LANG_LINE=$(grep -n "Read-Host 'Language / Dil (en/tr)'" "$ROOT/install.ps1" | cut -d: -f1) \
+  "$(_LANG_LINE=$(grep -nF 'Read-Host $langPrompt' "$ROOT/install.ps1" | cut -d: -f1) \
      && _USER_LINE=$(grep -n "Read-Host \$userPrompt" "$ROOT/install.ps1" | cut -d: -f1) \
      && [ -n "$_LANG_LINE" ] && [ -n "$_USER_LINE" ] && [ "$_LANG_LINE" -lt "$_USER_LINE" ] \
      && printf yes || printf no)"
@@ -5704,7 +5704,8 @@ t; assert_eq "T-321: install.ps1 wraps ReadKey in try/catch and falls back on fa
 t; assert_eq "T-321b: install.ps1 UpArrow/DownArrow move opposite ways; label is Turkish" 'yes' \
   "$(printf '%s\n' "$IPS1_MENU_SOURCE" | grep -Fq "'UpArrow'   { \$sel = (\$sel - 1 + \$options.Count) % \$options.Count }" \
      && printf '%s\n' "$IPS1_MENU_SOURCE" | grep -Fq "'DownArrow' { \$sel = (\$sel + 1) % \$options.Count }" \
-     && printf '%s\n' "$IPS1_MENU_SOURCE" | grep -qF "'tr -- Turkish'" \
+     && grep -qF "tr = 'Turkish'" "$ROOT/install.ps1" \
+     && printf '%s\n' "$IPS1_MENU_SOURCE" | grep -qF '$options = $langCodes' \
      && ! printf '%s\n' "$IPS1_MENU_SOURCE" | grep -Fq 'Türkçe' \
      && ! printf '%s\n' "$IPS1_MENU_SOURCE" | grep -Fq 'Turkce' \
      && printf yes || printf no)"
@@ -5713,7 +5714,7 @@ t; assert_eq "T-321b: install.ps1 UpArrow/DownArrow move opposite ways; label is
 # line, no arrow-key hint line -- matching quipu's own POSIX menu screen
 # (maintainer decision). The fallback plain-text question further down (used
 # when ReadKey fails) is a SEPARATE code path and keeps its own
-# 'Language / Dil (en/tr)' question -- this check is scoped to the menu
+# 'Language / Dil (<codes>)' question -- this check is scoped to the menu
 # function's source only, not the whole file.
 t; assert_eq "T-321c: install.ps1 menu screen has no question/hint line" 'yes' \
   "$(! printf '%s\n' "$IPS1_MENU_SOURCE" | grep -Fq 'Language / Dil' \

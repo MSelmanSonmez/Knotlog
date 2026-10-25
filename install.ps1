@@ -101,6 +101,11 @@ function Write-Box([string[]] $Lines, [int] $ProtectFirst = 2) {
     Write-Host $border
 }
 
+# Shipped languages = the i18n/<code>.txt files of this checkout, en first
+# (the same rule as knotlog's _q_langs). Names are display labels only.
+$langNames = @{ en = 'English'; tr = 'Turkish'; es = 'Spanish'; 'pt-br' = 'Portuguese (Brazil)'; ja = 'Japanese'; 'zh-cn' = 'Chinese (Simplified)' }
+$langCodes = @('en') + @(Get-ChildItem -LiteralPath (Join-Path $repo 'i18n') -Filter '*.txt' | ForEach-Object { $_.BaseName } | Where-Object { $_ -ne 'en' })
+
 # Arrow-key language menu, mirroring knotlog's own POSIX install wizard. This
 # is a strict optional upgrade over the Read-Host prompt below it: ReadKey
 # throws whenever there is no real interactive console (input redirected, a
@@ -111,8 +116,8 @@ function Write-Box([string[]] $Lines, [int] $ProtectFirst = 2) {
 # both option labels stay in English regardless of which one is picked,
 # since the language is not chosen yet (matches knotlog's own POSIX menu).
 function Read-LanguageMenu {
-    $options = @('en', 'tr')
-    $labels = @('en -- English', 'tr -- Turkish')
+    $options = $langCodes
+    $labels = @($langCodes | ForEach-Object { if ($langNames.ContainsKey($_)) { "$_ -- $($langNames[$_])" } else { $_ } })
     $sel = 0
     try {
         if ([Console]::IsInputRedirected -or [Console]::IsOutputRedirected) {
@@ -149,13 +154,14 @@ if ($hasLang) {
 } elseif (-not $hasNoPrompt) {
     $lang = Read-LanguageMenu
     if ($null -eq $lang) {
-        $langAns = Read-Host 'Language / Dil (en/tr)'
-        if ([String]::IsNullOrWhiteSpace($langAns) -or $langAns -eq 'en') {
+        $langPrompt = "Language / Dil ($($langCodes -join '/'))"
+        $langAns = "$(Read-Host $langPrompt)".Trim().ToLower().Replace('_', '-')
+        if ([String]::IsNullOrWhiteSpace($langAns)) {
             $lang = 'en'
-        } elseif ($langAns -eq 'tr') {
-            $lang = 'tr'
+        } elseif ($langCodes -contains $langAns) {
+            $lang = $langAns
         } else {
-            Fail "unrecognized language '$langAns'; answer en or tr"
+            Fail "unrecognized language '$langAns'; answer one of: $($langCodes -join ', ')"
         }
     }
     $forward += @('--lang', $lang)
