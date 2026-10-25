@@ -152,7 +152,7 @@ note.md
 $ knotlog context --json SessionStart
 {"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"…"}}
 $ knotlog doctor; echo $?
-summary: 71 ok, 3 warn, 0 fail
+summary: 139 ok, 3 warn, 0 fail
 0
 ```
 
