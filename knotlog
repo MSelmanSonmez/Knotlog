@@ -3236,8 +3236,11 @@ $_q_pf_line"
   _q_pg_lines=
 }
 
-_q_install_menu_lang() {
-  # Arrow-key menu for the language question. This is a strict optional
+_q_install_menu_pick() {
+  # Arrow-key menu core, shared by the language and Style questions.
+  # $1 = optional headline line, $2 = title, $3 = space-separated codes,
+  # $4 = newline-separated labels in the same order. Sets _q_menu_pick to
+  # the chosen code. This is a strict optional
   # upgrade over the plain-text prompt: it must only run when raw terminal
   # control is certain, and it must never be the only path. Anything short
   # of "real tty, real stty, real terminal" falls back silently to the
@@ -3267,7 +3270,8 @@ _q_install_menu_lang() {
   # source, and the modulo below is driven by the actual option count --
   # not a literal 2 -- so a third profile (README promises "other languages
   # via profiles") would not silently break up/down.
-  _q_menu_codes=$(_q_langs | tr '\n' ' ')
+  _q_menu_codes=$3
+  _q_menu_labels=$4
   # Word-splitting on this list is deliberate: it is a fixed space-separated
   # set of plain ASCII codes (no globs, no embedded spaces), the standard
   # POSIX sh idiom for an ad hoc list where real arrays are unavailable.
@@ -3284,14 +3288,15 @@ _q_install_menu_lang() {
     if [ -t 1 ]; then
       awk 'BEGIN { printf "%c[2J%c[H", 27, 27 }'
     fi
-    printf '%s\r\n\r\n' "$(_q_msg install_menu_lang_title)"
+    [ -z "$1" ] || printf '%s\r\n' "$1"
+    printf '%s\r\n\r\n' "$2"
     _q_menu_i=0
     for _q_menu_code in $_q_menu_codes; do
-      _q_menu_name=$(_q_msg "install_menu_lang_name_$_q_menu_code")
+      _q_menu_name=$(printf '%s\n' "$_q_menu_labels" | sed -n "$((_q_menu_i + 1))p")
       if [ "$_q_menu_i" -eq "$_q_menu_sel" ]; then
-        printf '> %s -- %s\r\n' "$_q_menu_code" "$_q_menu_name"
+        printf '> %s\r\n' "$_q_menu_name"
       else
-        printf '  %s -- %s\r\n' "$_q_menu_code" "$_q_menu_name"
+        printf '  %s\r\n' "$_q_menu_name"
       fi
       _q_menu_i=$((_q_menu_i + 1))
     done
@@ -3320,10 +3325,23 @@ _q_install_menu_lang() {
   _q_menu_i=0
   for _q_menu_code in $_q_menu_codes; do
     if [ "$_q_menu_i" -eq "$_q_menu_sel" ]; then
-      _q_i_lang=$_q_menu_code
+      _q_menu_pick=$_q_menu_code
     fi
     _q_menu_i=$((_q_menu_i + 1))
   done
+  return 0
+}
+
+_q_install_menu_lang() {
+  # Language question: the bare arrow-key menu (no headline), or fall back.
+  _q_ml_codes=$(_q_langs | tr '\n' ' ')
+  _q_ml_labels=
+  for _q_ml_c in $_q_ml_codes; do
+    _q_ml_labels="$_q_ml_labels$_q_ml_c -- $(_q_msg "install_menu_lang_name_$_q_ml_c")
+"
+  done
+  _q_install_menu_pick '' "$(_q_msg install_menu_lang_title)" "$_q_ml_codes" "$_q_ml_labels" || return 1
+  _q_i_lang=$_q_menu_pick
   _q_i_layout=$_q_i_lang
   return 0
 }
@@ -3339,6 +3357,12 @@ _q_install_review() {
     user) _q_pg_key=install_review_user; _q_pg_val=$_q_i_user ;;
     companion) _q_pg_key=install_review_companion; _q_pg_val=$_q_i_companion ;;
     purpose) _q_pg_key=install_review_purpose; _q_pg_val=$_q_i_purpose ;;
+    tone) _q_pg_key=install_review_tone; _q_pg_val=$(_q_msg "tone_name_${_q_i_tone:-varsayilan}") ;;
+    flair) _q_pg_key=install_review_flair; _q_pg_val=${_q_i_flair:-none} ;;
+    folders)
+      _q_pg_key=install_review_folders
+      if [ "$_q_i_plain" -eq 1 ]; then _q_pg_val=$(_q_msg install_style_plain); else _q_pg_val=$(_q_msg install_style_emoji); fi
+      ;;
   esac
   # shellcheck disable=SC2059
   _q_pg_line=$(printf "$(_q_msg "$_q_pg_key")" "$_q_pg_val")
@@ -3350,20 +3374,75 @@ _q_install_set_step_totals() {
   # $1 = 1 if a numbered "[n/N] Language" page was (or will be) shown, 0 if
   # language was covered some other way -- install.ps1's own screen
   # (KNOTLOG_INSTALL_HANDOFF) or bash's own arrow-key menu, which is itself
-  # the language step but carries no box/counter (maintainer decision). In
-  # the 0 case the total shrinks to 3 and location/identity/install shift
-  # to [1/3]/[2/3]/[3/3] -- never a stale [x/4] left over from a page that
-  # was not actually shown as its own numbered step.
-  if [ "$1" -eq 1 ]; then
-    _q_i_total_steps=4
-    _q_i_n_location=2
-    _q_i_n_identity=3
-    _q_i_n_install=4
-  else
-    _q_i_total_steps=3
-    _q_i_n_location=1
-    _q_i_n_identity=2
-    _q_i_n_install=3
+  # the language step but carries no box/counter (maintainer decision). With
+  # 0 the pages after it renumber from [1/N] -- never a stale count left over
+  # from a page that was not actually shown as its own numbered step. The
+  # Style page counts only when it will be shown (_q_i_style, set before the
+  # first call: interactive and at least one of its three questions open).
+  _q_i_n_location=$(( 2 - (1 - $1) ))
+  _q_i_n_identity=$((_q_i_n_location + 1))
+  _q_i_n_style=$((_q_i_n_identity + 1))
+  _q_i_n_install=$((_q_i_n_identity + 1 + _q_i_style))
+  _q_i_total_steps=$_q_i_n_install
+}
+
+_q_install_pick() {
+  # One Style question: the shared arrow-key menu, else numbered plain text
+  # (Enter = first option; a number or a code). $1 = headline, $2 = title,
+  # $3 = codes, $4 = newline-separated labels. Sets _q_menu_pick.
+  _q_install_menu_pick "$@" && return 0
+  printf '%s\n' "$2"
+  _q_pk_n=0
+  for _q_pk_c in $3; do
+    _q_pk_n=$((_q_pk_n + 1))
+    printf '  %d) %s\n' "$_q_pk_n" "$(printf '%s\n' "$4" | sed -n "${_q_pk_n}p")"
+  done
+  # shellcheck disable=SC2059
+  printf "$(_q_msg install_ask_pick) " "$_q_pk_n"
+  IFS= read -r _q_pk_ans || _q_pk_ans=
+  _q_menu_pick=${3%% *}
+  [ -n "$_q_pk_ans" ] || return 0
+  _q_pk_i=0
+  for _q_pk_c in $3; do
+    _q_pk_i=$((_q_pk_i + 1))
+    if [ "$_q_pk_ans" = "$_q_pk_i" ] || [ "$_q_pk_ans" = "$_q_pk_c" ]; then
+      _q_menu_pick=$_q_pk_c
+      return 0
+    fi
+  done
+  _q_die err_install_style_invalid 2 "$_q_pk_ans"
+}
+
+_q_install_style() {
+  # The Style step: tone preset, flair, folder names. Each question is asked
+  # only when its flag (--tone, --flair, --plain) was not given; the default
+  # answer (first option) leaves the state exactly as a flagless install.
+  _q_st_head=$(printf "$(_q_msg install_step_style)" "$_q_i_n_style" "$_q_i_total_steps")
+  if [ "$_q_i_tone_set" -eq 0 ]; then
+    _q_st_codes="varsayilan profesyonel dostane icten siradisi etkili sivridilli ogretici kaomoji"
+    _q_st_labels=
+    for _q_st_c in $_q_st_codes; do
+      _q_st_labels="$_q_st_labels$(_q_msg "tone_name_$_q_st_c") -- $(_q_msg "tone_desc_$_q_st_c")
+"
+    done
+    _q_install_pick "$_q_st_head" "$(_q_msg install_style_tone)" "$_q_st_codes" "$_q_st_labels"
+    if [ "$_q_menu_pick" != varsayilan ]; then _q_i_tone=$_q_menu_pick; _q_i_tone_set=1; fi
+  fi
+  if [ -z "$_q_i_flair" ]; then
+    _q_st_labels=
+    for _q_st_c in none kaomoji emoji; do
+      _q_st_labels="$_q_st_labels$_q_st_c -- $(_q_msg "flair_desc_$_q_st_c")
+"
+    done
+    _q_install_pick "$_q_st_head" "$(_q_msg install_style_flair)" "none kaomoji emoji" "$_q_st_labels"
+    if [ "$_q_menu_pick" != none ]; then _q_i_flair=$_q_menu_pick; fi
+  fi
+  if [ "$_q_i_plain" -eq 0 ]; then
+    _q_st_labels="$(_q_msg install_style_emoji) -- $(_q_msg install_style_emoji_ex)
+$(_q_msg install_style_plain) -- 000-Inbox, 100-Command-Center
+"
+    _q_install_pick "$_q_st_head" "$(_q_msg install_style_folders)" "emoji plain" "$_q_st_labels"
+    if [ "$_q_menu_pick" = plain ]; then _q_i_plain=1; _q_i_layout=plain; fi
   fi
 }
 
@@ -3532,6 +3611,12 @@ _q_cmd_install() {
     fi
   fi
 
+  # The Style page exists only when interactive and a question is still open.
+  _q_i_style=0
+  if [ "$_q_i_interactive" -eq 1 ] && { [ "$_q_i_tone_set" -eq 0 ] || [ -z "$_q_i_flair" ] || [ "$_q_i_plain" -eq 0 ]; }; then
+    _q_i_style=1
+  fi
+
   # Step numbering must match exactly what bash itself is about to show --
   # never a stale count left over from a page that was skipped. A numbered
   # "[n/N] Language" page is skipped in TWO cases, both of which already
@@ -3694,6 +3779,18 @@ _q_cmd_install() {
     *) _q_i_target="${_q_i_parent%/}/$_q_i_user's Knotlog" ;;
   esac
 
+  if [ "$_q_i_style" -eq 1 ]; then
+    _q_install_page install_step_style "$_q_i_n_style" "$_q_i_total_steps"
+    _q_install_review language
+    _q_install_review location
+    _q_install_review user
+    if [ -n "$_q_i_companion" ]; then
+      _q_install_review companion
+    fi
+    _q_install_page_flush
+    _q_install_style
+  fi
+
   if [ "$_q_i_interactive" -eq 1 ]; then
     _q_install_page install_step_install "$_q_i_n_install" "$_q_i_total_steps"
     _q_install_review language
@@ -3702,6 +3799,9 @@ _q_cmd_install() {
     if [ -n "$_q_i_companion" ]; then
       _q_install_review companion
     fi
+    _q_install_review tone
+    _q_install_review flair
+    _q_install_review folders
     if [ -n "$_q_i_purpose" ]; then
       _q_install_review purpose
     fi
