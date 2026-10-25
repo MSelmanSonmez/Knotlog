@@ -510,3 +510,19 @@ tui_pager_hint=Boşluk sonraki  b geri  q liste
 tui_empty=henüz oturum notu yok
 tui_search_prompt=ara: 
 tui_search_none=sonuç yok
+# flair (reply decoration, independent of tone)
+usage_flair=  flair     yanıt süsünü gösterir/ayarlar (--list ile listele; none|kaomoji|emoji config'e flair= yazar; init/install --flair <değer> alır)
+ctx_flair=süs
+flair_current=etkin süs: %s
+flair_current_invalid=flair=%s geçerli değil — none kullanılıyor
+flair_set=süs %s olarak ayarlandı (.knotlog/config'e yazılır)
+flair_list_header=Süsler:
+flair_list_row=  %s%-8s %s
+flair_list_marker=* 
+flair_desc_none=süs yok
+flair_desc_kaomoji=metin yüzlü kaomoji, yanıt başına 2-4
+flair_desc_emoji=resimli emoji, yanıt başına 1-3
+err_flair_unknown=bilinmeyen süs: %s (geçerli: none kaomoji emoji)
+err_flair_extra_arg=beklenmeyen fazladan flair argümanı: %s
+doc_flair=süs
+doc_flair_invalid=flair=%s none, kaomoji ya da emoji değil — none kullanılıyor (çalıştır: knotlog flair --list)

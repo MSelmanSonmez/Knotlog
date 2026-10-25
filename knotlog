@@ -370,6 +370,7 @@ usage() {
   _q_msg usage_import
   _q_msg usage_plan
   _q_msg usage_tone
+  _q_msg usage_flair
   _q_msg usage_archive
   _q_msg usage_compact
   _q_msg usage_tui
@@ -1035,6 +1036,25 @@ _q_tone_resolve() {
   fi
 }
 
+_q_flair_resolve() {
+  # Sets _q_fl_raw (flair= from config), _q_fl_val (none|kaomoji|emoji; anything
+  # else is none) and _q_fl_body (the flair/<lang>/<value>.md text, or empty).
+  # Independent of tone=: a flair is appended after the tone block. $1: vault root.
+  _q_fl_raw=
+  if [ -f "$1/$_q_SD/config" ]; then
+    _q_fl_raw=$(awk -F= -v k=flair '$1==k{sub(/^[^=]*=/,"");print;exit}' "$1/$_q_SD/config" 2>/dev/null || true)
+  fi
+  _q_fl_body=
+  case "$_q_fl_raw" in
+    kaomoji|emoji)
+      _q_fl_val=$_q_fl_raw
+      _q_fl_l=$(_q_lang_pick flair/ "/$_q_fl_val.md")
+      _q_fl_body=$(cat "$_q_HOME/flair/$_q_fl_l/$_q_fl_val.md" 2>/dev/null || true)
+      ;;
+    *) _q_fl_val=none ;;
+  esac
+}
+
 _q_doctor_stale_topics() {
   _q_dt_v=$1
   _q_dt_thr=$(_q_threads_path "$_q_dt_v")
@@ -1253,7 +1273,7 @@ _q_doctor() {
         _q_shipped="$_q_shipped $_q_lf"
       fi
     done
-    for _q_ld in templates tone; do
+    for _q_ld in templates tone flair; do
       if [ "$_q_lc" = en ] || [ -d "$_q_HOME/$_q_ld/$_q_lc" ]; then
         for _q_lt in "$_q_HOME/$_q_ld/en"/*; do
           _q_shipped="$_q_shipped $_q_ld/$_q_lc/${_q_lt##*/}"
@@ -1445,6 +1465,12 @@ _q_doctor() {
     if [ -n "$_q_tone_cfg" ] && [ ! -f "$_q_HOME/tone/$(_q_lang_pick tone/ "/$_q_tone_cfg.md")/$_q_tone_cfg.md" ]; then
       # shellcheck disable=SC2059
       _q_line warn tone "$(printf "$(_q_msg doc_tone_invalid)" "$_q_tone_cfg")"
+    fi
+    # flair=: only when the key is present; an unknown value runs as none.
+    _q_flair_resolve "$_q_v"
+    if [ -n "$_q_fl_raw" ] && [ "$_q_fl_raw" != none ] && [ "$_q_fl_val" = none ]; then
+      # shellcheck disable=SC2059
+      _q_line warn "$(_q_msg doc_flair)" "$(printf "$(_q_msg doc_flair_invalid)" "$_q_fl_raw")"
     fi
     # FAZ 2 (spec 4.6 B-22): companion check, only for a known layout.
     if _q_layout_ok "$_q_lay"; then
@@ -2345,6 +2371,7 @@ _q_cmd_init() {
   _q_cn=
   _q_purpose=
   _q_tone_req=
+  _q_flair_req=
   _q_noprompt=0
   _q_purpose_new=0
 
@@ -2394,6 +2421,12 @@ _q_cmd_init() {
           *) _q_die err_tone_unknown 2 "$2" ;;
         esac
         _q_tone_req=$2; shift 2 ;;
+      --flair) [ "$#" -ge 2 ] || _q_die err_missing_arg 2
+        case "$2" in
+          none|kaomoji|emoji) : ;;
+          *) _q_die err_flair_unknown 2 "$2" ;;
+        esac
+        _q_flair_req=$2; shift 2 ;;
       -*) _q_die err_unknown_flag 2 "$1" ;;
       *) _q_die err_missing_arg 2 ;;
     esac
@@ -2573,6 +2606,10 @@ _q_cmd_init() {
   # needs a way to reach init without a live question.
   if [ -n "$_q_tone_req" ] && ! grep -q '^tone=' "$_q_v/$_q_SD/config"; then
     printf 'tone=%s\n' "$_q_tone_req" >> "$_q_v/$_q_SD/config"
+    _q_changed=1
+  fi
+  if [ -n "$_q_flair_req" ] && ! grep -q '^flair=' "$_q_v/$_q_SD/config"; then
+    printf 'flair=%s\n' "$_q_flair_req" >> "$_q_v/$_q_SD/config"
     _q_changed=1
   fi
 
@@ -3411,6 +3448,7 @@ _q_cmd_install() {
   _q_i_purpose_set=0
   _q_i_tone=
   _q_i_tone_set=0
+  _q_i_flair=
   _q_i_layout=
 
   # Parse everything before asking questions or touching either destination.
@@ -3464,6 +3502,15 @@ _q_cmd_install() {
         esac
         _q_i_tone=$2
         _q_i_tone_set=1
+        shift 2
+        ;;
+      --flair)
+        [ "$#" -ge 2 ] || _q_die err_missing_arg 2
+        case "$2" in
+          none|kaomoji|emoji) : ;;
+          *) _q_die err_flair_unknown 2 "$2" ;;
+        esac
+        _q_i_flair=$2
         shift 2
         ;;
       -*) _q_die err_unknown_flag 2 "$1" ;;
@@ -3828,6 +3875,7 @@ _q_cmd_install() {
   [ "$_q_i_companion_set" -eq 0 ] || set -- "$@" --companion "$_q_i_companion"
   [ "$_q_i_purpose_set" -eq 0 ] || set -- "$@" --purpose "$_q_i_purpose"
   [ "$_q_i_tone_set" -eq 0 ] || set -- "$@" --tone "$_q_i_tone"
+  [ -z "$_q_i_flair" ] || set -- "$@" --flair "$_q_i_flair"
 
   QUIPU_INTERNAL_INSTALL_QUIET=1 QUIPU_VAULT="$_q_i_target" _q_cmd_init "$@"
 
@@ -4680,6 +4728,13 @@ _q_ctx_text() {
 $_q_tres_body
 
 $(_q_msg ctx_tone_priority)
+"
+  fi
+  # Flair (kaomoji/emoji) rides the fixed part right after the tone block.
+  _q_flair_resolve "$_q_v"
+  if [ -n "$_q_fl_body" ]; then
+    _q_tone="$_q_tone$(_q_msg ctx_flair)
+$_q_fl_body
 "
   fi
 
@@ -6981,6 +7036,52 @@ _q_cmd_tone() {
   esac
 }
 
+_q_cmd_flair() {
+  # knotlog flair [--list | none|kaomoji|emoji] -- show/set the reply flair
+  # (flair= in config). Mirrors `knotlog tone`; never touches companion.md.
+  _q_v=$(_q_vault)
+  [ -n "$_q_v" ] || _q_die err_no_vault
+  _q_flair_resolve "$_q_v"
+  case "$#" in
+    0)
+      if [ -n "$_q_fl_raw" ] && [ "$_q_fl_val" = none ] && [ "$_q_fl_raw" != none ]; then
+        # shellcheck disable=SC2059
+        printf "$(_q_msg flair_current_invalid)\n" "$_q_fl_raw"
+      else
+        # shellcheck disable=SC2059
+        printf "$(_q_msg flair_current)\n" "$_q_fl_val"
+      fi
+      ;;
+    1)
+      case "$1" in
+        --list)
+          _q_msg flair_list_header
+          for _q_fl_s in none kaomoji emoji; do
+            _q_fl_mark=
+            [ "$_q_fl_s" != "$_q_fl_val" ] || _q_fl_mark=$(_q_msg flair_list_marker)
+            # shellcheck disable=SC2059
+            printf "$(_q_msg flair_list_row)\n" "$_q_fl_mark" "$_q_fl_s" "$(_q_msg "flair_desc_$_q_fl_s")"
+          done
+          ;;
+        -*) _q_die err_unknown_flag 2 "$1" ;;
+        none|kaomoji|emoji)
+          mkdir -p "$_q_v/$_q_SD"
+          [ -f "$_q_v/$_q_SD/config" ] || : > "$_q_v/$_q_SD/config"
+          if grep -q '^flair=' "$_q_v/$_q_SD/config"; then
+            sed "s/^flair=.*/flair=$1/" "$_q_v/$_q_SD/config" > "$_q_v/$_q_SD/config.tmp" && mv "$_q_v/$_q_SD/config.tmp" "$_q_v/$_q_SD/config"
+          else
+            printf 'flair=%s\n' "$1" >> "$_q_v/$_q_SD/config"
+          fi
+          # shellcheck disable=SC2059
+          printf "$(_q_msg flair_set)\n" "$1"
+          ;;
+        *) _q_die err_flair_unknown 2 "$1" ;;
+      esac
+      ;;
+    *) _q_die err_flair_extra_arg 2 "$2" ;;
+  esac
+}
+
 # ---- setup: one agent's hook file into the vault ---------------------------
 # knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode> [--dry-run]. Writes the shipped adapter
 # only where the target is absent. An identical file is left alone; a
@@ -7301,6 +7402,7 @@ case "$_q_cmd" in
   links) shift; _q_cmd_links "$@" ;;
   plan) shift; _q_cmd_plan "$@" ;;
   tone) shift; _q_cmd_tone "$@" ;;
+  flair) shift; _q_cmd_flair "$@" ;;
   archive) shift; _q_cmd_archive "$@" ;;
   compact) shift; _q_cmd_compact "$@" ;;
   tui) shift; _q_cmd_tui "$@" ;;

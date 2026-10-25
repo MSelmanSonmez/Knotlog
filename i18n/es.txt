@@ -510,3 +510,19 @@ tui_pager_hint=Espacio siguiente  b atrás  q lista
 tui_empty=aún no hay notas de sesión
 tui_search_prompt=buscar: 
 tui_search_none=sin resultados
+# flair (reply decoration, independent of tone)
+usage_flair=  flair     muestra o fija el adorno de las respuestas (--list para verlos; none|kaomoji|emoji escribe flair= en la configuración; init/install aceptan --flair <valor>)
+ctx_flair=adorno
+flair_current=adorno activo: %s
+flair_current_invalid=flair=%s no es válido — se usa none
+flair_set=adorno fijado en %s (se escribe en .knotlog/config)
+flair_list_header=Adornos:
+flair_list_row=  %s%-8s %s
+flair_list_marker=* 
+flair_desc_none=sin adorno
+flair_desc_kaomoji=kaomoji de texto, 2-4 por respuesta
+flair_desc_emoji=emoji gráfico, 1-3 por respuesta
+err_flair_unknown=adorno desconocido: %s (válidos: none kaomoji emoji)
+err_flair_extra_arg=argumento extra inesperado de flair: %s
+doc_flair=adorno
+doc_flair_invalid=flair=%s no es none, kaomoji ni emoji — se usa none (ejecuta: knotlog flair --list)

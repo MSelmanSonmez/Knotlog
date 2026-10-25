@@ -510,3 +510,19 @@ tui_pager_hint=Space 下一页  b 上一页  q 返回列表
 tui_empty=还没有会话笔记
 tui_search_prompt=搜索：
 tui_search_none=无结果
+# flair (reply decoration, independent of tone)
+usage_flair=  flair     显示/设置回复装饰（--list 浏览；none|kaomoji|emoji 会把 flair= 写入配置；init/install 接受 --flair <值>）
+ctx_flair=装饰
+flair_current=当前装饰：%s
+flair_current_invalid=flair=%s 无效 — 改用 none
+flair_set=装饰已设为 %s（写入 .knotlog/config）
+flair_list_header=装饰：
+flair_list_row=  %s%-8s %s
+flair_list_marker=* 
+flair_desc_none=无装饰
+flair_desc_kaomoji=文字颜文字 (kaomoji)，每条回复 2-4 个
+flair_desc_emoji=图形表情 (emoji)，每条回复 1-3 个
+err_flair_unknown=未知装饰：%s（有效：none kaomoji emoji）
+err_flair_extra_arg=flair 多余的参数：%s
+doc_flair=装饰
+doc_flair_invalid=flair=%s 不是 none、kaomoji 或 emoji，改用 none（请运行：knotlog flair --list）
