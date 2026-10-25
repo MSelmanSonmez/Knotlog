@@ -3,6 +3,12 @@
 All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.1] - unreleased
+
+### Fixed
+- `install` no longer dead-ends on a `knotlog` symlink that already sits on PATH (for example one pointing at a developer checkout): an interactive install shows where it points and asks (default no); `--force` replaces the link without asking, and a non-interactive refusal now names `--force` and `--no-link`. The link's target is never touched, and a regular file or directory is never replaced. `install.ps1` gets the same rule for its shims (`-Force`).
+- Install errors no longer print glued to the "Installing..." progress dots.
+
 ## [1.1.0] - 2026-10-25
 
 ### Added
