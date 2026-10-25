@@ -123,6 +123,11 @@ main() {
 
   printf 'knotlog-install: verified and unpacked into %s\n' "$_dest"
   printf 'knotlog-install: handing over to knotlog install\n'
+  # `curl ... | sh` feeds this script through stdin, so the wizard would see no
+  # terminal and refuse to ask for a name; hand it the terminal when one exists.
+  if [ ! -t 0 ] && (: </dev/tty) 2>/dev/null; then
+    exec "$_dest/knotlog" install "$@" </dev/tty
+  fi
   exec "$_dest/knotlog" install "$@"
 }
 

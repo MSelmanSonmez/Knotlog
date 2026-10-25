@@ -12213,6 +12213,15 @@ hc_ev vhc8 2 m; hc_rem vhc8 '{"agent_action_name":"post_cascade_response","traje
 t; assert_eq "T-995: a Devin slug id stays whole in the card and a second response updates the same card" '1 yes' \
   "$(hc_cards vhc8) $(grep -q '^## [0-9-]* [0-9:]* · devin · flax-drip$' "$TMP/vhc8/Last-Session.md" && printf yes || printf no)"
 
+
+# ---- install.sh: `curl | sh` gives the wizard the terminal (T-996) ---------
+# Live report (2026-10-25): the README one-liner stopped at "install needs a user
+# name" because the script itself arrives on stdin. The handover must reopen
+# /dev/tty when stdin is not a terminal and one exists (a pty proves it by hand;
+# CI has no terminal, so this pins the guard and the redirect).
+t; assert_eq "T-996: install.sh hands knotlog install the terminal when stdin is a pipe" 'yes yes' \
+  "$(grep -qF 'if [ ! -t 0 ] && (: </dev/tty) 2>/dev/null; then' "$ROOT/install.sh" && printf yes || printf no) $(grep -qF 'exec "$_dest/knotlog" install "$@" </dev/tty' "$ROOT/install.sh" && printf yes || printf no)"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
