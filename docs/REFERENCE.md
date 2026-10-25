@@ -19,12 +19,13 @@ git clone https://github.com/MSelmanSonmez/Knotlog.git && cd Knotlog
 ./knotlog install
 ```
 
-On a real interactive terminal, setup advances one clear screen at a time through this localized four-step flow:
+On a real interactive terminal, setup advances one clear screen at a time through this localized five-step flow:
 
 1. **Language** — the first interaction is the `Language / Dil (<codes>):` question, listing every shipped language (`en/tr/es/pt-br/ja/zh-cn`); Enter selects English, and the answer is folded like `--lang` (`PT_BR` means `pt-br`).
 2. **Vault location** — choose the parent directory, with your home directory shown as the default. Enter accepts it. Literal `~` and `~/…` expand to your home directory; relative input is resolved from the directory where `install` started.
 3. **Identity** — provide the required user name, then optionally a companion name and vault purpose; Enter skips either optional answer.
-4. **Install** — Knotlog creates or reuses the vault, wires the integrations, and prints a compact status summary plus one `knotlog doctor` next action.
+4. **Style** — three short menus: tone preset (`varsayilan` by default), flair (`none` by default) and folder names (emoji or plain). Enter on each keeps today's defaults. Each menu is skipped when its flag is given (`--tone`, `--flair`, `--plain`); the page disappears (and the counter shrinks) when all three are, and in `--no-prompt` runs.
+5. **Install** — Knotlog creates or reuses the vault, wires the integrations, and prints a compact status summary plus one `knotlog doctor` next action.
 
 Supplying a positional parent path skips the location question. `--lang`, `--user`, `--companion`, and `--purpose` likewise skip their corresponding questions. For automation and other non-interactive use, pass the required values explicitly:
 

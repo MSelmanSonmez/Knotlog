@@ -14,6 +14,7 @@ curl -fsSL https://raw.githubusercontent.com/MSelmanSonmez/Knotlog/main/install.
 
 It fetches a verified release and hands over to `knotlog install`; the
 [README](../README.md) also covers checkout-based installs and Windows.
+The setup wizard has a Style step (tone, flair, folder names) you can change later with `knotlog tone` and `knotlog flair`.
 
 ## 1. What Knotlog does for you
 

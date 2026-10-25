@@ -14,6 +14,7 @@ curl -fsSL https://raw.githubusercontent.com/MSelmanSonmez/Knotlog/main/install.
 
 Betik doğrulanmış sürümü indirir ve `knotlog install`'a devreder; klonlayarak
 kurulumu ve Windows yolunu [README](../README.md) anlatıyor.
+Kurulum sihirbazında Üslup adımı (ton, süs, klasör adları) var; sonradan `knotlog tone` ve `knotlog flair` ile değişir.
 
 ## 1. Knotlog senin için ne yapıyor
 
