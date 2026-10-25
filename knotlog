@@ -3528,6 +3528,7 @@ _q_cmd_install() {
       printf "$(_q_msg install_ask_lang) " "$(_q_langs | paste -sd/ -)"
       IFS= read -r _q_i_ans || _q_i_ans=
       [ -n "$_q_i_ans" ] || _q_i_ans=en
+      _q_i_ans=$(QUIPU_LANG=$_q_i_ans _q_lang)
       _q_lang_has "$_q_i_ans" || _q_die err_install_lang_invalid 2 "$_q_i_ans" "$(_q_langs | paste -sd/ -)"
       _q_i_lang=$_q_i_ans
       _q_i_layout=$_q_i_lang

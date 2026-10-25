@@ -4361,6 +4361,21 @@ else
   assert_install_rc "install: interactive tr answer exits 2 clearly" '2' "$IRC" "$TMP/install-ask-tr.err"
 fi
 
+# The prompt folds case and the locale underscore like --lang does.
+IASK_PT_PARENT="$TMP/install-ask-pt-parent"
+IASK_PT_BIN="$TMP/install-ask-pt-bin"
+mkdir -p "$IASK_PT_PARENT" "$IASK_PT_BIN"
+t; printf 'PT_BR\nAda\n\n\n' | PATH="$IASK_PT_BIN:$INSTALL_TOOLS" \
+  QUIPU_FORCE_TTY=1 sh "$ROOT/knotlog" install "$IASK_PT_PARENT" \
+  >"$TMP/install-ask-pt.out" 2>"$TMP/install-ask-pt.err"; IRC=$?
+if [ "$TRUE_SYMLINKS" -eq 1 ]; then
+  assert_install_rc "install: interactive PT_BR answer exits 0" '0' "$IRC" "$TMP/install-ask-pt.err"
+  t; assert_eq "install: interactive PT_BR answer stores lang=pt-br" 'yes' \
+    "$(grep -rq '^lang=pt-br$' "$IASK_PT_PARENT"/*/.knotlog/config && printf yes || printf no)"
+else
+  assert_install_rc "install: interactive PT_BR answer exits 2 clearly" '2' "$IRC" "$TMP/install-ask-pt.err"
+fi
+
 # Garbage at the language prompt fails clearly before anything is created.
 IBAD_PARENT="$TMP/install-ask-bad-parent"
 IBAD_BIN="$TMP/install-ask-bad-bin"
