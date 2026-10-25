@@ -79,7 +79,7 @@ git clone https://github.com/MSelmanSonmez/Knotlog.git && cd Knotlog
 
 安装程序会问四件事——语言、保险库位置、你的名字，以及可选的伙伴（companion）名称和保险库用途——然后创建保险库，为 Claude Code 和 omp 接好线，并以唯一的下一步结束：打开保险库文件夹，运行 `knotlog doctor`。新用户只需要做这些。
 
-接着阅读用户指南——[docs/GUIDE.md](docs/GUIDE.md)（[Türkçe](docs/GUIDE.tr.md)）——了解日常使用流程和需要手动输入的命令。还不确定它是否适合你？[docs/WHY.md](docs/WHY.md)（[Türkçe](docs/WHY.tr.md)）一篇文章讲清楚。
+接着阅读用户指南——[docs/GUIDE.zh-CN.md](docs/GUIDE.zh-CN.md)（[English](docs/GUIDE.md) · [Türkçe](docs/GUIDE.tr.md)）——了解日常使用流程和需要手动输入的命令。还不确定它是否适合你？[docs/WHY.zh-CN.md](docs/WHY.zh-CN.md)（[English](docs/WHY.md) · [Türkçe](docs/WHY.tr.md)）一篇文章讲清楚。
 
 ## 工作原理
 
@@ -216,8 +216,8 @@ Claude Code：其适配器已在真实会话中验证，`install` 会替你接�
 
 ## 文档
 
-- [用户指南](docs/GUIDE.md)（[Türkçe](docs/GUIDE.tr.md)）——日常流程、各文件夹、需要手动输入的命令。
-- [为什么选择 Knotlog](docs/WHY.md)（[Türkçe](docs/WHY.tr.md)）——一篇文章讲清楚理由。
+- [用户指南](docs/GUIDE.zh-CN.md)（[English](docs/GUIDE.md) · [Türkçe](docs/GUIDE.tr.md)）——日常流程、各文件夹、需要手动输入的命令。
+- [为什么选择 Knotlog](docs/WHY.zh-CN.md)（[English](docs/WHY.md) · [Türkçe](docs/WHY.tr.md)）——一篇文章讲清楚理由。
 - [参考手册](docs/REFERENCE.md)——安装内部机制、所有命令、各适配器、保险库布局、搜索、更新与回滚。
 - [使用手册](docs/USAGE.md)——写给编码智能体照做的分步设置说明；由测试锁定，因此不会与真实命令偏离。
 
