@@ -459,6 +459,13 @@ it; `doctor` reports where the value it's using came from (env/config/
 default), and warns if a config `ctx_max=` isn't a positive integer
 (ignored, not fatal).
 
+**Choosing a language.** Knotlog speaks English, Türkçe, Español, Português
+(Brasil), 日本語 and 简体中文. Pick one in the install wizard, with
+`--lang <code>` (`en`, `tr`, `es`, `pt-br`, `ja`, `zh-cn`), or by setting
+`lang=` in `.knotlog/config`; anything missing in your language falls back to
+English. The non-English/Turkish translations are machine-assisted, and
+corrections are welcome.
+
 `tone` picks one of nine shipped tone presets (`knotlog tone --list` shows
 name + description, `knotlog tone <slug>` sets it) — it wins over
 companion.md's own `## Tone`/`## Üslup` section in the context Knotlog injects
@@ -504,7 +511,7 @@ anyway: `git commit --no-verify` skips all hooks, and
 commit.
 
 `knotlog help` lists every command; `knotlog help --tr` prints the same list in
-Turkish.
+Turkish (the other shipped languages work the same way: `--es`, `--pt-br`, `--ja`, `--zh-cn`).
 
 ## 10. Leaving
 

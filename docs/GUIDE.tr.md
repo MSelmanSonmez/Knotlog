@@ -469,6 +469,12 @@ elle eklersin; `doctor` kullandığı değerin nereden geldiğini (ortam/config/
 varsayılan) raporlar ve config'teki `ctx_max=` pozitif bir tamsayı değilse
 uyarır (yok sayılır, hataya düşmez).
 
+**Dil seçimi.** Knotlog English, Türkçe, Español, Português (Brasil), 日本語 ve
+简体中文 konuşur. Dili kurulum sihirbazında, `--lang <kod>` ile (`en`, `tr`, `es`,
+`pt-br`, `ja`, `zh-cn`) ya da `.knotlog/config` içindeki `lang=` ile seç; seçtiğin
+dilde eksik olan şey İngilizceye düşer. İngilizce ve Türkçe dışındaki çeviriler
+makine destekli, düzeltmelere açığız.
+
 `tone`, dokuz hazır üslup setinden birini seçer (`knotlog tone --list` ad +
 tarif gösterir, `knotlog tone <slug>` ayarlar) — kasanın dili için o preset
 gerçekten varsa, `knotlog context`'e enjekte edilen üslup bloğunda
@@ -516,7 +522,7 @@ commit etmek için: `git commit --no-verify` bütün hook'ları atlar;
 için atlar.
 
 `knotlog help` bütün komutları listeler; `knotlog help --tr` aynı listeyi Türkçe
-basar.
+basar (gönderilen diğer diller de aynı şekilde: `--es`, `--pt-br`, `--ja`, `--zh-cn`).
 
 ## 10. Amnezi testi
 
