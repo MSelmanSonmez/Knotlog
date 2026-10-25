@@ -4122,7 +4122,7 @@ t; assert_eq "install: prompted user is installed or rejected before mutation" '
 # terminal: pages must remain linear and contain no ANSI control bytes.
 IASK_OUT=$(cat "$TMP/install-ask.out")
 case "$IASK_OUT" in
-  *'[1/4]'*'[2/4]'*'[3/4]'*'[4/4]'*) IASK_PAGES=yes ;;
+  *'[1/5]'*'[2/5]'*'[3/5]'*'[4/5]'*'[5/5]'*) IASK_PAGES=yes ;;
   *) IASK_PAGES=no ;;
 esac
 t; assert_eq "install: forced-tty transcript keeps the four page headers in order" \
@@ -4469,13 +4469,13 @@ t; assert_eq "install: missing Claude adapter leaves vault and command absent" '
 if [ "$TRUE_SYMLINKS" -eq 1 ]; then
   # Full guided answer order: language, location, user, companion. The
   # purpose question is gone from the interactive flow, so the trailing
-  # "Kalici hafiza" line is fed deliberately and must remain unconsumed --
+  # "Kalici hafiza" line (after the three Style Enters) is fed deliberately and must remain unconsumed --
   # nothing may write purpose= without an explicit --purpose flag.
   # Blank location must choose this test-scoped HOME, never the checkout PWD.
   IGUIDED_HOME="$TMP/install-guided-home"
   IGUIDED_BIN="$TMP/install-guided-bin"
   mkdir -p "$IGUIDED_HOME" "$IGUIDED_BIN"
-  t; printf 'tr\n\nAda\nSumi\nKalici hafiza\n' | \
+  t; printf 'tr\n\nAda\nSumi\n\n\n\nKalici hafiza\n' | \
     HOME="$IGUIDED_HOME" PATH="$IGUIDED_BIN:$INSTALL_TOOLS" QUIPU_FORCE_TTY=1 \
     sh "$ROOT/knotlog" install >"$TMP/install-guided.out" \
     2>"$TMP/install-guided.err"; IRC=$?
@@ -4492,7 +4492,7 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
        && printf yes || printf no)"
   IGUIDED_OUT=$(cat "$TMP/install-guided.out")
   case "$IGUIDED_OUT" in
-    *'[1/4]'*'[2/4]'*'[3/4]'*'[4/4]'*) IGUIDED_STEPS=yes ;;
+    *'[1/5]'*'[2/5]'*'[3/5]'*'[4/5]'*'[5/5]'*) IGUIDED_STEPS=yes ;;
     *) IGUIDED_STEPS=no ;;
   esac
   t; assert_eq "install: transcript orders language, location, identity, install" \
@@ -5643,7 +5643,7 @@ assert_eq "T-319: --lang skips the language question (no ask/menu text emitted)"
 # who interrupts the wizard (or whose terminal hangs up) is left with a
 # broken, echo-less shell. Source check only: this suite has no portable
 # pseudo-TTY across its three CI shells.
-IMENU_SOURCE=$(sed -n '/^_q_install_menu_lang()/,/^}/p' "$ROOT/knotlog")
+IMENU_SOURCE=$(sed -n '/^_q_install_menu_pick()/,/^}/p;/^_q_install_menu_lang()/,/^}/p' "$ROOT/knotlog")
 t; assert_eq "T-320: the language menu traps EXIT/HUP/INT/TERM to restore stty" 'yes' \
   "$(printf '%s\n' "$IMENU_SOURCE" | grep -Fq "trap 'stty \"\$_q_menu_saved\"" \
      && printf '%s\n' "$IMENU_SOURCE" | grep -Fq 'EXIT' \
@@ -5772,7 +5772,7 @@ t; assert_eq "T-322c: install.ps1 stays fully CRLF (no bare LF) after the BOM wa
 
 # T-323: a plain POSIX install (Linux/macOS, no install.ps1 in the picture)
 # is unaffected by the Windows single-wizard work -- it must still show all
-# 4 wizard pages, [1/4] Language included, each one drawn as an ASCII box
+# 5 wizard pages, [1/5] Language included, each one drawn as an ASCII box
 # (border lines present, not the old un-boxed plain text).
 IT323_PARENT="$TMP/install-t323-parent"
 IT323_BIN="$TMP/install-t323-bin"
@@ -5780,19 +5780,20 @@ mkdir -p "$IT323_PARENT" "$IT323_BIN"
 printf 'en\nT323User\n\n\n' | PATH="$IT323_BIN:$INSTALL_TOOLS" QUIPU_LANG=en QUIPU_FORCE_TTY=1 \
   sh "$ROOT/knotlog" install "$IT323_PARENT" \
   >"$TMP/install-t323.out" 2>"$TMP/install-t323.err"
-t; assert_eq "T-323: pure-bash install still shows [1/4]..[4/4], each page boxed" 'yes' \
-  "$(grep -qF '[1/4] Language' "$TMP/install-t323.out" \
-     && grep -qF '[2/4] Vault location' "$TMP/install-t323.out" \
-     && grep -qF '[3/4] Identity' "$TMP/install-t323.out" \
-     && grep -qF '[4/4] Install' "$TMP/install-t323.out" \
+t; assert_eq "T-323: pure-bash install still shows [1/5]..[5/5], each page boxed" 'yes' \
+  "$(grep -qF '[1/5] Language' "$TMP/install-t323.out" \
+     && grep -qF '[2/5] Vault location' "$TMP/install-t323.out" \
+     && grep -qF '[3/5] Identity' "$TMP/install-t323.out" \
+     && grep -qF '[4/5] Style' "$TMP/install-t323.out" \
+     && grep -qF '[5/5] Install' "$TMP/install-t323.out" \
      && [ "$(grep -o '+-*+' "$TMP/install-t323.out" | wc -l | tr -d ' ')" -ge 8 ] \
      && printf yes || printf no)"
 
 # T-324: KNOTLOG_INSTALL_HANDOFF (set only by install.ps1, never a documented
 # public flag) must make quipu's own wizard skip the language page it would
 # otherwise show for a --lang-preset language, and renumber every page
-# after it so the total is exactly how many pages are actually left (3:
-# location, identity, install) -- never a stale [x/4] left over from the
+# after it so the total is exactly how many pages are actually left (4:
+# location, identity, style, install) -- never a stale [x/4] left over from the
 # page that was skipped, and never an invented count.
 IT324_PARENT="$TMP/install-t324-parent"
 IT324_BIN="$TMP/install-t324-bin"
@@ -5803,10 +5804,11 @@ printf 'T324User\n\n\n' | PATH="$IT324_BIN:$INSTALL_TOOLS" QUIPU_LANG=en QUIPU_F
 IT324_OUT=$(cat "$TMP/install-t324.out")
 t; assert_eq "T-324: KNOTLOG_INSTALL_HANDOFF skips the language page and renumbers honestly" 'yes' \
   "$(! printf '%s\n' "$IT324_OUT" | grep -qF '] Language' \
-     && printf '%s\n' "$IT324_OUT" | grep -qF '[1/3] Vault location' \
-     && printf '%s\n' "$IT324_OUT" | grep -qF '[2/3] Identity' \
-     && printf '%s\n' "$IT324_OUT" | grep -qF '[3/3] Install' \
-     && ! printf '%s\n' "$IT324_OUT" | grep -qF '/4]' \
+     && printf '%s\n' "$IT324_OUT" | grep -qF '[1/4] Vault location' \
+     && printf '%s\n' "$IT324_OUT" | grep -qF '[2/4] Identity' \
+     && printf '%s\n' "$IT324_OUT" | grep -qF '[3/4] Style' \
+     && printf '%s\n' "$IT324_OUT" | grep -qF '[4/4] Install' \
+     && ! printf '%s\n' "$IT324_OUT" | grep -qF '/5]' \
      && printf yes || printf no)"
 
 # The pre-rename QUIPU_INSTALL_HANDOFF is still honoured.
@@ -5817,7 +5819,7 @@ printf 'T324User\n\n\n' | PATH="$IT324_BIN:$INSTALL_TOOLS" QUIPU_LANG=en QUIPU_F
   >"$TMP/install-t324b.out" 2>"$TMP/install-t324b.err"
 t; assert_eq "T-324b: the old QUIPU_INSTALL_HANDOFF still skips the language page" 'yes' \
   "$(! grep -qF '] Language' "$TMP/install-t324b.out" \
-     && grep -qF '[1/3] Vault location' "$TMP/install-t324b.out" && printf yes || printf no)"
+     && grep -qF '[1/4] Vault location' "$TMP/install-t324b.out" && printf yes || printf no)"
 
 # T-325: box alignment must hold with multibyte UTF-8 content, not just
 # ASCII -- feed a companion name with Turkish characters (ş, ğ) through the
@@ -6040,9 +6042,9 @@ printf 'en\nT332User\n\n\n' | PATH="$IT332_DIR:$INSTALL_TOOLS" QUIPU_LANG=en QUI
 IT332_RC=$?
 t; assert_eq "T-332: stty=0 + broken tput does not crash install, falls back to 80 cols" 'yes' \
   "$([ "$IT332_RC" -eq 0 ] \
-     && grep -qF '[1/4] Language' "$TMP/install-t332.out" \
-     && grep -qF '[2/4] Vault location' "$TMP/install-t332.out" \
-     && grep -qF '[4/4] Install' "$TMP/install-t332.out" \
+     && grep -qF '[1/5] Language' "$TMP/install-t332.out" \
+     && grep -qF '[2/5] Vault location' "$TMP/install-t332.out" \
+     && grep -qF '[5/5] Install' "$TMP/install-t332.out" \
      && printf yes || printf no)"
 
 # T-333: stty reports "0 0", tput reports a real "80" -- the exact
@@ -6064,9 +6066,9 @@ printf 'en\nT333User\n\n\n' | PATH="$IT333_DIR:$INSTALL_TOOLS" QUIPU_LANG=en QUI
   sh "$ROOT/knotlog" install "$IT333_PARENT" \
   >"$TMP/install-t333.out" 2>"$TMP/install-t333.err"
 t; assert_eq "T-333: stty=0 falls through to a valid tput cols, pages stay intact" 'yes' \
-  "$(grep -qF '[1/4] Language' "$TMP/install-t333.out" \
-     && grep -qF '[3/4] Identity' "$TMP/install-t333.out" \
-     && grep -qF '[4/4] Install' "$TMP/install-t333.out" \
+  "$(grep -qF '[1/5] Language' "$TMP/install-t333.out" \
+     && grep -qF '[3/5] Identity' "$TMP/install-t333.out" \
+     && grep -qF '[5/5] Install' "$TMP/install-t333.out" \
      && printf yes || printf no)"
 
 # T-334: a genuinely narrow but POSITIVE terminal (10 columns -- a real,
@@ -6100,8 +6102,8 @@ done < "$TMP/install-t334.borders"
 # floor, not the narrowest.
 t; assert_eq "T-334: a 10-column terminal still floors the box at 40, titles unclipped" 'yes' \
   "$([ "$IT334_MAXBORDER" -eq 40 ] \
-     && grep -qF '[3/4] Identity' "$TMP/install-t334.out" \
-     && grep -qF '[4/4] Install' "$TMP/install-t334.out" \
+     && grep -qF '[3/5] Identity' "$TMP/install-t334.out" \
+     && grep -qF '[5/5] Install' "$TMP/install-t334.out" \
      && grep -qF '| ...' "$TMP/install-t334.out" \
      && printf yes || printf no)"
 
@@ -12433,6 +12435,42 @@ t; assert_eq "T-1037: tone=kaomoji still works and adds no flair section" 'yes y
 
 t; assert_eq "T-1038: doctor lists every shipped flair file as ok" "$(find "$ROOT/flair" -name '*.md' -type f | wc -l | tr -d ' ')" \
   "$(QUIPU_VAULT="$TMP/vfl0" sh "$ROOT/knotlog" doctor 2>&1 | awk -F"$TAB" -v s="$(men doc_ok)" 'index($2,"flair/")==1 && $1==s{n++} END{print n+0}')"
+# ---- install wizard: Style step (T-1040..T-1046) ----
+# st_inst NAME ANSWERS [install args...] -- plain-text wizard over a pipe;
+# output in $TMP/stN.out, vault in $TMP/stN/Ada's Knotlog.
+st_inst() {
+  _st_n=$1; _st_a=$2; shift 2
+  mkdir -p "$TMP/$_st_n" "$TMP/$_st_n-bin"
+  printf "$_st_a" | HOME="$TMP/$_st_n-bin" PATH="$TMP/$_st_n-bin:$INSTALL_TOOLS" QUIPU_LANG=en QUIPU_FORCE_TTY=1 \
+    sh "$ROOT/knotlog" install --no-link "$TMP/$_st_n" "$@" >"$TMP/$_st_n.out" 2>"$TMP/$_st_n.err"
+  ST_RC=$?
+}
+ST_V() { printf '%s' "$TMP/$1/Ada's Knotlog"; }
+st_inst st1 'en\nAda\n\n3\n3\n2\n'
+t; assert_eq "T-1040: choosing tone 3 + flair 3 + plain folders writes tone=, flair= and the plain folders" 'dostane emoji plain yes' \
+  "$(for _k in tone flair layout; do sed -n "s/^$_k=//p" "$(ST_V st1)/.knotlog/config"; done | tr '\n' ' ')$([ -d "$(ST_V st1)/000-Inbox" ] && printf yes)"
+st_inst st2 'en\nAda\n\n\n\n\n'
+mkdir -p "$TMP/st3b"; HOME="$TMP/st3b" PATH="$TMP/st3b:$INSTALL_TOOLS" sh "$ROOT/knotlog" install --no-link --no-prompt --lang en --user Ada "$TMP/st3b" >"$TMP/st3b.out" 2>&1
+t; assert_eq "T-1041: Enter on all three questions gives the flagless non-interactive result" 'yes yes' \
+  "$([ "$(grep -v '^$' "$(ST_V st2)/.knotlog/config" | grep -v '^created')" = "$(grep -v '^$' "$(ST_V st3b)/.knotlog/config" | grep -v '^created')" ] && printf yes) $([ "$(cd "$(ST_V st2)" && find . -not -path './.git/*' | sort)" = "$(cd "$(ST_V st3b)" && find . -not -path './.git/*' | sort)" ] && printf yes)"
+st_inst st4 'en\nAda\n\n\n\n' --tone ogretici
+st_inst st5 'en\nAda\n\n\n\n' --flair kaomoji
+st_inst st6 'en\nAda\n\n\n\n' --plain
+st_inst st7 'en\nAda\n\n' --tone ogretici --flair emoji --plain
+t; assert_eq "T-1042: each of --tone, --flair, --plain skips only its own menu; all three skip the step" 'no yes yes, yes no yes, yes yes no, nostep' \
+  "$(_q() { grep -qF "$2" "$TMP/$1.out" && printf yes || printf no; }
+     printf '%s %s %s, %s %s %s, %s %s %s, ' "$(_q st4 'Choose 1-9')" "$(_q st4 'Choose 1-3')" "$(_q st4 'Choose 1-2')" "$(_q st5 'Choose 1-9')" "$(_q st5 'Choose 1-3')" "$(_q st5 'Choose 1-2')" "$(_q st6 'Choose 1-9')" "$(_q st6 'Choose 1-3')" "$(_q st6 'Choose 1-2')"
+     grep -qF 'Style' "$TMP/st7.out" && printf step || printf nostep)"
+t; assert_eq "T-1043: flag-given values still land in config, and skipping the whole step renumbers to [4/4]" 'ogretici emoji plain yes' \
+  "$(for _k in tone flair layout; do sed -n "s/^$_k=//p" "$(ST_V st7)/.knotlog/config"; done | tr '\n' ' ')$(grep -qF '[4/4] Install' "$TMP/st7.out" && printf yes)"
+t; assert_eq "T-1044: --no-prompt prints no Style step and writes no tone=/flair=" 'yes yes' \
+  "$(! grep -qF 'Style' "$TMP/st3b.out" && printf yes) $(! grep -qE '^(tone|flair)=' "$(ST_V st3b)/.knotlog/config" && printf yes)"
+t; assert_eq "T-1045: the step counter shows five steps and the review box lists the three choices" 'yes yes' \
+  "$(grep -qF '[4/5] Style' "$TMP/st1.out" && grep -qF '[5/5] Install' "$TMP/st1.out" && printf yes) $(grep -qF 'Tone: Friendly' "$TMP/st1.out" && grep -qF 'Flair: emoji' "$TMP/st1.out" && grep -qF 'Folders: Plain' "$TMP/st1.out" && printf yes)"
+st_inst st8 'en\nAda\n\n99\n'
+t; assert_eq "T-1046: an out-of-range Style answer exits 2" '2' "$ST_RC"
+t; assert_eq "T-1047: every language has the Style keys" '' \
+  "$(for _f in "$ROOT"/i18n/*.txt; do for _k in install_step_style install_ask_pick install_style_tone install_style_flair install_style_folders install_style_emoji install_style_emoji_ex install_style_plain install_review_tone install_review_flair install_review_folders err_install_style_invalid; do grep -q "^$_k=." "$_f" || printf '%s:%s ' "$_f" "$_k"; done; done)"
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0

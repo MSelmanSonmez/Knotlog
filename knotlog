@@ -3417,6 +3417,7 @@ _q_install_style() {
   # The Style step: tone preset, flair, folder names. Each question is asked
   # only when its flag (--tone, --flair, --plain) was not given; the default
   # answer (first option) leaves the state exactly as a flagless install.
+  # shellcheck disable=SC2059
   _q_st_head=$(printf "$(_q_msg install_step_style)" "$_q_i_n_style" "$_q_i_total_steps")
   if [ "$_q_i_tone_set" -eq 0 ]; then
     _q_st_codes="varsayilan profesyonel dostane icten siradisi etkili sivridilli ogretici kaomoji"
