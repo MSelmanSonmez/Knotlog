@@ -847,7 +847,7 @@ _q_rules_adopted() {
   # seed or the file is missing. Never fails. $1: rules file path.
   _q_ra=0
   [ -f "$1" ] || return 0
-  for _q_ra_l in tr en; do
+  for _q_ra_l in $(_q_langs); do
     if [ -f "$_q_HOME/templates/$_q_ra_l/rules.md" ] &&
        cmp -s "$1" "$_q_HOME/templates/$_q_ra_l/rules.md"; then
       return 0
@@ -916,7 +916,7 @@ _q_facts_adopted() {
   # file path.
   _q_fa=0
   [ -f "$1" ] || return 0
-  for _q_fa_l in tr en; do
+  for _q_fa_l in $(_q_langs); do
     if [ -f "$_q_HOME/templates/$_q_fa_l/facts.md" ] &&
        cmp -s "$1" "$_q_HOME/templates/$_q_fa_l/facts.md"; then
       return 0

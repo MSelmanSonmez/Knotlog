@@ -12267,7 +12267,7 @@ t; assert_eq "T-1008: --layout en --scope full gives the same folders in xx as i
 mkdir -p "$TMP/ixp" "$TMP/ixb"
 t; printf 'xx\nAda\n\n\n' | PATH="$TMP/ixb:$INSTALL_TOOLS" QUIPU_FORCE_TTY=1 sh "$XXH/knotlog" install "$TMP/ixp" >"$TMP/ix.out" 2>&1
 t; assert_eq "T-1009: the install language prompt lists xx and accepts it" 'yes yes' \
-  "$(grep -qF 'Language / Dil (en/tr/xx)' "$TMP/ix.out" && printf yes || printf no) $(cat "$TMP"/ixp/*/.knotlog/config 2>/dev/null | grep -q '^lang=xx$' && printf yes || printf no)"
+  "$(grep -qE 'Language / Dil \(en/([a-z-]+/)*xx[/)]' "$TMP/ix.out" && printf yes || printf no) $(cat "$TMP"/ixp/*/.knotlog/config 2>/dev/null | grep -q '^lang=xx$' && printf yes || printf no)"
 t; assert_eq "T-1010: no hard-coded language or layout-name list is left in knotlog" '0' \
   "$(grep -cE 'emoji\|plain\|tr\|en|menu_codes=.en tr.|i18n/tr\.txt' "$ROOT/knotlog")"
 # Fold profile by language, and locale spellings mapping onto lowercase codes.
@@ -12281,6 +12281,20 @@ mkdir -p "$TMP/lg-loc"
 (cd "$TMP/lg-loc" && env -u LC_ALL -u QUIPU_LANG LANG=pt_BR.UTF-8 QUIPU_VAULT="$TMP/lg-loc" sh "$XXH/knotlog" init --no-prompt </dev/null >/dev/null 2>&1)
 t; assert_eq "T-1012: LANG=pt_BR.UTF-8 and --lang PT-BR both resolve to pt-br (fold latin)" 'latin latin' \
   "$(awk -F= '$1 == "fold" {print $2}' "$TMP/lg-loc/.knotlog/config") $(mkdir -p "$TMP/lg-loc2"; xx_run PT-BR "$TMP/lg-loc2" init --no-prompt --lang PT-BR >/dev/null; awk -F= '$1 == "fold" {print $2}' "$TMP/lg-loc2/.knotlog/config")"
+
+
+# ---- every shipped language: a fresh vault is healthy (T-1013) -------------
+# pt-br's own Rules.md seed was taken for a hand-written file because the
+# "is this the untouched seed" checks only compared tr and en templates, so a
+# clean pt-br vault failed doctor 3 times. Walk the real languages, not a fixture.
+_l13=
+for _l13_f in "$ROOT"/i18n/*.txt; do
+  _l13_c=${_l13_f##*/}; _l13_c=${_l13_c%.txt}
+  mkdir -p "$TMP/l13-$_l13_c"
+  (cd "$TMP/l13-$_l13_c" && env -u LANG -u LC_ALL QUIPU_VAULT="$TMP/l13-$_l13_c" QUIPU_LANG="$_l13_c" sh "$ROOT/knotlog" init --no-prompt </dev/null >/dev/null 2>&1)
+  (cd "$TMP/l13-$_l13_c" && env -u LANG -u LC_ALL QUIPU_VAULT="$TMP/l13-$_l13_c" QUIPU_LANG="$_l13_c" sh "$ROOT/knotlog" doctor </dev/null >"$TMP/l13-$_l13_c.out" 2>&1) || _l13="$_l13 $_l13_c"
+done
+t; assert_eq "T-1013: doctor passes on a fresh vault in every shipped language" '' "$_l13"
 
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
