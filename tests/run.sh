@@ -206,7 +206,7 @@ fi
 # ---- cli skeleton ----
 
 t; VERSION=$(sh "$ROOT/knotlog" --version)
-t; assert_eq "knotlog --version prints knotlog 1.0.0" 'knotlog 1.0.0' "$VERSION"
+t; assert_eq "knotlog --version prints knotlog 1.1.0" 'knotlog 1.1.0' "$VERSION"
 
 mkdir -p "$TMP/empty"
 t; (cd "$TMP/empty" && "$ROOT/knotlog" doctor) >"$TMP/empty.out" 2>&1; RC=$?
@@ -3957,7 +3957,7 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
     "$([ -L "$IBIN/knotlog" ] && [ -f "$IBIN/knotlog" ] \
        && [ -x "$IBIN/knotlog" ] && [ ! -e "$ILATER/knotlog" ] && printf yes || printf no)"
   t; IVERSION=$(PATH="$IBIN:$INSTALL_TOOLS" "$IBIN/knotlog" --version)
-  assert_eq "install: installed symlink executes the real knotlog script" 'knotlog 1.0.0' "$IVERSION"
+  assert_eq "install: installed symlink executes the real knotlog script" 'knotlog 1.1.0' "$IVERSION"
 
   # Existing matching vault/link is idempotent and preserves user-authored text.
   touch -t 200001010101 "$ITARGET/.claude/settings.json"
@@ -6850,14 +6850,14 @@ t; assert_eq "B7 T-378: the default URL is the pinned GitHub release archive" 'y
 t; assert_eq "B7 T-378: README leads Install with the one-line command" 'yes' \
   "$(grep -qF 'curl -fsSL https://raw.githubusercontent.com/MSelmanSonmez/Knotlog/main/install.sh | sh' \
      "$ROOT/README.md" && printf yes || printf no)"
-t; assert_eq "release 1.0.0: update defaults point at MSelmanSonmez/Knotlog" 'yes' \
+t; assert_eq "release 1.1.0: update defaults point at MSelmanSonmez/Knotlog" 'yes' \
   "$(grep -qF 'https://api.github.com/repos/MSelmanSonmez/Knotlog/releases/latest' "$ROOT/knotlog" \
      && grep -qF 'https://github.com/MSelmanSonmez/Knotlog/releases/download/v$_q_up_latest/knotlog-$_q_up_latest.tar.gz' "$ROOT/knotlog" \
-     && grep -qF 'archive/refs/tags/v1.0.0.tar.gz' "$INST" && printf yes || printf no)"
-t; assert_eq "release 1.0.0: no shipped file mentions SelmanBuilds" '' \
+     && grep -qF 'archive/refs/tags/v1.1.0.tar.gz' "$INST" && printf yes || printf no)"
+t; assert_eq "release 1.1.0: no shipped file mentions SelmanBuilds" '' \
   "$(cd "$ROOT" && grep -rIil selmanbuilds . --exclude-dir=.git --exclude-dir=tests \
      --exclude=ORCHESTRATOR_LOG.md --exclude='CHANGELOG*' 2>/dev/null)"
-t; assert_eq "release 1.0.0: the banner is icon/knotlog-banner.png" 'yes' \
+t; assert_eq "release 1.1.0: the banner is icon/knotlog-banner.png" 'yes' \
   "$([ -f "$ROOT/icon/knotlog-banner.png" ] && [ ! -e "$ROOT/icon/quipu-banner.png" ] \
      && grep -qF 'icon/knotlog-banner.png' "$ROOT/README.md" && printf yes || printf no)"
 
@@ -8911,7 +8911,7 @@ t; UPD509=$(QUIPU_LANG=en QUIPU_RELEASE_API_URL="$FIXURL/release-current.json" \
   sh "$ROOT/knotlog" update --check); RC509=$?
 t; assert_eq "T-509: already up to date exits 0" '0' "$RC509"
 t; assert_eq "T-509: up-to-date names the current version" 'yes' \
-  "$(printf '%s\n' "$UPD509" | grep -qF '1.0.0' && printf yes || printf no)"
+  "$(printf '%s\n' "$UPD509" | grep -qF '1.1.0' && printf yes || printf no)"
 t; assert_eq "T-509: up-to-date identifies this checkout as git" 'yes' \
   "$(printf '%s\n' "$UPD509" | grep -qF 'git' && printf yes || printf no)"
 
@@ -8938,7 +8938,7 @@ t; UPD510=$(QUIPU_LANG=en QUIPU_RELEASE_API_URL="$FIXURL/release-newer.json" \
   sh "$ROOT/knotlog" update --check); RC510=$?
 t; assert_eq "T-510: newer release exits 0" '0' "$RC510"
 t; assert_eq "T-510: newer release names the current version" 'yes' \
-  "$(printf '%s\n' "$UPD510" | grep -qF '1.0.0' && printf yes || printf no)"
+  "$(printf '%s\n' "$UPD510" | grep -qF '1.1.0' && printf yes || printf no)"
 t; assert_eq "T-510: newer release names the new version" 'yes' \
   "$(printf '%s\n' "$UPD510" | grep -qF '2.8.0' && printf yes || printf no)"
 
@@ -8952,7 +8952,7 @@ t; assert_eq "T-510: newer release names the new version" 'yes' \
 # in the scratch copy differs from the real script.
 VERPATCH="$TMP/verpatch"
 mkdir -p "$VERPATCH"
-sed 's/^_q_version=1\.0\.0$/_q_version=2.9.0/' "$ROOT/knotlog" > "$VERPATCH/knotlog"
+sed 's/^_q_version=1\.1\.0$/_q_version=2.9.0/' "$ROOT/knotlog" > "$VERPATCH/knotlog"
 t; assert_eq "T-511 setup: the scratch copy's version constant was patched" 'yes' \
   "$(grep -qF '_q_version=2.9.0' "$VERPATCH/knotlog" && printf yes || printf no)"
 t; UPD511=$(QUIPU_LANG=en QUIPU_HOME="$ROOT" \
@@ -8962,7 +8962,7 @@ t; assert_eq "T-511: double-digit component correctly compares as available" 'ye
   "$(printf '%s\n' "$UPD511" | grep -qF '2.10.0' && printf yes || printf no)"
 t; UPD511B=$(QUIPU_LANG=en QUIPU_HOME="$ROOT" \
   QUIPU_RELEASE_API_URL="$FIXURL/release-current.json" sh "$VERPATCH/knotlog" update --check)
-t; assert_eq "T-511: 2.9.0 vs 1.0.0 correctly stays noop (older release)" 'yes' \
+t; assert_eq "T-511: 2.9.0 vs 1.1.0 correctly stays noop (older release)" 'yes' \
   "$(printf '%s\n' "$UPD511B" | grep -qF '2.9.0' && printf yes || printf no)"
 
 # T-512: a tarball checkout (install.sh's shape, no .git) is identified as

@@ -3,6 +3,23 @@
 All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.0] - unreleased
+
+### Added
+- Six interface languages: English, Türkçe, Español (`es`), Português do Brasil (`pt-br`), 日本語 (`ja`) and 简体中文 (`zh-cn`). Messages live in `i18n/<code>.txt`; templates, tone presets and persona files are per language under `templates/`, `tone/` and `persona/`. The non-English/Turkish translations are machine-assisted; corrections are welcome.
+- How languages are found: the supported set is the set of `i18n/*.txt` files (codes are lowercase file names); nothing else lists languages. `--lang`, `lang=` and the locale accept any case and `_` for `-` (`pt_BR` means `pt-br`; `en_US` means `en`). A language missing an asset (template, tone, persona, layout) falls back to English; an unsupported code works as English.
+- Fold profile follows the language: `tr` uses `tr.sed`, `es` and `pt-br` use `latin.sed`, every other language uses `default.sed`.
+- `knotlog help --<code>` prints help in any shipped language, and the help text says so.
+- READMEs in all six languages; the guides and the reference describe how to choose a language.
+
+### Changed
+- The install wizard's language prompt accepts uppercase and underscore forms (`PT-BR`, `pt_BR`) the same way `--lang` does.
+- `install.ps1` lists every shipped language, taken from the checkout's `i18n/*.txt` files, in its arrow-key menu and in its plain-text prompt. Not run on Windows before this entry was written.
+
+### Fixed
+- `install.sh` gives the wizard the terminal under `curl | sh` (reads from `/dev/tty` when stdin is not a terminal and `/dev/tty` opens); without a terminal nothing changes.
+- The untouched-seed checks for `Rules.md` and `Facts.md` covered only the Turkish and English templates, so a fresh vault in another language failed `doctor`. They now walk every shipped language.
+
 ## [1.0.0] - 2026-10-25
 
 ### Renamed (from Quipu)
@@ -73,3 +90,4 @@ knotlog migrate --apply   # writes the changes
 Old Quipu checkouts and vaults keep working until you migrate.
 
 [1.0.0]: https://github.com/MSelmanSonmez/Knotlog
+[1.1.0]: https://github.com/MSelmanSonmez/Knotlog
