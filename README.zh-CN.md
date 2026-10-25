@@ -40,9 +40,9 @@
 curl -fsSL https://raw.githubusercontent.com/MSelmanSonmez/Knotlog/main/install.sh | sh
 ```
 
-Knotlog 为 Claude Code、Codex 等编码智能体提供比会话更长久的记忆。记忆以纯 Markdown 形式保存在你自己的文件夹（即*保险库*，vault）中，每次会话开始时注入相关部分，并且不会把任何内容发出你的机器。它是一个 POSIX shell 脚本：无需 Python、Node、数据库或 API 密钥。
+Knotlog 为 Claude Code、Codex 等编码智能体提供比会话更长久的记忆。记忆以纯 Markdown 形式保存在你自己的文件夹（即*知识库*，vault）中，每次会话开始时注入相关部分，并且不会把任何内容发出你的机器。它是一个 POSIX shell 脚本：无需 Python、Node、数据库或 API 密钥。
 
-> **前身为 Quipu。** Knotlog 是 Quipu 的新名称；旧的 `quipu` 命令已移除。如果你有用旧名称创建的保险库，运行 `knotlog migrate` 预览变更，运行 `knotlog migrate --apply` 写入变更；它也会把旧的 `quipu` 钩子命令改写为 `knotlog`。手工编辑过的桥接块不会被刷新（只重命名其标记），并会给出警告。
+> **前身为 Quipu。** Knotlog 是 Quipu 的新名称；旧的 `quipu` 命令已移除。如果你有用旧名称创建的知识库，运行 `knotlog migrate` 预览变更，运行 `knotlog migrate --apply` 写入变更；它也会把旧的 `quipu` 钩子命令改写为 `knotlog`。手工编辑过的桥接块不会被刷新（只重命名其标记），并会给出警告。
 
 ## 失忆测试
 
@@ -53,7 +53,7 @@ Knotlog 为 Claude Code、Codex 等编码智能体提供比会话更长久的记
 3. 打开新会话，只问一个问题：*"我们昨天做了什么？"*
 
 没有 Knotlog，回答是*"我无法访问之前的对话。"*
-有了 Knotlog，回答就是你的昨天：做过的决定、决定的理由，以及停在了哪里——这些是从保险库读回来的，而不是来自模型的记忆。
+有了 Knotlog，回答就是你的昨天：做过的决定、决定的理由，以及停在了哪里——这些是从知识库读回来的，而不是来自模型的记忆。
 
 ## 快速开始
 
@@ -77,7 +77,7 @@ git clone https://github.com/MSelmanSonmez/Knotlog.git && cd Knotlog
 ./knotlog install
 ```
 
-安装程序会问四件事——语言、保险库位置、你的名字，以及可选的伙伴（companion）名称和保险库用途——然后创建保险库，为 Claude Code 和 omp 接好线，并以唯一的下一步结束：打开保险库文件夹，运行 `knotlog doctor`。新用户只需要做这些。
+安装程序会问四件事——语言、知识库位置、你的名字，以及可选的伙伴（companion）名称和知识库用途——然后创建知识库，为 Claude Code 和 omp 接好线，并以唯一的下一步结束：打开知识库文件夹，运行 `knotlog doctor`。新用户只需要做这些。
 
 接着阅读用户指南——[docs/GUIDE.zh-CN.md](docs/GUIDE.zh-CN.md)（[English](docs/GUIDE.md) · [Türkçe](docs/GUIDE.tr.md)）——了解日常使用流程和需要手动输入的命令。还不确定它是否适合你？[docs/WHY.zh-CN.md](docs/WHY.zh-CN.md)（[English](docs/WHY.md) · [Türkçe](docs/WHY.tr.md)）一篇文章讲清楚。
 
@@ -115,7 +115,7 @@ Claude Code 读取 `CLAUDE.md`，其他大多数智能体读取 `AGENTS.md`；Kn
 - **跨平台**：Windows、macOS、Linux——三者均经 CI 验证。
 - **多语言**：界面提供六种语言（English、Türkçe、Español、Português (Brasil)、日本語、简体中文）。可用 `--lang <代码>`（`en`、`tr`、`es`、`pt-br`、`ja`、`zh-cn`）、配置中的 `lang=` 或安装向导选择。英语和土耳其语由人工维护，其余翻译为机器辅助，欢迎提出修正。
 - **存储**：纯 Markdown，无数据库——文件归你所有，无厂商锁定。
-- **默认开启的密钥关卡**：保险库是一个 git 仓库，带有 pre-commit 扫描器，会拒绝包含已知密钥形态的提交。
+- **默认开启的密钥关卡**：知识库是一个 git 仓库，带有 pre-commit 扫描器，会拒绝包含已知密钥形态的提交。
 - **不只是笔记，更是行为契约**：`Rules.md` 和 `Facts.md` 在每次会话开始时注入——你写下一次的纠正会在下一次会话中继续生效，而不必反复重复。
 
 为什么竞品要为基础设施收费而这里免费：像 claude-mem 这样的工具需要单独的向量数据库和 AI worker，因为它们的 worker 是内部没有模型的独立进程。Knotlog 没有这个问题——智能体本来就在运行且已付费，所以语义层*就是*模型本身。
@@ -163,7 +163,7 @@ summary: 139 ok, 3 warn, 0 fail
 0
 ```
 
-预置的 `Rules.md`、`Facts.md` 和 `companion.md` 都是普通笔记，会和其他笔记一样被索引，所以范围宽泛的查询会把它们和你自己的笔记一起返回——请缩小搜索词，或用 `--tag`/`--status` 过滤。密钥关卡那一行是 `init` 打印的最后一行：当保险库是 git 仓库根目录时，它会安装 `.githooks/pre-commit`；不是时则会如此提示。
+预置的 `Rules.md`、`Facts.md` 和 `companion.md` 都是普通笔记，会和其他笔记一样被索引，所以范围宽泛的查询会把它们和你自己的笔记一起返回——请缩小搜索词，或用 `--tag`/`--status` 过滤。密钥关卡那一行是 `init` 打印的最后一行：当知识库是 git 仓库根目录时，它会安装 `.githooks/pre-commit`；不是时则会如此提示。
 
 给 `init` 传入 `--lang <代码>`（例如 `--lang tr`）可改为其他语言输出。
 
@@ -172,7 +172,7 @@ summary: 139 ok, 3 warn, 0 fail
 <details>
 <summary><b>有内容会离开我的机器吗？</b></summary>
 
-不会。Knotlog 只读写你保险库中的文件，不运行任何服务器。唯一会访问网络的命令是安装程序和 `knotlog update`，它们与 GitHub 通信。Knotlog 注入会话的内容之后会和该会话中的其他内容一样发送给你的智能体的模型提供方——这部分由你的提供方的数据政策决定。
+不会。Knotlog 只读写你知识库中的文件，不运行任何服务器。唯一会访问网络的命令是安装程序和 `knotlog update`，它们与 GitHub 通信。Knotlog 注入会话的内容之后会和该会话中的其他内容一样发送给你的智能体的模型提供方——这部分由你的提供方的数据政策决定。
 </details>
 
 <details>
@@ -184,7 +184,7 @@ summary: 139 ok, 3 warn, 0 fail
 <details>
 <summary><b>哪些智能体效果最好？</b></summary>
 
-Claude Code：其适配器已在真实会话中验证，`install` 会替你接好。Codex 在你复制一个文件并确认一次信任提示后即可工作。其他任何智能体都可以使用无 hook 的桥接方式，任何 MCP 客户端都可以通过 `knotlog mcp`（工具 `knotlog_search`、`knotlog_context` 和 `knotlog_note`）搜索保险库。参见[支持的智能体](#支持的智能体)。
+Claude Code：其适配器已在真实会话中验证，`install` 会替你接好。Codex 在你复制一个文件并确认一次信任提示后即可工作。其他任何智能体都可以使用无 hook 的桥接方式，任何 MCP 客户端都可以通过 `knotlog mcp`（工具 `knotlog_search`、`knotlog_context` 和 `knotlog_note`）搜索知识库。参见[支持的智能体](#支持的智能体)。
 </details>
 
 <details>
@@ -196,7 +196,7 @@ Claude Code：其适配器已在真实会话中验证，`install` 会替你接�
 <details>
 <summary><b>如何卸载？</b></summary>
 
-`knotlog uninstall --dry-run` 会显示将被移除的内容，`knotlog uninstall` 移除该命令（Windows 上用 `.\uninstall.ps1`）。你的保险库绝不会被删除——那是你的笔记。参见 [Uninstall](docs/REFERENCE.md#uninstall)。
+`knotlog uninstall --dry-run` 会显示将被移除的内容，`knotlog uninstall` 移除该命令（Windows 上用 `.\uninstall.ps1`）。你的知识库绝不会被删除——那是你的笔记。参见 [Uninstall](docs/REFERENCE.md#uninstall)。
 </details>
 
 <details>
@@ -218,7 +218,7 @@ Claude Code：其适配器已在真实会话中验证，`install` 会替你接�
 
 - [用户指南](docs/GUIDE.zh-CN.md)（[English](docs/GUIDE.md) · [Türkçe](docs/GUIDE.tr.md)）——日常流程、各文件夹、需要手动输入的命令。
 - [为什么选择 Knotlog](docs/WHY.zh-CN.md)（[English](docs/WHY.md) · [Türkçe](docs/WHY.tr.md)）——一篇文章讲清楚理由。
-- [参考手册](docs/REFERENCE.md)——安装内部机制、所有命令、各适配器、保险库布局、搜索、更新与回滚。
+- [参考手册](docs/REFERENCE.md)——安装内部机制、所有命令、各适配器、知识库布局、搜索、更新与回滚。
 - [使用手册](docs/USAGE.md)——写给编码智能体照做的分步设置说明；由测试锁定，因此不会与真实命令偏离。
 
 ## 许可证
