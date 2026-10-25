@@ -136,8 +136,10 @@ _q_lang() {
   # Codes are lowercase file names (pt-br, zh-cn): fold case and the locale
   # underscore (pt_BR), then let a region without a file of its own (en-us,
   # tr_TR) fall back to its language. An unsupported code stays as it is.
+  # [[:upper:]], not [A-Z]: bash 3.2 (macOS /bin/sh) in a UTF-8 locale lets [A-Z]
+  # match lowercase too, so "en" ran tr -- missing from a minimal PATH (CI, 2026-10-25).
   case "$_q_lang_l" in
-    *[A-Z_]*) _q_lang_l=$(printf '%s' "$_q_lang_l" | tr 'A-Z_' 'a-z-') ;;
+    *[[:upper:]_]*) _q_lang_l=$(printf '%s' "$_q_lang_l" | tr 'A-Z_' 'a-z-') ;;
   esac
   [ -f "$_q_HOME/i18n/$_q_lang_l.txt" ] || _q_lang_l=${_q_lang_l%%-*}
   printf '%s\n' "$_q_lang_l"
