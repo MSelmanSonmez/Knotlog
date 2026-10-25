@@ -7,7 +7,7 @@ usage_index=  index     .knotlog/index.tsv üret/güncelle (artımlı)
 usage_compile=  compile   türetilmiş kavram notlarını deterministik üretir (elle; context'e girmez)
 usage_search=  search    indeks üzerinde katlanmış sözcüksel + BM25 arama (--brief: 120 baytlık künye; --tag/--status: front matter'a göre daraltma; --all: validity: rejected notları da dahil et)
 usage_init=  init      .knotlog/ ve AGENTS.md köprü bloğunu kur (--scope core|goals|money|body|mind|full; tekrarlanabilir)
-usage_install=  install   <kullanıcı>'nın Knotlog kasasını kur ve checkout'u PATH'e bağla (--no-link: sarmalayıcılar için; --no-git: kasayı git deposu yapma; --tone <slug>: üslup preseti ayarla; kasa içinde repair-hooks girişleri oluşturur)
+usage_install=  install   <kullanıcı>'nın Knotlog kasasını kur ve checkout'u PATH'e bağla (--no-link: sarmalayıcılar için; --force yabancı komut bağlantısını değiştirir; --no-git: kasayı git deposu yapma; --tone <slug>: üslup preseti ayarla; kasa içinde repair-hooks girişleri oluşturur)
 usage_uninstall=  uninstall `knotlog` komutunu PATH'ten kaldır; kasasına asla dokunmaz (--dry-run: önizleme)
 usage_context=  context   ajan için oturum hafızası bağlamını bas
 help_profile=            config: profile=normal|economical|manual hook bağlamını kısar (bkz. REFERENCE)
@@ -176,6 +176,7 @@ install_ask_location_head=Kasanız nereye kurulsun?
 install_ask_location_default=Hiçbir şey yazmadan Enter tuşuna basarsanız varsayılan dizinde kurulacaktır. [%s]
 install_ask_location_move=İsterseniz kasayı istediğiniz bir yere taşıyabilirsiniz.
 install_ask_location_prompt=: 
+install_ask_link_replace=%s, %s hedefine giden bir sembolik bağ. Bağ değiştirilsin mi (hedefe dokunulmaz)? [y/N]
 install_location_selected=Üst dizin: %s
 install_step_identity=[%d/%d] Kimlik
 install_busy=Kuruluyor
@@ -214,6 +215,8 @@ err_install_claude_source=Claude Code adaptörü yok veya okunamıyor: %s
 err_install_asset_source=kurulum varlığı yok veya okunamıyor: %s
 err_install_claude_parent=Claude Code ayar klasörünün yerinde klasör olmayan bir öğe var: %s
 err_install_link_occupied=mevcut komutun üzerine yazılması reddedildi: %s
+err_install_link_symlink=%s, %s hedefine giden bir sembolik bağ; değiştirilmedi. Bağı değiştirmek için --force, komut bağını atlamak için --no-link ile yeniden çalıştırın (hedefe dokunulmaz)
+err_install_link_file=%s var ve Knotlog'un oluşturduğu bir bağ değil; asla değiştirilmez. Kendiniz silin ya da --no-link ile yeniden çalıştırın
 err_install_link_unusable=install kullanılabilir bir sembolik bağlantı oluşturamadı; sembolik bağlantı desteğini etkinleştirip yeniden dene: %s
 warn_install_metadata_failed=klasör ikonu metadata'sı tamamlanamadı (kasa ve komut etkilenmedi): %s
 # persona

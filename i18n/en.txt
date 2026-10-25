@@ -7,7 +7,7 @@ usage_index=  index     build/update .knotlog/index.tsv (incremental)
 usage_compile=  compile   build deterministic derived concept notes (manual; never enters context)
 usage_search=  search    folded lexical + BM25 search over the index (--brief: 120-byte snippet; --tag/--status: narrow by frontmatter; --all: include validity: rejected notes)
 usage_init=  init      create .knotlog/ and the AGENTS.md bridge block (--scope core|goals|money|body|mind|full; repeatable)
-usage_install=  install   create <user>'s Knotlog vault and link this checkout into PATH (--no-link for wrappers; --no-git to skip making the vault a git repo; --tone <slug> to set a tone preset; creates vault-local repair-hooks entrypoints)
+usage_install=  install   create <user>'s Knotlog vault and link this checkout into PATH (--no-link for wrappers; --force replaces a foreign command link; --no-git to skip making the vault a git repo; --tone <slug> to set a tone preset; creates vault-local repair-hooks entrypoints)
 usage_uninstall=  uninstall remove the `knotlog` command from PATH; never touches your vault (--dry-run to preview)
 usage_context=  context   print session memory context for the agent
 help_profile=            config: profile=normal|economical|manual trims hook context (see REFERENCE)
@@ -176,6 +176,7 @@ install_ask_location_head=Where should your vault be installed?
 install_ask_location_default=Press Enter without typing anything to install in the default directory. [%s]
 install_ask_location_move=If you like, you can move the vault wherever you want.
 install_ask_location_prompt=: 
+install_ask_link_replace=%s is a symlink to %s. Replace the link (its target is left alone)? [y/N]
 install_location_selected=Parent: %s
 install_busy=Installing
 install_step_identity=[%d/%d] Identity
@@ -214,6 +215,8 @@ err_install_claude_source=Claude Code adapter is missing or unreadable: %s
 err_install_asset_source=install asset is missing or unreadable: %s
 err_install_claude_parent=Claude Code settings directory is occupied by a non-directory: %s
 err_install_link_occupied=refusing to overwrite existing command: %s
+err_install_link_symlink=%s is a symlink to %s; not replaced. Rerun with --force to replace the link (its target is left alone), or with --no-link to skip the command link
+err_install_link_file=%s exists and is not a link Knotlog made; it is never replaced. Remove it yourself, or rerun with --no-link
 err_install_link_unusable=install could not create a usable symbolic link; enable symlink support and retry: %s
 warn_install_metadata_failed=folder icon metadata could not be finished (vault and command are unaffected): %s
 # persona

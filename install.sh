@@ -31,7 +31,7 @@
 
 set -eu
 
-_q_default_url='https://github.com/MSelmanSonmez/Knotlog/archive/refs/tags/v1.1.0.tar.gz'
+_q_default_url='https://github.com/MSelmanSonmez/Knotlog/archive/refs/tags/v1.1.1.tar.gz'
 # The --version line is stable text every release carries; grepping for it
 # (never running the download) is the content check.
 _q_anchor="--version) printf 'knotlog "
