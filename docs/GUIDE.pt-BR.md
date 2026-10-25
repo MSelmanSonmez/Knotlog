@@ -331,7 +331,7 @@ arquivo existe e fica em silêncio em cofres anteriores a essa camada.
 quando há apenas avisos, e com 1 somente quando algo falhou.
 
 ```
-summary: 143 ok, 3 warn, 0 fail
+summary: 151 ok, 3 warn, 0 fail
 ```
 
 **Que parte da sua memória é auditada?** Nem todo arquivo de um cofre é cobrado

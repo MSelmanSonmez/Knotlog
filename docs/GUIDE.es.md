@@ -335,7 +335,7 @@ hechos cuando el archivo existe y calla en las bóvedas anteriores a esta capa.
 0 cuando solo hay avisos, y con 1 solo cuando algo falló.
 
 ```
-summary: 143 ok, 3 warn, 0 fail
+summary: 151 ok, 3 warn, 0 fail
 ```
 
 **¿Qué parte de tu memoria se audita?** No todos los archivos de una bóveda se

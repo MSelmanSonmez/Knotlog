@@ -320,7 +320,7 @@ vaults that predate the layer.
 there are only warnings, and 1 only when something failed.
 
 ```
-summary: 143 ok, 3 warn, 0 fail
+summary: 151 ok, 3 warn, 0 fail
 ```
 
 **Which part of your memory is audited?** Not every file in a vault is held to
