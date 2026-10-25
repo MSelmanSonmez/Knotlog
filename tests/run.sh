@@ -12342,7 +12342,7 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
        && [ ! -e "$L20_PAR/L20's Knotlog" ] && printf yes || printf no)"
 
   _l20_setup c
-  t; printf 'en\nL20\n\nn\n' | PATH="$L20_BIN:$INSTALL_TOOLS" HOME="$TMP/l20-c-home" QUIPU_LANG=en QUIPU_FORCE_TTY=1 \
+  t; printf 'en\nL20\n\n\n\n\nn\n' | PATH="$L20_BIN:$INSTALL_TOOLS" HOME="$TMP/l20-c-home" QUIPU_LANG=en QUIPU_FORCE_TTY=1 \
     sh "$ROOT/knotlog" install "$L20_PAR" >"$TMP/l20-c.out" 2>"$TMP/l20-c.err"; IRC=$?
   assert_install_rc "T-1022: interactive answer n refuses (exit 2)" '2' "$IRC" "$TMP/l20-c.err"
   t; assert_eq "T-1022: the question showed the target and the link is unchanged" 'yes' \
@@ -12350,7 +12350,7 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
        && [ "$(readlink "$L20_BIN/knotlog")" = "$L20_TGT" ] && printf yes || printf no)"
 
   _l20_setup d
-  t; printf 'en\nL20\n\ny\n' | PATH="$L20_BIN:$INSTALL_TOOLS" HOME="$TMP/l20-d-home" QUIPU_LANG=en QUIPU_FORCE_TTY=1 \
+  t; printf 'en\nL20\n\n\n\n\ny\n' | PATH="$L20_BIN:$INSTALL_TOOLS" HOME="$TMP/l20-d-home" QUIPU_LANG=en QUIPU_FORCE_TTY=1 \
     sh "$ROOT/knotlog" install "$L20_PAR" >"$TMP/l20-d.out" 2>"$TMP/l20-d.err"; IRC=$?
   assert_install_rc "T-1023: interactive answer y replaces the link (exit 0)" '0' "$IRC" "$TMP/l20-d.err"
   t; assert_eq "T-1023: link replaced, old target untouched" 'yes' \
