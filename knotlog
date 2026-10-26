@@ -1055,6 +1055,57 @@ _q_flair_resolve() {
   esac
 }
 
+_q_style_build() {
+  # Sets _q_tone: the tone block, then the flair block (either may be absent),
+  # exactly what `context` prints and the AGENTS.md bridge Style section carries.
+  # Rule: a flair other than none drops a tone=kaomoji preset -- its "never
+  # pictorial emoji" would contradict flair=emoji, and flair=kaomoji says the
+  # same thing itself. $1: vault root.
+  _q_tone=
+  _q_tone_resolve "$1"
+  _q_flair_resolve "$1"
+  if [ "$_q_tres_source" != none ] && { [ -z "$_q_fl_body" ] || [ "$_q_tres_source" != preset ] || [ "$_q_tres_slug" != kaomoji ]; }; then
+    _q_tone="$(_q_msg ctx_tone)
+$_q_tres_body
+
+$(_q_msg ctx_tone_priority)
+"
+  fi
+  if [ -n "$_q_fl_body" ]; then
+    _q_tone="$_q_tone$(_q_msg ctx_flair)
+$_q_fl_body
+"
+  fi
+}
+
+_q_bridge_refresh() {
+  # Rewrite the static bridge block of AGENTS.md/CLAUDE.md after tone=/flair=
+  # changed: run the real init on a scratch copy (config + the files that have
+  # the block) so the block comes from its one source, then copy a changed
+  # file back. Text outside the markers is never touched. $1: vault root.
+  _q_br_d=$(mktemp -d "${TMPDIR:-/tmp}/knotlog-bridge-XXXXXX") || return 0
+  mkdir -p "$_q_br_d/$_q_SD"
+  _q_br_have=0
+  for _q_br_f in AGENTS.md CLAUDE.md; do
+    grep -Eq '^<!-- (knotlog|quipu):start -->$' "$1/$_q_br_f" 2>/dev/null || continue
+    cp -- "$1/$_q_br_f" "$_q_br_d/$_q_br_f"
+    _q_br_have=1
+  done
+  if [ "$_q_br_have" -eq 1 ]; then
+    cp -- "$1/$_q_SD/config" "$_q_br_d/$_q_SD/config"
+    # shellcheck disable=SC2030 # the subshell is the point: init runs on the scratch copy only
+    (QUIPU_VAULT="$_q_br_d"; export QUIPU_VAULT; unset QUIPU_HOOK; _q_cmd_init --no-prompt) >/dev/null 2>&1 || _q_br_have=0
+  fi
+  if [ "$_q_br_have" -eq 1 ]; then
+    for _q_br_f in AGENTS.md CLAUDE.md; do
+      [ -f "$1/$_q_br_f" ] && [ -f "$_q_br_d/$_q_br_f" ] || continue
+      grep -Eq '^<!-- (knotlog|quipu):start -->$' "$1/$_q_br_f" || continue
+      cmp -s "$1/$_q_br_f" "$_q_br_d/$_q_br_f" || cat "$_q_br_d/$_q_br_f" > "$1/$_q_br_f"
+    done
+  fi
+  rm -rf "$_q_br_d"
+}
+
 _q_doctor_stale_topics() {
   _q_dt_v=$1
   _q_dt_thr=$(_q_threads_path "$_q_dt_v")
@@ -2354,6 +2405,7 @@ _q_hooks_report() {
 }
 
 _q_cmd_init() {
+  # shellcheck disable=SC2031 # _q_bridge_refresh sets it only inside its own subshell
   _q_v=${QUIPU_VAULT:-$PWD}
   _q_SD=$(_q_sd_of "$_q_v")
   # Keep the vault path in a name the message helpers cannot touch. _q_msg and
@@ -2883,6 +2935,13 @@ _q_cmd_init() {
       printf '  %s\n' "$(_q_msg "$_q_proto_key")"
       _q_proto_n=$((_q_proto_n + 1))
     done
+    # Style: OpenCode has no context hook and reads only this block, so the
+    # active tone preset and flair ride it. Absent when neither is set.
+    _q_style_build "$_q_v"
+    if [ "$_q_tres_source" = preset ] || [ -n "$_q_fl_body" ]; then
+      printf '%s\n' "$(_q_msg bridge_style)"
+      printf '%s' "$_q_tone"
+    fi
   } > "$_q_bridge_body"
 
   awk -f "$_q_HOME/lib/block.awk" "$_q_v/AGENTS.md" < "$_q_bridge_body" > "$_q_v/$_q_SD/agents.tmp" \
@@ -3420,7 +3479,8 @@ _q_install_style() {
   # shellcheck disable=SC2059
   _q_st_head=$(printf "$(_q_msg install_step_style)" "$_q_i_n_style" "$_q_i_total_steps")
   if [ "$_q_i_tone_set" -eq 0 ]; then
-    _q_st_codes="varsayilan profesyonel dostane icten siradisi etkili sivridilli ogretici kaomoji"
+    # kaomoji is a flair now; the tone menu leaves it out (--tone kaomoji still works).
+    _q_st_codes="varsayilan profesyonel dostane icten siradisi etkili sivridilli ogretici"
     _q_st_labels=
     for _q_st_c in $_q_st_codes; do
       _q_st_labels="$_q_st_labels$(_q_msg "tone_name_$_q_st_c") -- $(_q_msg "tone_desc_$_q_st_c")
@@ -4162,6 +4222,16 @@ _q_cmd_install() {
     # shellcheck disable=SC2059
     _q_sum_skip "$(printf "$(_q_msg install_summary_icon_failed)" "$_q_i_target/.directory")"
   fi
+  # Clients found on this machine but not wired into the vault: a hint with the
+  # remedy, never wired automatically.
+  if { command -v opencode >/dev/null 2>&1 || [ -x "$HOME/.opencode/bin/opencode" ]; } &&
+    [ ! -f "$_q_i_target/.opencode/plugins/knotlog.js" ]; then
+    _q_sum_skip "$(_q_msg install_summary_opencode_off)" "$(_q_msg install_summary_fix_opencode)"
+  fi
+  if { command -v devin-desktop >/dev/null 2>&1 || command -v windsurf >/dev/null 2>&1; } &&
+    [ ! -f "$_q_i_target/.devin/hooks.json" ]; then
+    _q_sum_skip "$(_q_msg install_summary_windsurf_off)" "$(_q_msg install_summary_fix_windsurf)"
+  fi
   _q_sum_print
   printf '\n'
   printf '%s\n' "$(_q_msg install_summary_next)"
@@ -4890,22 +4960,7 @@ _q_ctx_text() {
   # existed (_q_tone_resolve above is the single place both paths are
   # decided, so this stays byte-identical for a vault that never sets
   # tone=).
-  _q_tone=
-  _q_tone_resolve "$_q_v"
-  if [ "$_q_tres_source" != none ]; then
-    _q_tone="$(_q_msg ctx_tone)
-$_q_tres_body
-
-$(_q_msg ctx_tone_priority)
-"
-  fi
-  # Flair (kaomoji/emoji) rides the fixed part right after the tone block.
-  _q_flair_resolve "$_q_v"
-  if [ -n "$_q_fl_body" ]; then
-    _q_tone="$_q_tone$(_q_msg ctx_flair)
-$_q_fl_body
-"
-  fi
+  _q_style_build "$_q_v"
 
   # Fixed part A: activity section (tail lines + per-path digest table).
   _q_act=
@@ -7196,6 +7251,7 @@ _q_cmd_tone() {
           else
             printf 'tone=%s\n' "$1" >> "$_q_v/$_q_SD/config"
           fi
+          _q_bridge_refresh "$_q_v"
           # shellcheck disable=SC2059
           printf "$(_q_msg tone_set)\n" "$1"
           ;;
@@ -7241,6 +7297,7 @@ _q_cmd_flair() {
           else
             printf 'flair=%s\n' "$1" >> "$_q_v/$_q_SD/config"
           fi
+          _q_bridge_refresh "$_q_v"
           # shellcheck disable=SC2059
           printf "$(_q_msg flair_set)\n" "$1"
           ;;

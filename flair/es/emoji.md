@@ -3,4 +3,4 @@
 - Ejemplos, no un límite: 🙂 amable · 🤔 duda · 😮 sorpresa · ✅ hecho · 🎉 gran momento · 😴 cansancio · ⚠️ precaución o error · 😅 reírse de un error propio.
 - Mantén sin emoji el código, los mensajes de commit y los archivos que escribas.
 
-El usuario eligió este estilo a propósito, así que anula el "sin emoji salvo que se pida" por defecto de un arnés de agente, solo en las respuestas del chat.
+El usuario eligió este estilo a propósito, así que anula el "sin emoji salvo que se pida" por defecto de un arnés de agente, solo en las respuestas del chat. Sustituye cualquier regla de emoji o kaomoji del tono anterior.

@@ -24,7 +24,7 @@ On a real interactive terminal, setup advances one clear screen at a time throug
 1. **Language** — the first interaction is the `Language / Dil (<codes>):` question, listing every shipped language (`en/tr/es/pt-br/ja/zh-cn`); Enter selects English, and the answer is folded like `--lang` (`PT_BR` means `pt-br`).
 2. **Vault location** — choose the parent directory, with your home directory shown as the default. Enter accepts it. Literal `~` and `~/…` expand to your home directory; relative input is resolved from the directory where `install` started.
 3. **Identity** — provide the required user name, then optionally a companion name and vault purpose; Enter skips either optional answer.
-4. **Style** — three short menus: tone preset (`varsayilan` by default), flair (`none` by default) and folder names (emoji or plain). Enter on each keeps today's defaults. Each menu is skipped when its flag is given (`--tone`, `--flair`, `--plain`); the page disappears (and the counter shrinks) when all three are, and in `--no-prompt` runs.
+4. **Style** — three short menus: tone preset (`varsayilan` by default; `kaomoji` is a flair, so it is not listed, though `--tone kaomoji` still works), flair (`none` by default) and folder names (emoji or plain). Enter on each keeps today's defaults. Each menu is skipped when its flag is given (`--tone`, `--flair`, `--plain`); the page disappears (and the counter shrinks) when all three are, and in `--no-prompt` runs.
 5. **Install** — Knotlog creates or reuses the vault, wires the integrations, and prints a compact status summary plus one `knotlog doctor` next action.
 
 Supplying a positional parent path skips the location question. `--lang`, `--user`, `--companion`, and `--purpose` likewise skip their corresponding questions. For automation and other non-interactive use, pass the required values explicitly:
@@ -428,6 +428,19 @@ languages use the English text) and is appended right after the tone block
 in `knotlog context`, inside the same fixed part of the context budget.
 Absent or invalid means `none`; `doctor` warns once on an invalid value.
 `knotlog flair` shows the active value, `--list` browses.
+
+Rule: when a flair other than `none` is set, a `tone=kaomoji` preset is left
+out of the context and the bridge (its "never pictorial emoji" would contradict
+`flair=emoji`, and `flair=kaomoji` already says the same thing). Every flair
+text also states that it replaces any emoji or kaomoji rule in the tone above.
+
+**Bridge Style section.** Agents with no context hook (OpenCode, Windsurf) read
+only the `AGENTS.md`/`CLAUDE.md` bridge block. When `tone=` names a shipped
+preset or `flair=` is `kaomoji`/`emoji`, `init` ends that block with a short
+Style section holding the same tone and flair text `context` prints (vault
+language, English fallback). With neither set the block is unchanged.
+`knotlog tone <slug>` and `knotlog flair <value>` rewrite the block in place
+through the same generator as `init`; text outside the markers is never touched.
 
 ## Notes: frontmatter and wikilinks
 

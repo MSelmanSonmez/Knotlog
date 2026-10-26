@@ -12459,7 +12459,7 @@ st_inst st6 'en\nAda\n\n\n\n' --plain
 st_inst st7 'en\nAda\n\n' --tone ogretici --flair emoji --plain
 t; assert_eq "T-1042: each of --tone, --flair, --plain skips only its own menu; all three skip the step" 'no yes yes, yes no yes, yes yes no, nostep' \
   "$(_q() { grep -qF "$2" "$TMP/$1.out" && printf yes || printf no; }
-     printf '%s %s %s, %s %s %s, %s %s %s, ' "$(_q st4 'Choose 1-9')" "$(_q st4 'Choose 1-3')" "$(_q st4 'Choose 1-2')" "$(_q st5 'Choose 1-9')" "$(_q st5 'Choose 1-3')" "$(_q st5 'Choose 1-2')" "$(_q st6 'Choose 1-9')" "$(_q st6 'Choose 1-3')" "$(_q st6 'Choose 1-2')"
+     printf '%s %s %s, %s %s %s, %s %s %s, ' "$(_q st4 'Choose 1-8')" "$(_q st4 'Choose 1-3')" "$(_q st4 'Choose 1-2')" "$(_q st5 'Choose 1-8')" "$(_q st5 'Choose 1-3')" "$(_q st5 'Choose 1-2')" "$(_q st6 'Choose 1-8')" "$(_q st6 'Choose 1-3')" "$(_q st6 'Choose 1-2')"
      grep -qF 'Style' "$TMP/st7.out" && printf step || printf nostep)"
 t; assert_eq "T-1043: flag-given values still land in config, and skipping the whole step renumbers to [4/4]" 'ogretici emoji plain yes' \
   "$(for _k in tone flair layout; do sed -n "s/^$_k=//p" "$(ST_V st7)/.knotlog/config"; done | tr '\n' ' ')$(grep -qF '[4/4] Install' "$TMP/st7.out" && printf yes)"
@@ -12501,7 +12501,7 @@ t; assert_eq "T-1053: a missing git identity is a skipped item with a fix line" 
   "$(grep -qF '  ! No baseline commit' "$TMP/sm1.out" && grep -qF '    fix: git config --global user.name' "$TMP/sm1.out" && printf yes || printf no)"
 sm_inst sm2 GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t
 t; assert_eq "T-1054: with an identity the baseline commit is a done item and no fix line prints" 'yes' \
-  "$(grep -qF '  ✔ Baseline commit made' "$TMP/sm2.out" && ! grep -qF 'fix:' "$TMP/sm2.out" && printf yes || printf no)"
+  "$(grep -qF '  ✔ Baseline commit made' "$TMP/sm2.out" && ! grep -qF 'fix: git config' "$TMP/sm2.out" && printf yes || printf no)"
 if [ "$SM_PTY" -eq 1 ]; then
   sm_pty sm3; sm_pty sm4 NO_COLOR=1; sm_pty sm5 TERM=dumb
   t; assert_eq "T-1055: on a terminal the marks are coloured; NO_COLOR=1 and TERM=dumb print none" 'yes yes yes' \
@@ -12511,6 +12511,46 @@ $(! grep -q "${SM_ESC}\[3[23]m" "$TMP/sm5.out" && grep -qF '✔ Vault: created' 
 else
   t; skip "T-1055: coloured summary on a terminal" "needs Linux and python3 for a pty"
 fi
+
+# ---- style in the bridge, kaomoji rule, wizard menu, client hints (T-1060..T-1065) ----
+BR_LAST=$(men bridge_proto_13)
+BR_STYLE=$(men bridge_style)
+br_mk() { # name [extra config lines] -- en vault with text around the bridge block
+  mkvault "$1"; printf 'lang=en\n' > "$TMP/$1/.knotlog/config"; [ -z "${2:-}" ] || printf '%s\n' "$2" >> "$TMP/$1/.knotlog/config"
+  printf 'USER TOP\n' > "$TMP/$1/AGENTS.md"; printf 'USER TOP\n' > "$TMP/$1/CLAUDE.md"
+  QUIPU_VAULT="$TMP/$1" sh "$ROOT/knotlog" init --no-prompt >/dev/null 2>&1
+  printf 'USER BOTTOM\n' | tee -a "$TMP/$1/AGENTS.md" >> "$TMP/$1/CLAUDE.md"
+}
+br_mk vbr0
+t; assert_eq "T-1060: with no tone= and no flair= the bridge has no Style section and ends at the last protocol" 'yes yes' \
+  "$(! grep -qxF "$BR_STYLE" "$TMP/vbr0/AGENTS.md" && printf yes) $(awk -v l="  $BR_LAST" '$0==l{f=1;next} f&&/knotlog:end/{ok=1} END{exit !ok}' "$TMP/vbr0/AGENTS.md" && printf yes)"
+br_mk vbr1 'tone=dostane
+flair=emoji'
+t; assert_eq "T-1061: with tone=dostane and flair=emoji both bridge files carry both texts under Style" 'yes yes yes yes' \
+  "$(for _f in AGENTS.md CLAUDE.md; do grep -qxF "$BR_STYLE" "$TMP/vbr1/$_f" && grep -qF -- "$(head -1 "$ROOT/tone/en/dostane.md")" "$TMP/vbr1/$_f" && printf 'yes '; grep -qF -- "$(head -1 "$ROOT/flair/en/emoji.md")" "$TMP/vbr1/$_f" && printf 'yes '; done | sed 's/ $//')"
+br_mk vbr2; cp "$TMP/vbr2/AGENTS.md" "$TMP/vbr2.before"
+BR_V="$TMP/vbr2"
+QUIPU_VAULT="$BR_V" sh "$ROOT/knotlog" flair emoji >/dev/null
+BR_MID=$(grep -cF -- "$(head -1 "$ROOT/flair/en/emoji.md")" "$BR_V/AGENTS.md")$(grep -cF -- "$(head -1 "$ROOT/flair/en/emoji.md")" "$BR_V/CLAUDE.md")$(grep -c '^USER ' "$BR_V/AGENTS.md")
+QUIPU_VAULT="$BR_V" sh "$ROOT/knotlog" flair none >/dev/null
+t; assert_eq "T-1062: flair emoji adds the text to the bridge, flair none removes it, and the text outside the markers stays identical" '112 yes' \
+  "$BR_MID $(cmp -s "$BR_V/AGENTS.md" "$TMP/vbr2.before" && printf yes)"
+br_mk vbr3 'tone=kaomoji
+flair=emoji'
+KP=$(grep -m1 'never pictorial emoji' "$ROOT/tone/en/kaomoji.md")
+t; assert_eq "T-1063: tone=kaomoji with flair=emoji drops the tone's decoration lines from context and the bridge" 'no no yes yes' \
+  "$(fl_ctx vbr3 | grep -qF -- "$KP" && printf yes || printf no) $(grep -qF -- "$KP" "$TMP/vbr3/AGENTS.md" && printf yes || printf no) $(fl_ctx vbr3 | grep -qF -- "$(head -1 "$ROOT/flair/en/emoji.md")" && printf yes) $(grep -qF -- "$(head -1 "$ROOT/flair/en/emoji.md")" "$TMP/vbr3/AGENTS.md" && printf yes)"
+br_mk vbr4 'tone=kaomoji'
+t; assert_eq "T-1064: tone=kaomoji alone keeps its text in context and the bridge, and the wizard tone menu no longer offers it" 'yes yes no yes' \
+  "$(fl_ctx vbr4 | grep -qF -- "$KP" && printf yes) $(grep -qF -- "$KP" "$TMP/vbr4/AGENTS.md" && printf yes) $(grep -qF 'Kaomoji -- ' "$TMP/st1.out" && printf yes || printf no) $(grep -qF 'Choose 1-8' "$TMP/st1.out" && printf yes)"
+# A PATH with every host tool except the three clients, so the test holds on a machine that has them.
+mkdir -p "$TMP/ih-bin" "$TMP/ih-clean"
+for _d in $(printf '%s' "$INSTALL_TOOLS" | tr ':' ' '); do for _f in "$_d"/*; do case ${_f##*/} in opencode | windsurf | devin-desktop) ;; *) ln -s "$_f" "$TMP/ih-clean/${_f##*/}" 2>/dev/null ;; esac; done; done
+printf '#!/bin/sh\n' > "$TMP/ih-bin/opencode"; cp "$TMP/ih-bin/opencode" "$TMP/ih-bin/windsurf"; chmod +x "$TMP/ih-bin/opencode" "$TMP/ih-bin/windsurf"
+sm_inst ih0 PATH="$TMP/ih0-bin:$TMP/ih-clean"
+sm_inst ih1 PATH="$TMP/ih-bin:$TMP/ih1-bin:$TMP/ih-clean"
+t; assert_eq "T-1065: a client on PATH gets a Skipped line with its setup remedy; without it nothing is added" 'yes yes yes no no' \
+  "$(grep -qF '  ! OpenCode found' "$TMP/ih1.out" && printf yes) $(grep -qF 'fix: knotlog setup opencode' "$TMP/ih1.out" && printf yes) $(grep -qF 'fix: knotlog setup windsurf' "$TMP/ih1.out" && printf yes) $(grep -qF 'setup opencode' "$TMP/ih0.out" && printf yes || printf no) $(grep -qF 'setup windsurf' "$TMP/ih0.out" && printf yes || printf no)"
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
