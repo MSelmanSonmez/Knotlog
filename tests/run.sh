@@ -12698,6 +12698,91 @@ t; assert_eq "T-1075: unchanged hook files (and the directories they leave empty
 t; assert_eq "T-1075: the vault's config and bridge file are untouched" 'yes' \
   "$([ -f "$TMP/vun75/.knotlog/config" ] && [ -f "$TMP/vun75/AGENTS.md" ] && printf yes || printf no)"
 
+# ---- 1.2.0 security: links inside a vault never carry a write out of it (T-1080..T-1086) ----
+# A cloned repository is adopted as a vault by the walk-up and may carry symlinks.
+# Each outside target is compared with cksum before and after; hook runs exit 0, manual runs 1.
+SO="$TMP/sec-out"
+mkdir -p "$SO"
+D=$(date +%Y-%m-%d)
+sec_vault() { # name -> vault with two activity rows, the second naming a hostile path
+  mkvault "$1"
+  printf '%s\n' '2026-10-27T01:00 | PostToolUse | Read | a.md' '2026-10-27T01:01 | PostToolUse | Read | x; touch pwned' > "$TMP/$1/.knotlog/activity.log"
+}
+sec_target() { printf 'ORIGINAL %s\n' "$1" > "$SO/$1"; cksum < "$SO/$1"; }
+sec_same() { if [ "$(cksum < "$SO/$1")" = "$2" ]; then printf same; else printf changed; fi; }
+sec_rem() { # name hook(0|1) -> exit code of remember run from inside the vault (walk-up)
+  (cd "$TMP/$1" && unset QUIPU_VAULT KNOTLOG_VAULT && QUIPU_HOOK=$2 QUIPU_LANG=en sh "$ROOT/knotlog" remember </dev/null >/dev/null 2>"$TMP/$1.err$2"); printf '%s' "$?"
+}
+sec_slink() { MSYS="${MSYS:+$MSYS }winsymlinks:nativestrict" ln -s "$1" "$2"; }
+SEC_MSG=$(i18n err_state_link); SEC_MSG=${SEC_MSG#%s}
+
+if [ "$TRUE_SYMLINKS" -eq 1 ]; then
+  # T-1080: .knotlog/remembered -> outside file (the ~/.bashrc case).
+  sec_vault s80; C80=$(sec_target t80); sec_slink "$SO/t80" "$TMP/s80/.knotlog/remembered"
+  R80="$(sec_rem s80 1) $(sec_rem s80 0)"
+  t; assert_eq "T-1080: symlinked .knotlog/remembered: hook exits 0, manual exits 1, the outside file is byte-identical" '0 1 same' "$R80 $(sec_same t80 "$C80")"
+  t; assert_eq "T-1080: the manual run names the reason and no session note is written" 'yes no' \
+    "$(grep -qF -- "$SEC_MSG" "$TMP/s80.err0" && printf yes || printf no) $([ -e "$TMP/s80/📆 700-Sessions" ] && printf yes || printf no)"
+  t; assert_eq "T-1080: doctor still runs and fails on the link (exit 1)" 'yes 1' \
+    "$(QUIPU_VAULT="$TMP/s80" QUIPU_LANG=en sh "$ROOT/knotlog" doctor >"$TMP/s80.doc" 2>&1; R=$?; grep -qF -- "$(i18n doc_state_link)" "$TMP/s80.doc" && printf yes || printf no; printf ' %s' "$R")"
+
+  # T-1081: .knotlog/activity.log -> outside file; capture appends there unguarded.
+  mkvault s81; C81=$(sec_target t81); sec_slink "$SO/t81" "$TMP/s81/.knotlog/activity.log"
+  R81H=$(printf '%s\n' '{"hook_event_name":"PostToolUse","tool_name":"Read","tool_input":{"file_path":"x;payload"}}' | (cd "$TMP/s81" && unset QUIPU_VAULT KNOTLOG_VAULT && QUIPU_HOOK=1 sh "$ROOT/knotlog" capture >/dev/null 2>&1); printf '%s' "$?")
+  R81M=$( (cd "$TMP/s81" && unset QUIPU_VAULT KNOTLOG_VAULT && sh "$ROOT/knotlog" capture --event PostToolUse --tool Read --path 'x;payload' >/dev/null 2>&1); printf '%s' "$?")
+  t; assert_eq "T-1081: symlinked .knotlog/activity.log: hook capture exits 0, manual exits 1, the outside file is byte-identical" '0 1 same' "$R81H $R81M $(sec_same t81 "$C81")"
+
+  # T-1082: today's session note -> outside file (remember appends the file list to it),
+  # and a dangling Last-Session.md link (remember would create its target).
+  sec_vault s82; C82=$(sec_target t82); mkdir -p "$TMP/s82/📆 700-Sessions"; sec_slink "$SO/t82" "$TMP/s82/📆 700-Sessions/$D.md"
+  R82="$(sec_rem s82 1) $(sec_rem s82 0)"
+  t; assert_eq "T-1082: symlinked session note: hook exits 0, manual exits 1, the outside file is byte-identical" '0 1 same' "$R82 $(sec_same t82 "$C82")"
+  sec_vault s82b; sec_slink "$SO/t82b-new" "$TMP/s82b/Last-Session.md"
+  R82B="$(sec_rem s82b 1) $(sec_rem s82b 0)"
+  t; assert_eq "T-1082: dangling Last-Session.md link: hook exits 0, manual exits 1, nothing is created outside" '0 1 no' \
+    "$R82B $([ -e "$SO/t82b-new" ] && printf yes || printf no)"
+
+  # T-1083: .knotlog itself -> an outside directory.
+  mkdir -p "$TMP/s83" "$SO/sd83"; : > "$SO/sd83/config"
+  printf '%s\n' '2026-10-27T01:00 | PostToolUse | Read | a.md' '2026-10-27T01:01 | PostToolUse | Read | b.md' > "$SO/sd83/activity.log"
+  C83=$(cksum < "$SO/sd83/activity.log"); L83=$(ls -A "$SO/sd83")
+  sec_slink "$SO/sd83" "$TMP/s83/.knotlog"
+  R83="$(sec_rem s83 1) $(sec_rem s83 0)"
+  t; assert_eq "T-1083: symlinked .knotlog directory: hook exits 0, manual exits 1, the outside directory gains no file" '0 1 yes yes' \
+    "$R83 $([ "$(ls -A "$SO/sd83")" = "$L83" ] && printf yes || printf no) $([ "$(cksum < "$SO/sd83/activity.log")" = "$C83" ] && printf yes || printf no)"
+
+  # T-1086: the vault root itself may be a link (a vault moved to another disk): unchanged behaviour.
+  sec_vault s86real; sec_slink "$TMP/s86real" "$TMP/s86"
+  R86=$(sec_rem s86 0)
+  t; assert_eq "T-1086: a symlinked vault root still remembers (exit 0, session note and Last-Session.md in the real directory)" '0 yes yes' \
+    "$R86 $([ -f "$TMP/s86real/📆 700-Sessions/$D.md" ] && printf yes || printf no) $([ -f "$TMP/s86real/Last-Session.md" ] && printf yes || printf no)"
+else
+  for _s in T-1080 T-1080 T-1080 T-1081 T-1082 T-1082 T-1083 T-1086; do
+    t; skip "$_s: symlink write scenarios" "no native symlinks on this host"
+  done
+fi
+
+# T-1084: an unshipped layout= (a path to a layout file of the repository's own) falls back to emoji
+# in remember and note, so its sessions folder cannot point outside the vault.
+UP84=$(printf '%s\n' "$ROOT/layout" | awk -F/ '{ for (i = 1; i <= NF + 10; i++) printf "../" }')
+printf 'sessions\t../s84-out\n' > "$SO/lay84.txt"
+sec_vault s84; printf 'layout=%s%s\n' "$UP84" "${SO#/}/lay84" > "$TMP/s84/.knotlog/config"
+R84=$(QUIPU_VAULT="$TMP/s84" QUIPU_LANG=en sh "$ROOT/knotlog" remember >/dev/null 2>&1; printf '%s' "$?")
+R84N=$(QUIPU_VAULT="$TMP/s84" QUIPU_LANG=en sh "$ROOT/knotlog" note "hello" >/dev/null 2>&1; printf '%s' "$?")
+t; assert_eq "T-1084: bad layout=: remember and note exit 0, write today's note under the emoji sessions folder, nothing outside" '0 0 yes no' \
+  "$R84 $R84N $(grep -q 'hello' "$TMP/s84/📆 700-Sessions/$D.md" 2>/dev/null && printf yes || printf no) $([ -e "$TMP/s84-out" ] && printf yes || printf no)"
+
+# T-1085: a layout whose sessions folder climbs out (sessions=../x) is refused by remember and note.
+H85="$TMP/home85"; mkdir -p "$H85"
+cp -R "$ROOT/knotlog" "$ROOT/lib" "$ROOT/i18n" "$ROOT/layout" "$ROOT/fold" "$H85/"
+printf 'sessions\t../s85-out\n' > "$H85/layout/evil.txt"
+sec_vault s85; printf 'layout=evil\n' > "$TMP/s85/.knotlog/config"
+R85M=$(QUIPU_HOME="$H85" QUIPU_VAULT="$TMP/s85" QUIPU_LANG=en sh "$H85/knotlog" remember >/dev/null 2>&1; printf '%s' "$?")
+R85H=$(QUIPU_HOME="$H85" QUIPU_VAULT="$TMP/s85" QUIPU_HOOK=1 QUIPU_LANG=en sh "$H85/knotlog" remember </dev/null >/dev/null 2>&1; printf '%s' "$?")
+R85N=$(QUIPU_HOME="$H85" QUIPU_VAULT="$TMP/s85" QUIPU_LANG=en sh "$H85/knotlog" note "hello" >/dev/null 2>&1; printf '%s' "$?")
+t; assert_eq "T-1085: sessions=../x: manual remember exits 1, hook remember 0, note 1; nothing is written outside the vault" '1 0 1 no' \
+  "$R85M $R85H $R85N $([ -e "$TMP/s85-out" ] && printf yes || printf no)"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
