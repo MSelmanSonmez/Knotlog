@@ -557,3 +557,6 @@ err_flair_unknown=enfeite desconhecido: %s (válidos: none kaomoji emoji)
 err_flair_extra_arg=argumento extra inesperado de flair: %s
 doc_flair=enfeite
 doc_flair_invalid=flair=%s não é none, kaomoji nem emoji — usando none (execute: knotlog flair --list)
+err_state_link=%s é um link simbólico ou contém um; o knotlog não grava através de links. Remova-os (o doctor mostra esta verificação)
+err_unsafe_write=%s não será gravado: é um link simbólico ou leva para fora do cofre
+doc_state_link=o diretório de estado é um link simbólico ou contém um; os demais comandos não rodam até que seja removido

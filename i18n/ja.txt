@@ -557,3 +557,6 @@ err_flair_unknown=不明な装飾: %s (有効: none kaomoji emoji)
 err_flair_extra_arg=flair の余分な引数: %s
 doc_flair=装飾
 doc_flair_invalid=flair=%s は none、kaomoji、emoji のいずれでもないため none を使用します (実行: knotlog flair --list)
+err_state_link=%s はシンボリックリンクであるか、シンボリックリンクを含んでいます。knotlog はリンク経由で書き込みません。リンクを削除してください (doctor がこの検査を表示します)
+err_unsafe_write=%s には書き込みません: シンボリックリンクであるか、ボールトの外を指しています
+doc_state_link=状態ディレクトリがシンボリックリンクであるか、シンボリックリンクを含んでいます。削除するまで他のコマンドは実行されません

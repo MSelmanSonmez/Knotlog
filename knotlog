@@ -196,6 +196,40 @@ _q_layout_ok() {
   [ -f "$_q_HOME/layout/$1.txt" ]
 }
 
+_q_has_link() {
+  # Is $1 a symbolic link, or a directory holding one at any depth?
+  [ ! -L "$1" ] || return 0
+  [ -d "$1" ] || return 1
+  [ -n "$(find "$1" -type l -print 2>/dev/null)" ]
+}
+
+_q_safe_target() {
+  # _q_safe_target VAULT PATH — may knotlog write PATH? Not when PATH is itself
+  # a symbolic link, or when its nearest existing directory resolves (pwd -P)
+  # outside the vault's real path: a cloned repository can carry links that
+  # would carry a write out of the vault. The vault root itself may be a link.
+  [ ! -L "$2" ] || return 1
+  _q_st_d=${2%/*}
+  while [ ! -d "$_q_st_d" ]; do
+    [ "${_q_st_d%/*}" != "$_q_st_d" ] || return 1
+    _q_st_d=${_q_st_d%/*}
+  done
+  _q_st_root=$(CDPATH='' cd -- "$1" && pwd -P) || return 1
+  _q_st_d=$(CDPATH='' cd -- "$_q_st_d" && pwd -P) || return 1
+  case "$_q_st_d/" in
+    "$_q_st_root"/*) return 0 ;;
+  esac
+  return 1
+}
+
+_q_sessions_ok() {
+  # Is $1 a sessions folder that stays inside the vault (relative, no `..`)?
+  case "$1" in
+    /* | .. | ../* | */.. | */../*) return 1 ;;
+  esac
+  return 0
+}
+
 _q_fold_for_lang() {
   # THE language -> fold profile mapping: tr has its own, Latin-script
   # languages with accents use latin, everything else default.
@@ -1101,6 +1135,7 @@ _q_bridge_refresh() {
       [ -f "$1/$_q_br_f" ] || continue
       [ -f "$_q_br_d/$_q_br_f" ] || continue
       grep -Eq '^<!-- (knotlog|quipu):start -->$' "$1/$_q_br_f" || continue
+      _q_safe_target "$1" "$1/$_q_br_f" || continue
       cmp -s "$1/$_q_br_f" "$_q_br_d/$_q_br_f" || cat "$_q_br_d/$_q_br_f" > "$1/$_q_br_f"
     done
   fi
@@ -1377,6 +1412,10 @@ _q_doctor() {
     _q_line warn vault "$(_q_msg doc_vault_missing)"
   else
     _q_line ok vault "$(_q_msg doc_vault_ok)"
+    # The links every other command refuses to run with (see dispatch).
+    if _q_has_link "$_q_v/$_q_SD"; then
+      _q_line fail "$_q_SD" "$(_q_msg doc_state_link)"
+    fi
     # A vault from before the rename still works in place; point at migrate.
     if [ -d "$_q_v/.quipu" ] || { [ -f "$_q_v/$_q_SD/config" ] && grep -q '^QUIPU_' "$_q_v/$_q_SD/config"; }; then
       _q_line warn "$(_q_msg doc_migrate)" "$(_q_msg doc_migrate_old)"
@@ -5536,6 +5575,9 @@ ${_q_text}"
     # Written to BOTH bridge files: this is the hook-less path, and it is the
     # only way a Codex session (whose hooks do not fire) learns what a Claude
     # session did -- and vice versa when Claude reads CLAUDE.md.
+    for _q_f in AGENTS.md CLAUDE.md; do
+      _q_safe_target "$_q_v" "$_q_v/$_q_f" || _q_die err_unsafe_write 1 "$_q_f"
+    done
     : >> "$_q_v/AGENTS.md"
     : >> "$_q_v/CLAUDE.md"
     _q_ctx_body="$_q_v/$_q_SD/context-body.tmp"
@@ -5701,10 +5743,9 @@ _q_cmd_remember() {
   if [ -f "$_q_v/$_q_SD/config" ]; then
     _q_layout=$(awk -F= -v k=layout '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_v/$_q_SD/config" 2>/dev/null || true)
   fi
-  if [ -z "$_q_layout" ]; then
-    _q_layout=emoji
-  fi
+  _q_layout_ok "$_q_layout" || _q_layout=emoji
   _q_sessions=$(awk -F"$_q_tab" '$1=="sessions"{print $2;exit}' "$_q_HOME/layout/$_q_layout.txt" 2>/dev/null || true)
+  _q_sessions_ok "$_q_sessions" || _q_die err_unsafe_write 1 "$_q_sessions"
 
   _q_day=$(date +%Y-%m-%d)
   _q_rel="$_q_sessions/$_q_day.md"
@@ -5729,6 +5770,7 @@ _q_cmd_remember() {
     exit 0
   fi
 
+  _q_safe_target "$_q_v" "$_q_v/$_q_rel" || _q_die err_unsafe_write 1 "$_q_rel"
   mkdir -p "$_q_v/$_q_sessions"
   cat "$_q_body" >> "$_q_v/$_q_rel"
 
@@ -5758,6 +5800,7 @@ _q_cmd_remember() {
   # mv below, or a freshly created file would be written back under the other
   # name and the scaffold would land in a second, empty file.
   _q_threads_f=$(_q_threads_path "$_q_v")
+  _q_safe_target "$_q_v" "$_q_threads_f" || _q_die err_unsafe_write 1 "$_q_threads_f"
   [ -f "$_q_threads_f" ] || : > "$_q_threads_f"
   if ! awk 'index($0, "knotlog:threads:start") || index($0, "quipu:threads:start") { found = 1 } END { exit !found }' "$_q_threads_f"; then
     {
@@ -5773,6 +5816,7 @@ _q_cmd_remember() {
 
   _q_ls_body="$_q_day · $_q_count $(_q_msg remember_events) · $_q_rel"
   _q_ls_f=$(_q_session_file "$_q_v")
+  _q_safe_target "$_q_v" "$_q_ls_f" || _q_die err_unsafe_write 1 "$_q_ls_f"
   : >> "$_q_ls_f"
   if [ -n "$_q_sid" ]; then
     # Per-session handoff card (lib/card.awk): this session's card only,
@@ -5865,6 +5909,7 @@ _q_note_thread_write() {
   if [ ! -f "$_q_nt_tp" ]; then
     _q_die err_thread_nofile 1 "${_q_nt_tp#"$_q_nt_v"/}"
   fi
+  _q_safe_target "$_q_nt_v" "$_q_nt_tp" || _q_die err_unsafe_write 1 "${_q_nt_tp#"$_q_nt_v"/}"
   _q_nt_cr=$(printf '\r')
   _q_nt_lock="$_q_nt_v/$_q_SD/remember.lock"
   _q_remember_lock_acquire "$_q_nt_lock" note_busy || exit 1
@@ -5978,10 +6023,9 @@ _q_cmd_note() {
   if [ -f "$_q_v/$_q_SD/config" ]; then
     _q_layout=$(awk -F= -v k=layout '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_v/$_q_SD/config" 2>/dev/null || true)
   fi
-  if [ -z "$_q_layout" ]; then
-    _q_layout=emoji
-  fi
+  _q_layout_ok "$_q_layout" || _q_layout=emoji
   _q_sessions=$(awk -F"$_q_tab" '$1=="sessions"{print $2;exit}' "$_q_HOME/layout/$_q_layout.txt" 2>/dev/null || true)
+  _q_sessions_ok "$_q_sessions" || _q_die err_unsafe_write 1 "$_q_sessions"
   _q_day=$(date +%Y-%m-%d)
   _q_rel="$_q_sessions/$_q_day.md"
   _q_now=$(date +%H:%M)
@@ -6000,6 +6044,7 @@ _q_cmd_note() {
   }
   trap '_q_note_cleanup' EXIT HUP INT TERM
 
+  _q_safe_target "$_q_v" "$_q_note_file" || _q_die err_unsafe_write 1 "$_q_rel"
   mkdir -p "$_q_v/$_q_sessions"
   : >> "$_q_note_file"
   if ! awk 'index($0, "knotlog:reflect:start") || index($0, "quipu:reflect:start") { found = 1 } END { exit !found }' "$_q_note_file"; then
@@ -6052,6 +6097,9 @@ _q_cmd_compile() {
   _q_tab=$(printf '\t')
   _q_cp=$(_q_compiled_path "$_q_v")
   _q_cpre=${_q_cp#"$_q_v"/}/
+  if ! _q_safe_target "$_q_v" "$_q_cp" || _q_has_link "$_q_cp"; then
+    _q_die err_unsafe_write 1 "$_q_cpre"
+  fi
   mkdir -p "$_q_cp" || exit 1
   _q_tmp=$(mktemp -d "${TMPDIR:-/tmp}/quipu-compile-XXXXXX") || exit 1
   trap 'rm -rf "$_q_tmp"' EXIT HUP INT TERM
@@ -6656,6 +6704,7 @@ _q_cmd_digest() {
     cat "$_q_body"
     exit 0
   fi
+  _q_safe_target "$_q_v" "$_q_v/$_q_rel" || _q_die err_unsafe_write 1 "$_q_rel"
   mkdir -p "$_q_v/$_q_dump"
   cat "$_q_body" > "$_q_v/$_q_rel"
   # shellcheck disable=SC2059
@@ -6717,6 +6766,7 @@ _q_cmd_import() {
     _q_rel="$_q_sessions/$_q_date-import-$_q_slug-$_q_suffix.md"
     _q_suffix=$((_q_suffix + 1))
   done
+  _q_safe_target "$_q_v" "$_q_v/$_q_rel" || _q_die err_unsafe_write 1 "$_q_rel"
   mkdir -p "$_q_v/$_q_sessions"
   awk -f "$_q_HOME/lib/jsonfield.awk" -f "$_q_HOME/lib/import.awk" "$_q_tmp" > "$_q_v/$_q_rel"
   # shellcheck disable=SC2059
@@ -6785,6 +6835,7 @@ _q_cmd_plan() {
   fi
 
   _q_pl_dir=$(_q_plans_dir_path "$_q_pl_projdir")
+  _q_safe_target "$_q_v" "$_q_pl_dir/$_q_pl_name" || _q_die err_unsafe_write 1 "$_q_pl_dir/$_q_pl_name"
   if [ ! -d "$_q_pl_dir" ]; then
     mkdir -p "$_q_pl_dir" || _q_die err_plan_mkdir 2 "$_q_pl_dir"
   fi
@@ -6936,6 +6987,9 @@ _q_cmd_archive() {
     return 0
   fi
 
+  for _q_f in "$_q_ar_thr" "$_q_ar_dst"; do
+    _q_safe_target "$_q_v" "$_q_f" || _q_die err_unsafe_write 1 "$_q_f"
+  done
   _q_ar_dstdir=$(dirname "$_q_ar_dst")
   if [ ! -d "$_q_ar_dstdir" ]; then
     mkdir -p "$_q_ar_dstdir" || _q_die err_archive_mkdir 2 "$_q_ar_dstdir"
@@ -6997,6 +7051,9 @@ _q_cp_move() {
   # before the cut, so the source is untouched on error.
   _q_cp_thr=$1; _q_cp_s=$2; _q_cp_e=$3; _q_cp_bytes=$4; _q_cp_dst=$5
   _q_cp_dstname=${_q_cp_dst#"$_q_v"/}
+  for _q_f in "$_q_cp_thr" "$_q_cp_dst"; do
+    _q_safe_target "$_q_v" "$_q_f" || _q_die err_unsafe_write 1 "$_q_f"
+  done
   _q_cp_dstdir=$(dirname "$_q_cp_dst")
   if [ ! -d "$_q_cp_dstdir" ]; then
     mkdir -p "$_q_cp_dstdir" || _q_die err_archive_mkdir 2 "$_q_cp_dstdir"
@@ -7668,6 +7725,18 @@ _q_sd_v=$(_q_vault)
 [ -z "$_q_sd_v" ] || _q_SD=$(_q_sd_of "$_q_sd_v")
 
 _q_cmd=${1:-}
+# Every state write (activity.log, remembered, index, ...) lives in the state
+# directory, so one check guards them all: a link there, or the directory
+# being one, would let a write follow it out of the vault. doctor lists them.
+case "$_q_cmd" in
+  --version | help | doctor) ;;
+  *)
+    if [ -n "$_q_sd_v" ] && _q_has_link "$_q_sd_v/$_q_SD"; then
+      [ "${QUIPU_HOOK:-0}" != 1 ] || exit 0
+      _q_die err_state_link 1 "$_q_sd_v/$_q_SD"
+    fi
+    ;;
+esac
 case "$_q_cmd" in
   --version) printf 'knotlog %s\n' "$_q_version"; exit 0 ;;
   doctor) _q_doctor ;;

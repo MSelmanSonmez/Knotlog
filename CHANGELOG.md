@@ -5,6 +5,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [1.2.0] - 2026-10-26
 
+### Security
+- A repository carrying symlinks inside `.knotlog/` could make hooks write outside the vault. Knotlog now refuses to run when the state directory is a symbolic link or holds one (hooks exit 0 silently, manual runs exit 1, `doctor` reports it), and refuses to write a vault file that is a link or whose folder resolves outside the vault. The vault root itself may still be a link. Present in 1.1.1 and earlier.
+- `remember` and `note` ignore a `layout=` value that is not a shipped layout (falling back to `emoji`, as `context`, `import` and `digest` already did), and refuse a sessions folder that is absolute or contains `..`.
+
 ### Fixed
 - The arrow-key language menu no longer fails with "unknown layout" when you pick `es`, `ja`, `pt-br` or `zh-cn` (languages without their own folder layout); it falls back to English folders like every other install path. Present in 1.1.1.
 - `knotlog tone` and `knotlog flair` also rewrite the `knotlog:context` block that `context --bridge` writes, so old style text no longer lingers beside the new one.

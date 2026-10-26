@@ -557,3 +557,6 @@ err_flair_unknown=bilinmeyen süs: %s (geçerli: none kaomoji emoji)
 err_flair_extra_arg=beklenmeyen fazladan flair argümanı: %s
 doc_flair=süs
 doc_flair_invalid=flair=%s none, kaomoji ya da emoji değil — none kullanılıyor (çalıştır: knotlog flair --list)
+err_state_link=%s sembolik bağ ya da içinde sembolik bağ var; knotlog bağların üzerinden yazmaz. Bağları kaldır (doctor bu denetimi gösterir)
+err_unsafe_write=%s yazılmıyor: sembolik bağ ya da kasanın dışına çıkıyor
+doc_state_link=durum dizini sembolik bağ ya da içinde sembolik bağ var; kaldırılana kadar diğer komutlar çalışmaz
