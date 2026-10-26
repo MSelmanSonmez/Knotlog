@@ -1262,7 +1262,7 @@ _q_HOME=$(_q_home)
 # `update --check` (comparing the shipped version against the latest
 # release) both read this instead of each carrying their own copy of the
 # literal, which is what let the two drift apart before this existed.
-_q_version=1.1.1
+_q_version=1.2.0
 
 # ---- doctor -----------------------------------------------------------------
 
@@ -1282,6 +1282,15 @@ _q_wsl_bash() {
   return 1
 }
 
+_q_path_knotlog() {
+  # The `knotlog` hooks call by plain name: first one on PATH (_q_pk_path,
+  # empty when none) and its version number (_q_pk_ver, ? when unreadable).
+  _q_pk_path=$(command -v knotlog 2>/dev/null) || _q_pk_path=
+  _q_pk_ver=
+  [ -z "$_q_pk_path" ] || _q_pk_ver=$("$_q_pk_path" --version 2>/dev/null | sed -n '1s/^knotlog //p')
+  [ -n "$_q_pk_ver" ] || _q_pk_ver='?'
+}
+
 _q_doctor() {
   OK=0
   WARN=0
@@ -1299,6 +1308,13 @@ _q_doctor() {
   done
   if _q_wsl_bash; then
     _q_line warn bash "$(_q_msg doc_wsl_bash)"
+  fi
+  _q_path_knotlog
+  if [ -z "$_q_pk_path" ]; then
+    _q_line warn knotlog "$(_q_msg doc_path_missing)"
+  elif [ "$_q_pk_ver" != "$_q_version" ]; then
+    # shellcheck disable=SC2059
+    _q_line warn knotlog "$(printf "$(_q_msg doc_path_shadow)" "$_q_pk_path" "$_q_pk_ver" "$_q_version")"
   fi
 
   _q_msg doc_sec_dialects
@@ -4197,6 +4213,15 @@ _q_cmd_install() {
   else
     # shellcheck disable=SC2059
     _q_sum_ok vault "$(printf "$(_q_msg install_summary_command_linked)" "$_q_i_link")"
+  fi
+  if [ "$_q_i_no_link" -eq 0 ]; then
+    # Hooks call plain `knotlog`: another one earlier on PATH wins over the link.
+    _q_path_knotlog
+    if [ -n "$_q_pk_path" ] && [ "$(_q_resolve_path "$_q_pk_path" 2>/dev/null || true)" != "$_q_i_source" ]; then
+      # shellcheck disable=SC2059
+      _q_sum_skip "$(printf "$(_q_msg install_summary_path_shadow)" "$_q_pk_path" "$_q_pk_ver")" \
+        "$(printf "$(_q_msg install_summary_fix_path_shadow)" "$_q_pk_path" "$(dirname -- "$_q_i_link")")"
+    fi
   fi
   if [ "$_q_i_claude_state" = preserved ]; then
     # shellcheck disable=SC2059

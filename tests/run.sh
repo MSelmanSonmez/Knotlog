@@ -206,7 +206,7 @@ fi
 # ---- cli skeleton ----
 
 t; VERSION=$(sh "$ROOT/knotlog" --version)
-t; assert_eq "knotlog --version prints knotlog 1.1.1" 'knotlog 1.1.1' "$VERSION"
+t; assert_eq "knotlog --version prints knotlog 1.2.0" 'knotlog 1.2.0' "$VERSION"
 
 mkdir -p "$TMP/empty"
 t; (cd "$TMP/empty" && "$ROOT/knotlog" doctor) >"$TMP/empty.out" 2>&1; RC=$?
@@ -3957,7 +3957,7 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
     "$([ -L "$IBIN/knotlog" ] && [ -f "$IBIN/knotlog" ] \
        && [ -x "$IBIN/knotlog" ] && [ ! -e "$ILATER/knotlog" ] && printf yes || printf no)"
   t; IVERSION=$(PATH="$IBIN:$INSTALL_TOOLS" "$IBIN/knotlog" --version)
-  assert_eq "install: installed symlink executes the real knotlog script" 'knotlog 1.1.1' "$IVERSION"
+  assert_eq "install: installed symlink executes the real knotlog script" 'knotlog 1.2.0' "$IVERSION"
 
   # Existing matching vault/link is idempotent and preserves user-authored text.
   touch -t 200001010101 "$ITARGET/.claude/settings.json"
@@ -8913,7 +8913,7 @@ t; UPD509=$(QUIPU_LANG=en QUIPU_RELEASE_API_URL="$FIXURL/release-current.json" \
   sh "$ROOT/knotlog" update --check); RC509=$?
 t; assert_eq "T-509: already up to date exits 0" '0' "$RC509"
 t; assert_eq "T-509: up-to-date names the current version" 'yes' \
-  "$(printf '%s\n' "$UPD509" | grep -qF '1.1.1' && printf yes || printf no)"
+  "$(printf '%s\n' "$UPD509" | grep -qF '1.2.0' && printf yes || printf no)"
 t; assert_eq "T-509: up-to-date identifies this checkout as git" 'yes' \
   "$(printf '%s\n' "$UPD509" | grep -qF 'git' && printf yes || printf no)"
 
@@ -8940,7 +8940,7 @@ t; UPD510=$(QUIPU_LANG=en QUIPU_RELEASE_API_URL="$FIXURL/release-newer.json" \
   sh "$ROOT/knotlog" update --check); RC510=$?
 t; assert_eq "T-510: newer release exits 0" '0' "$RC510"
 t; assert_eq "T-510: newer release names the current version" 'yes' \
-  "$(printf '%s\n' "$UPD510" | grep -qF '1.1.1' && printf yes || printf no)"
+  "$(printf '%s\n' "$UPD510" | grep -qF '1.2.0' && printf yes || printf no)"
 t; assert_eq "T-510: newer release names the new version" 'yes' \
   "$(printf '%s\n' "$UPD510" | grep -qF '2.8.0' && printf yes || printf no)"
 
@@ -8954,7 +8954,7 @@ t; assert_eq "T-510: newer release names the new version" 'yes' \
 # in the scratch copy differs from the real script.
 VERPATCH="$TMP/verpatch"
 mkdir -p "$VERPATCH"
-sed 's/^_q_version=1\.1\.1$/_q_version=2.9.0/' "$ROOT/knotlog" > "$VERPATCH/knotlog"
+sed 's/^_q_version=1\.2\.0$/_q_version=2.9.0/' "$ROOT/knotlog" > "$VERPATCH/knotlog"
 t; assert_eq "T-511 setup: the scratch copy's version constant was patched" 'yes' \
   "$(grep -qF '_q_version=2.9.0' "$VERPATCH/knotlog" && printf yes || printf no)"
 t; UPD511=$(QUIPU_LANG=en QUIPU_HOME="$ROOT" \
@@ -12329,7 +12329,7 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
     --no-prompt --user L20 --force >"$TMP/l20-a.out" 2>"$TMP/l20-a.err"; IRC=$?
   assert_install_rc "T-1020: --force replaces a foreign symlink (exit 0)" '0' "$IRC" "$TMP/l20-a.err"
   t; assert_eq "T-1020: the link now runs this knotlog; its old target is untouched" 'yes' \
-    "$([ -L "$L20_BIN/knotlog" ] && [ "$(PATH="$L20_BIN:$INSTALL_TOOLS" "$L20_BIN/knotlog" --version)" = 'knotlog 1.1.1' ] \
+    "$([ -L "$L20_BIN/knotlog" ] && [ "$(PATH="$L20_BIN:$INSTALL_TOOLS" "$L20_BIN/knotlog" --version)" = 'knotlog 1.2.0' ] \
        && [ "$(cat "$L20_TGT")" = 'dev checkout' ] && printf yes || printf no)"
 
   _l20_setup b
@@ -12603,6 +12603,35 @@ t; assert_eq "T-1071 setup: both files carry the emoji text twice (static + cont
 QUIPU_VAULT="$TMP/vbr5" sh "$ROOT/knotlog" flair kaomoji >/dev/null 2>&1
 t; assert_eq "T-1071: after flair kaomoji the old emoji text is gone from both files, the new text is in both blocks, outside text is identical" '0 0 2 2 yes' \
   "$(grep -cF -- "$BR5_E" "$TMP/vbr5/AGENTS.md") $(grep -cF -- "$BR5_E" "$TMP/vbr5/CLAUDE.md") $(grep -cF -- "$BR5_K" "$TMP/vbr5/AGENTS.md") $(grep -cF -- "$BR5_K" "$TMP/vbr5/CLAUDE.md") $(br5_out "$TMP/vbr5/AGENTS.md" | cmp -s - "$TMP/vbr5.before" && printf yes || printf no)"
+
+# T-1072: an older knotlog earlier on PATH shadows the link; hooks call plain `knotlog`, so say so.
+SH72_OLD="$TMP/sh72-old"; SH72_BIN="$TMP/sh72-bin"; mkdir -p "$SH72_OLD" "$SH72_BIN" "$TMP/sh72-par"
+printf '#!/bin/sh\necho "knotlog 1.1.1"\n' > "$SH72_OLD/knotlog"; chmod +x "$SH72_OLD/knotlog"
+mkvault vsh72; QUIPU_VAULT="$TMP/vsh72" sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang en >/dev/null 2>&1
+SH72_DOC=$(PATH="$SH72_OLD:$INSTALL_TOOLS" QUIPU_VAULT="$TMP/vsh72" QUIPU_LANG=en sh "$ROOT/knotlog" doctor 2>&1); SH72_RC=$?
+t; assert_eq "T-1072: doctor warns (exit 0) when an older knotlog is first on PATH, naming its path and both versions" 'yes 0' \
+  "$(printf '%s\n' "$SH72_DOC" | grep -qF "warn	knotlog	hooks will run $SH72_OLD/knotlog (knotlog 1.1.1), but this is knotlog 1.2.0" && printf yes || printf no) $SH72_RC"
+SH72_DOC=$(PATH="$(dirname "$INSTALL_SHELL")" QUIPU_VAULT="$TMP/vsh72" QUIPU_LANG=en sh "$ROOT/knotlog" doctor 2>&1)
+t; assert_eq "T-1072: doctor warns when knotlog is not on PATH at all" 'yes' \
+  "$(printf '%s\n' "$SH72_DOC" | grep -qF "warn	knotlog	knotlog is not on PATH" && printf yes || printf no)"
+if [ "$TRUE_SYMLINKS" -eq 1 ]; then
+  ln -s "$ROOT/knotlog" "$SH72_BIN/knotlog"
+  SH72_DOC=$(PATH="$SH72_BIN:$INSTALL_TOOLS" QUIPU_VAULT="$TMP/vsh72" QUIPU_LANG=en sh "$ROOT/knotlog" doctor 2>&1)
+  t; assert_eq "T-1072: doctor adds no knotlog warning when PATH finds this version" 'no' \
+    "$(printf '%s\n' "$SH72_DOC" | grep -q "warn	knotlog	" && printf yes || printf no)"
+  rm -f "$SH72_BIN/knotlog"
+  chmod 555 "$SH72_OLD"
+  if [ -w "$SH72_OLD" ]; then
+    t; skip "T-1072: install summary names the shadowing knotlog" "running as a user that ignores directory modes"
+  else
+    PATH="$SH72_OLD:$SH72_BIN:$INSTALL_TOOLS" HOME="$TMP/sh72-home" QUIPU_LANG=en sh "$ROOT/knotlog" install "$TMP/sh72-par" \
+      --no-prompt --user Ada --no-git >"$TMP/sh72.out" 2>"$TMP/sh72.err"; IRC=$?
+    assert_install_rc "T-1072: install past a shadowing knotlog still succeeds (exit 0)" '0' "$IRC" "$TMP/sh72.err"
+    t; assert_eq "T-1072: the summary lists the shadowing path and version under Skipped with a fix line" 'yes yes' \
+      "$(grep -qF "  ! Command: PATH finds $SH72_OLD/knotlog (knotlog 1.1.1) before the link above; hooks will run that one" "$TMP/sh72.out" && printf yes || printf no) $(grep -qF "    fix: remove $SH72_OLD/knotlog or put $SH72_BIN before it on PATH" "$TMP/sh72.out" && printf yes || printf no)"
+  fi
+  chmod 755 "$SH72_OLD"
+fi
 
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
