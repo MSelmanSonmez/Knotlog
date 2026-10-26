@@ -111,6 +111,7 @@ Claude Code `CLAUDE.md`'yi, diğer ajanların çoğu `AGENTS.md`'yi okur; Knotlo
 - **%100 çevrimdışı**, **ücretsiz**: makinenden hiçbir şey çıkmaz, API anahtarı yok, token maliyeti sıfır.
 - **Çok platformlu**: Windows, macOS, Linux — üçü de CI'da doğrulanıyor.
 - **Çok dilli**: arayüz altı dilde gelir (English, Türkçe, Español, Português (Brasil), 日本語, 简体中文). `--lang <kod>` (`en`, `tr`, `es`, `pt-br`, `ja`, `zh-cn`), yapılandırmadaki `lang=` ya da kurulum sihirbazıyla seçilir. İngilizce ve Türkçe elle bakılır; diğer çeviriler makine destekli, düzeltmelere açığız.
+- **Yanıt üslubu**: bir üslup ön ayarı (`--tone`) ve isteğe bağlı bir süs seç, `none`, `kaomoji` ya da `emoji` (`--flair`); kurulum sihirbazında ya da sonradan `knotlog tone` ve `knotlog flair` ile.
 - **Depolama**: düz Markdown, veritabanı yok — dosyalar senin, kilitlenme yok.
 - **Sır kapısı, varsayılan açık**: kasa bir git deposudur ve bilinen bir sır biçimi taşıyan commit'i reddeden bir pre-commit tarayıcısı vardır.
 - **Yalnız not değil, davranış sözleşmesi**: `Kurallar.md` ve `Gerçekler.md` her oturum açılışında bağlama basılır — bir kez yazdığın düzeltme sonraki oturumda da geçerli olur, tekrar söylemen gerekmez.

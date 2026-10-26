@@ -5,6 +5,7 @@
 Instalaste Knotlog y creó una bóveda. Esta guía es lo que viene después: qué
 ocurre por sí solo, qué haces tú a mano y qué comando responde a cada pregunta.
 Para la instalación en sí, consulta el [README](../README.es.md).
+El asistente de instalación tiene un paso de Estilo (tono, adorno, nombres de carpetas) que puedes cambiar después con `knotlog tone` y `knotlog flair`. Si hay un `knotlog` más antiguo antes en tu `PATH`, el resumen de la instalación y `knotlog doctor` te avisan, porque los hooks ejecutan ese.
 
 > **Antes llamado Quipu.** Knotlog es el nuevo nombre de Quipu; el antiguo comando `quipu` ya no existe. Si tienes una bóveda creada con el nombre antiguo, ejecuta `knotlog migrate` para previsualizar los cambios y `knotlog migrate --apply` para escribirlos; también reescribe los antiguos comandos de hook `quipu` como `knotlog`. Un bloque puente que hayas editado a mano no se refresca (solo se renombran sus marcadores) y recibes un aviso.
 
@@ -473,7 +474,7 @@ Detalles: [REFERENCE.md](REFERENCE.md#mcp-server).
 ## 9. Ajustes
 
 Los ajustes de la bóveda viven en `.knotlog/config` como líneas simples
-`key=value`: `layout`, `lang`, `fold`, `user`, `companion`, `purpose`, `tone`,
+`key=value`: `layout`, `lang`, `fold`, `user`, `companion`, `purpose`, `tone`, `flair`,
 `ctx_max`. Cambiar `fold` requiere `knotlog index --full` después; los demás
 surten efecto en el siguiente comando. `init` nunca escribe `ctx_max` — ya
 tiene un valor por defecto que funciona (4096), así que añade la línea a mano
@@ -497,6 +498,8 @@ recurre a la sección Tone de companion.md — el mismo comportamiento que tení
 una bóveda antes de que existieran los presets. Como `purpose`, no hay pregunta
 interactiva para `tone` durante `init`; solo la opción `--tone <slug>` (que
 también acepta `install`).
+
+`flair` añade un adorno a las respuestas encima del tono: `none` (por defecto), `kaomoji` o `emoji`. `knotlog flair` lo muestra, `knotlog flair --list` los lista y `knotlog flair <valor>` lo establece; `init` e `install` también aceptan `--flair`. Los textos vienen en los seis idiomas. Cualquier adorno distinto de `none` sustituye al preajuste de tono `kaomoji`.
 
 Variables de entorno, cuando los valores por defecto no encajan:
 

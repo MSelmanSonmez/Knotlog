@@ -111,6 +111,7 @@ Claude Code reads `CLAUDE.md`, most other agents read `AGENTS.md`; Knotlog write
 - **100% offline**, **free**: nothing leaves your machine, no API keys, zero token cost.
 - **Cross-platform**: Windows, macOS, Linux — CI-verified on all three.
 - **Multilingual**: the interface ships in six languages (English, Türkçe, Español, Português (Brazil), 日本語, 简体中文). Pick one with `--lang <code>` (`en`, `tr`, `es`, `pt-br`, `ja`, `zh-cn`), `lang=` in the config, or the install wizard. English and Turkish are maintained by hand; the other translations are machine-assisted, and corrections are welcome.
+- **Reply style**: pick a tone preset (`--tone`) and an optional flair, `none`, `kaomoji` or `emoji` (`--flair`), in the install wizard or later with `knotlog tone` and `knotlog flair`.
 - **Storage**: plain Markdown, no database — your files, no lock-in.
 - **Secret gate, on by default**: the vault is a git repository with a pre-commit scanner that rejects a commit carrying a known secret shape.
 - **A behavior contract, not just notes**: `Rules.md` and `Facts.md` are injected at every session start — a correction you write once holds in the next session instead of being repeated.

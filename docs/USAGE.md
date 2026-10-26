@@ -38,7 +38,7 @@ no additional service is needed.
 ## Phase 2 — Setup
 
 ```
-./knotlog install [PARENT] --lang <tr|en> [--plain] [--no-git] [--no-link] [--no-prompt] \
+./knotlog install [PARENT] --lang <en|tr|es|pt-br|ja|zh-cn> [--plain] [--no-git] [--no-link] [--no-prompt] \
   --user <name> [--companion <name>] [--purpose <text>]
 ```
 

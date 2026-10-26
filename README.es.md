@@ -113,6 +113,7 @@ Claude Code lee `CLAUDE.md`, la mayoría de los demás agentes leen `AGENTS.md`;
 - **100 % sin conexión**, **gratis**: nada sale de tu equipo, sin claves de API, coste cero en tokens.
 - **Multiplataforma**: Windows, macOS, Linux — verificado por CI en los tres.
 - **Multilingüe**: la interfaz se distribuye en seis idiomas (English, Türkçe, Español, Português (Brasil), 日本語, 简体中文). Elige uno con `--lang <código>` (`en`, `tr`, `es`, `pt-br`, `ja`, `zh-cn`), `lang=` en la configuración o el asistente de instalación. El inglés y el turco se mantienen a mano; las demás traducciones están asistidas por máquina y las correcciones son bienvenidas.
+- **Estilo de respuesta**: elige un preajuste de tono (`--tone`) y un adorno opcional, `none`, `kaomoji` o `emoji` (`--flair`), en el asistente de instalación o después con `knotlog tone` y `knotlog flair`.
 - **Almacenamiento**: Markdown plano, sin base de datos — tus archivos, sin dependencia de un proveedor.
 - **Control de secretos, activado por defecto**: el vault es un repositorio git con un escáner pre-commit que rechaza un commit que contenga la forma de un secreto conocido.
 - **Un contrato de comportamiento, no solo notas**: `Rules.md` y `Facts.md` se inyectan al inicio de cada sesión — una corrección que escribes una vez se mantiene en la siguiente sesión en lugar de repetirse.

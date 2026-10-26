@@ -14,7 +14,7 @@ curl -fsSL https://raw.githubusercontent.com/MSelmanSonmez/Knotlog/main/install.
 
 Betik doğrulanmış sürümü indirir ve `knotlog install`'a devreder; klonlayarak
 kurulumu ve Windows yolunu [README](../README.md) anlatıyor.
-Kurulum sihirbazında Üslup adımı (ton, süs, klasör adları) var; sonradan `knotlog tone` ve `knotlog flair` ile değişir.
+Kurulum sihirbazında Üslup adımı (ton, süs, klasör adları) var; sonradan `knotlog tone` ve `knotlog flair` ile değişir. PATH'te daha önce gelen eski bir `knotlog` varsa kurulum özeti ve `knotlog doctor` uyarır, çünkü kancalar onu çalıştırır.
 
 ## 1. Knotlog senin için ne yapıyor
 
@@ -462,7 +462,7 @@ claude mcp add knotlog -- knotlog mcp
 ## 9. Ayar düğmeleri
 
 Kasa ayarları `.knotlog/config` içinde düz `anahtar=değer` satırları hâlinde
-durur: `layout`, `lang`, `fold`, `user`, `companion`, `purpose`, `tone`,
+durur: `layout`, `lang`, `fold`, `user`, `companion`, `purpose`, `tone`, `flair`,
 `ctx_max`. `fold` değişince ardından `knotlog index --full` gerekir; diğerleri
 bir sonraki komutta etkili olur. `ctx_max`'ı `init` kendiliğinden yazmaz —
 zaten çalışan bir varsayılanı var (4096), satırı yalnız değiştirmek istersen
@@ -484,6 +484,8 @@ bırakırsan, ya da sunulmayan bir slug yazarsan, Knotlog companion.md'nin
 Üslup bölümüne düşer — presetler var olmadan önceki davranışın aynısı.
 `purpose` gibi, `init` sırasında `tone` için de soru sorulmaz; yalnız
 `--tone <slug>` bayrağı vardır (`install` da kabul eder).
+
+`flair` tonun üstüne bir yanıt süsü ekler: `none` (varsayılan), `kaomoji` ya da `emoji`. `knotlog flair` gösterir, `knotlog flair --list` listeler, `knotlog flair <değer>` ayarlar; `--flair` bayrağını `init` ve `install` de kabul eder. Metinler altı dilde de gelir. `none` dışındaki süs, `kaomoji` ton ön ayarının yerine geçer.
 
 Varsayılanlar yetmezse ortam değişkenleri:
 

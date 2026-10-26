@@ -5,6 +5,7 @@
 你已经安装了 Knotlog，它也创建了一个知识库。本指南讲的是接下来的事：
 哪些事会自动发生，哪些事要你亲手做，以及哪条命令能回答哪个问题。
 关于安装本身，请参阅 [README](../README.zh-CN.md)。
+安装向导包含一个“风格”步骤（语气、点缀、文件夹名称），之后可用 `knotlog tone` 和 `knotlog flair` 修改。如果 `PATH` 中更靠前的位置有较旧的 `knotlog`，安装摘要和 `knotlog doctor` 会发出警告，因为钩子运行的是那一个。
 
 > **前身为 Quipu。** Knotlog 是 Quipu 的新名称；旧的 `quipu` 命令已移除。如果你有用旧名称创建的知识库，运行 `knotlog migrate` 预览变更，运行 `knotlog migrate --apply` 写入变更；它还会把旧的 `quipu` 钩子命令改写为 `knotlog`。你手工编辑过的桥接块不会被刷新（只会重命名其标记），并会给出警告。
 
@@ -432,7 +433,7 @@ claude mcp add knotlog -- knotlog mcp
 ## 9. 配置项
 
 知识库设置保存在 `.knotlog/config` 中，是朴素的 `key=value` 行：`layout`、
-`lang`、`fold`、`user`、`companion`、`purpose`、`tone`、`ctx_max`。修改
+`lang`、`fold`、`user`、`companion`、`purpose`、`tone`、`flair`、`ctx_max`。修改
 `fold` 之后需要运行 `knotlog index --full`；其他项在下一条命令时生效。
 `ctx_max` 从不由 `init` 写入——它已经有可用的默认值（4096），
 所以只有想覆盖它时才需要手动加这一行；
@@ -453,6 +454,8 @@ companion.md 自带的 `## Tone`/`## Üslup` 部分。不设置它，或者把�
 并未随附的 slug，Knotlog 就会回退到
 companion.md 的 Tone 部分——与预设出现之前知识库的行为相同。和 `purpose` 一样，`init` 期间
 没有针对 `tone` 的交互式提问；只有 `--tone <slug>` 标志（`install` 也接受）。
+
+`flair` 在语气之上为回复添加点缀：`none`（默认）、`kaomoji` 或 `emoji`。`knotlog flair` 显示当前值，`knotlog flair --list` 列出选项，`knotlog flair <值>` 进行设置；`init` 和 `install` 也接受 `--flair`。文本提供全部六种语言。除 `none` 之外的点缀会取代 `kaomoji` 语气预设。
 
 当默认值不合适时，可以使用环境变量：
 

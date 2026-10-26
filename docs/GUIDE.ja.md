@@ -5,6 +5,7 @@
 Knotlog をインストールすると、ボールトが作成されます。このガイドはその後の話です。
 何が自動で行われ、何を自分の手でやり、どの疑問にどのコマンドが答えるのかを説明します。
 インストール自体については [README](../README.ja.md) を参照してください。
+セットアップウィザードには「スタイル」の手順 (トーン、装飾、フォルダ名) があり、あとから `knotlog tone` と `knotlog flair` で変更できます。`PATH` の前のほうに古い `knotlog` があると、インストールの要約と `knotlog doctor` が警告します。フックはそちらを実行するためです。
 
 > **旧称 Quipu。** Knotlog は Quipu の新しい名前で、旧 `quipu` コマンドはなくなりました。旧名で作ったボールトがある場合は、`knotlog migrate` で変更内容をプレビューし、`knotlog migrate --apply` で書き込んでください。古い `quipu` フックコマンドも `knotlog` に書き換えられます。手で編集したブリッジブロックは更新されず (マーカー名だけが変更されます)、警告が表示されます。
 
@@ -345,7 +346,7 @@ claude mcp add knotlog -- knotlog mcp
 
 ## 9. 設定項目
 
-ボールトの設定は `.knotlog/config` に、単純な `key=value` の行として保存されます。`layout`、`lang`、`fold`、`user`、`companion`、`purpose`、`tone`、`ctx_max` です。
+ボールトの設定は `.knotlog/config` に、単純な `key=value` の行として保存されます。`layout`、`lang`、`fold`、`user`、`companion`、`purpose`、`tone`、`flair`、`ctx_max` です。
 `fold` を変更したら、その後に `knotlog index --full` が必要です。それ以外は次のコマンドから有効になります。`ctx_max` は `init` が書き込むことはありません。
 既に使える既定値 (4096) があるので、上書きしたいときだけ手で行を追加してください。`doctor` は使っている値の出どころ (env/config/default) を報告し、
 config の `ctx_max=` が正の整数でなければ警告します (無視されるだけで、致命的ではありません)。
@@ -358,6 +359,8 @@ config の `ctx_max=` が正の整数でなければ警告します (無視さ�
 指定したプリセットがボールトの言語に実際に存在するかぎり、Knotlog が注入するコンテキストの中で、companion.md 自身の `## Tone`/`## Üslup` セクションより優先されます。
 未設定のままにするか、同梱されていないスラッグを設定すると、Knotlog は companion.md の Tone セクションにフォールバックします。これはプリセットが存在する前のボールトと同じ動作です。
 `purpose` と同じく、`init` の間に `tone` を尋ねる対話的な質問はありません。あるのは `--tone <slug>` フラグだけです (`install` も受け付けます)。
+
+`flair` はトーンの上に返信の装飾を加えます。`none` (既定)、`kaomoji`、`emoji` のいずれかです。`knotlog flair` で現在の値を表示し、`knotlog flair --list` で一覧を表示し、`knotlog flair <値>` で設定します。`init` と `install` も `--flair` を受け付けます。文面は 6 言語すべてに付属します。`none` 以外の装飾は、`kaomoji` トーンのプリセットの代わりになります。
 
 既定値が合わないときの環境変数:
 

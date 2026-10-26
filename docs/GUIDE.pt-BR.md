@@ -5,6 +5,7 @@
 Você instalou o Knotlog e ele criou um cofre (vault). Este guia trata do que vem
 depois: o que acontece sozinho, o que você faz à mão e qual comando responde a
 qual pergunta. Para a instalação em si, veja o [README](../README.pt-BR.md).
+O assistente de instalação tem uma etapa de Estilo (tom, enfeite, nomes das pastas) que você pode mudar depois com `knotlog tone` e `knotlog flair`. Se houver um `knotlog` mais antigo antes no seu `PATH`, o resumo da instalação e o `knotlog doctor` avisam, porque os hooks executam esse.
 
 > **Antigo Quipu.** Knotlog é o novo nome do Quipu; o antigo comando `quipu` não existe mais. Se você tem um cofre criado com o nome antigo, execute `knotlog migrate` para ver as mudanças e `knotlog migrate --apply` para gravá-las; ele também reescreve os antigos comandos de hook `quipu` para `knotlog`. Um bloco de ponte que você editou à mão não é atualizado (só os marcadores são renomeados) e você recebe um aviso.
 
@@ -466,7 +467,7 @@ iniciado fora do cofre, defina `KNOTLOG_VAULT` com a pasta do cofre. Detalhes:
 ## 9. Ajustes
 
 As configurações do cofre ficam em `.knotlog/config` como linhas simples
-`chave=valor`: `layout`, `lang`, `fold`, `user`, `companion`, `purpose`, `tone`,
+`chave=valor`: `layout`, `lang`, `fold`, `user`, `companion`, `purpose`, `tone`, `flair`,
 `ctx_max`. Mudar `fold` exige `knotlog index --full` depois; as outras valem a
 partir do próximo comando. O `ctx_max` nunca é gravado pelo `init` — ele já tem
 um padrão que funciona (4096), então acrescente a linha à mão só se quiser
@@ -489,6 +490,8 @@ definir, ou defina um slug que não existe, e o Knotlog volta para a seção Ton
 companion.md — o mesmo comportamento que um cofre tinha antes de existirem
 presets. Como `purpose`, não há pergunta interativa para `tone` durante o `init`;
 só a flag `--tone <slug>` (também aceita pelo `install`).
+
+`flair` acrescenta um enfeite às respostas por cima do tom: `none` (padrão), `kaomoji` ou `emoji`. `knotlog flair` mostra o valor, `knotlog flair --list` lista as opções e `knotlog flair <valor>` define; `init` e `install` também aceitam `--flair`. Os textos vêm nos seis idiomas. Qualquer enfeite diferente de `none` substitui a predefinição de tom `kaomoji`.
 
 Variáveis de ambiente, quando os padrões não servem:
 

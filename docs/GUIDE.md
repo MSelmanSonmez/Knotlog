@@ -14,7 +14,7 @@ curl -fsSL https://raw.githubusercontent.com/MSelmanSonmez/Knotlog/main/install.
 
 It fetches a verified release and hands over to `knotlog install`; the
 [README](../README.md) also covers checkout-based installs and Windows.
-The setup wizard has a Style step (tone, flair, folder names) you can change later with `knotlog tone` and `knotlog flair`.
+The setup wizard has a Style step (tone, flair, folder names) you can change later with `knotlog tone` and `knotlog flair`. If an older `knotlog` sits earlier on your `PATH`, the install summary and `knotlog doctor` warn, because the hooks run that one.
 
 ## 1. What Knotlog does for you
 
@@ -452,7 +452,7 @@ outside the vault, set `KNOTLOG_VAULT` to the vault folder. Details:
 ## 9. Knobs
 
 Vault settings live in `.knotlog/config` as plain `key=value` lines: `layout`,
-`lang`, `fold`, `user`, `companion`, `purpose`, `tone`, `ctx_max`. Changing
+`lang`, `fold`, `user`, `companion`, `purpose`, `tone`, `flair`, `ctx_max`. Changing
 `fold` requires `knotlog index --full` afterwards; the others take effect on
 the next command. `ctx_max` is never written by `init` — it already has a
 working default (4096), so add the line by hand only if you want to override
@@ -475,6 +475,8 @@ unset, or set it to a slug that doesn't ship, and Knotlog falls back to
 companion.md's Tone section — the same behavior a vault had before presets
 existed. Like `purpose`, there is no interactive question for `tone` during
 `init`; only the `--tone <slug>` flag (also accepted by `install`).
+
+`flair` adds a reply decoration on top of the tone: `none` (default), `kaomoji` or `emoji`. `knotlog flair` shows it, `knotlog flair --list` browses, `knotlog flair <value>` sets it; `--flair` is also accepted by `init` and `install`. The text ships in all six languages. Any flair other than `none` replaces the `kaomoji` tone preset.
 
 Environment variables, when the defaults do not fit:
 

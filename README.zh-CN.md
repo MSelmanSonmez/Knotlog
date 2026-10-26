@@ -114,6 +114,7 @@ Claude Code 读取 `CLAUDE.md`，其他大多数智能体读取 `AGENTS.md`；Kn
 - **100% 离线**、**免费**：没有任何内容离开你的机器，无需 API 密钥，零 token 成本。
 - **跨平台**：Windows、macOS、Linux——三者均经 CI 验证。
 - **多语言**：界面提供六种语言（English、Türkçe、Español、Português (Brasil)、日本語、简体中文）。可用 `--lang <代码>`（`en`、`tr`、`es`、`pt-br`、`ja`、`zh-cn`）、配置中的 `lang=` 或安装向导选择。英语和土耳其语由人工维护，其余翻译为机器辅助，欢迎提出修正。
+- **回复风格**：可选语气预设（`--tone`）和可选点缀 `none`、`kaomoji` 或 `emoji`（`--flair`），在安装向导中选择，或之后用 `knotlog tone` 和 `knotlog flair` 修改。
 - **存储**：纯 Markdown，无数据库——文件归你所有，无厂商锁定。
 - **默认开启的密钥关卡**：知识库是一个 git 仓库，带有 pre-commit 扫描器，会拒绝包含已知密钥形态的提交。
 - **不只是笔记，更是行为契约**：`Rules.md` 和 `Facts.md` 在每次会话开始时注入——你写下一次的纠正会在下一次会话中继续生效，而不必反复重复。
