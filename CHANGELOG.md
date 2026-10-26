@@ -3,7 +3,7 @@
 All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.2.0] - unreleased
+## [1.2.0] - 2026-10-26
 
 ### Fixed
 - The arrow-key language menu no longer fails with "unknown layout" when you pick `es`, `ja`, `pt-br` or `zh-cn` (languages without their own folder layout); it falls back to English folders like every other install path. Present in 1.1.1.
@@ -13,12 +13,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - `--version` reports `1.2.0`.
+- The language menu shows Turkish as `Türkçe` in every interface language, and the install summary's first group is named in Spanish, Portuguese and Japanese instead of the English `Vault`.
 - `knotlog uninstall` also removes the client hook files in the vault that are still identical to their shipped template, and lists those you changed as `Kept:`.
 
 ### Added
 - `install` and `doctor` report a different `knotlog` earlier on PATH (hooks call plain `knotlog`, so that one runs): the install summary lists it under Skipped with its version and a `fix:` line, `doctor` warns when `knotlog` is missing from PATH or reports another version.
-- `flair=none|kaomoji|emoji` config key and `knotlog flair [--list | none|kaomoji|emoji]`: a reply decoration independent of the tone preset, appended after the tone block in `knotlog context`. `init --flair` and `install --flair` set it. English and Turkish text ship under `flair/`; other languages use the English text. `doctor` warns on an invalid value. `tone=kaomoji` is unchanged.
-- Install wizard: a new Style step after Identity (tone preset, flair, folder names). Each menu is skipped by its flag (`--tone`, `--flair`, `--plain`) and the step is skipped in `--no-prompt` runs; the step counter is now `[n/5]`.
+- `flair=none|kaomoji|emoji` config key and `knotlog flair [--list | none|kaomoji|emoji]`: a reply decoration independent of the tone preset, appended after the tone block in `knotlog context`. `init --flair` and `install --flair` set it. The text ships in all six languages under `flair/<lang>/`. `doctor` warns on an invalid value. `tone=kaomoji` is unchanged.
+- Install wizard: a new Style step after Identity (tone preset, flair, folder names). Each menu is skipped by its flag (`--tone`, `--flair`, `--plain`) and the step is skipped in `--no-prompt` runs. The step counter reads `[n/5]` when the language is asked as a numbered page (`--lang` or the plain-text prompt) and `[n/4]` after the arrow-key language menu, which carries no counter of its own.
 - The `AGENTS.md`/`CLAUDE.md` bridge block ends with a Style section (the active tone preset and flair text) when `tone=` or `flair=` is set, so agents with no context hook (OpenCode, Windsurf) see it; `knotlog tone` and `knotlog flair` rewrite the block in place. Unchanged when neither is set.
 - A flair other than `none` replaces a `tone=kaomoji` preset in the context and the bridge, and each flair text says it overrides any emoji rule in the tone. The wizard's tone menu no longer lists `kaomoji` (`--tone kaomoji` still works).
 - Install summary hint: when `opencode` or `windsurf`/`devin-desktop` is on PATH and the vault lacks its plugin or hook file, Skipped names `knotlog setup opencode` / `knotlog setup windsurf`. Nothing is wired automatically.

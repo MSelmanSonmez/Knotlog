@@ -6855,10 +6855,10 @@ t; assert_eq "B7 T-378: the default URL is the pinned GitHub release archive" 'y
 t; assert_eq "B7 T-378: README leads Install with the one-line command" 'yes' \
   "$(grep -qF 'curl -fsSL https://raw.githubusercontent.com/MSelmanSonmez/Knotlog/main/install.sh | sh' \
      "$ROOT/README.md" && printf yes || printf no)"
-t; assert_eq "release 1.1.1: update defaults point at MSelmanSonmez/Knotlog" 'yes' \
+t; assert_eq "release 1.2.0: update defaults point at MSelmanSonmez/Knotlog" 'yes' \
   "$(grep -qF 'https://api.github.com/repos/MSelmanSonmez/Knotlog/releases/latest' "$ROOT/knotlog" \
      && grep -qF 'https://github.com/MSelmanSonmez/Knotlog/releases/download/v$_q_up_latest/knotlog-$_q_up_latest.tar.gz' "$ROOT/knotlog" \
-     && grep -qF 'archive/refs/tags/v1.1.1.tar.gz' "$INST" && printf yes || printf no)"
+     && grep -qF 'archive/refs/tags/v1.2.0.tar.gz' "$INST" && printf yes || printf no)"
 t; assert_eq "release 1.1.1: no shipped file mentions SelmanBuilds" '' \
   "$(cd "$ROOT" && grep -rIil selmanbuilds . --exclude-dir=.git --exclude-dir=tests \
      --exclude=ORCHESTRATOR_LOG.md --exclude='CHANGELOG*' 2>/dev/null)"
