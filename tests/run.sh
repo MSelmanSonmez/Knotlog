@@ -12479,7 +12479,9 @@ t; assert_eq "T-1047: every language has the Style keys" '' \
 sm_inst() {
   _sm_n=$1; shift
   mkdir -p "$TMP/$_sm_n" "$TMP/$_sm_n-bin"
+  # useConfigOnly: git on macOS otherwise guesses user@host.local and commits anyway.
   env HOME="$TMP/$_sm_n-bin" GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 PATH="$TMP/$_sm_n-bin:$INSTALL_TOOLS" \
+    GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=user.useConfigOnly GIT_CONFIG_VALUE_0=true \
     QUIPU_LANG=en "$@" sh "$ROOT/knotlog" install --no-link --no-prompt --user Ada "$TMP/$_sm_n" >"$TMP/$_sm_n.out" 2>"$TMP/$_sm_n.err"
 }
 # sm_pty NAME [ENV=VAL ...] -- the same install on a pseudo-terminal (python3 pty; skipped without it).
@@ -12498,8 +12500,12 @@ t; assert_eq "T-1050: the summary under a pipe has no ESC byte and no colour cod
   "$(grep -q "$SM_ESC" "$TMP/sm1.out" && printf yes || printf no)"
 t; assert_eq "T-1051: groups print in order Vault, Hooks, Safety, Skipped, each item on one line" 'yes 5' \
   "$(awk '/^Vault$/ {a=NR} /^Hooks$/ {b=NR} /^Safety$/ {c=NR} /^Skipped$/ {d=NR} END {print (a && a<b && b<c && c<d) ? "yes" : "no"}' "$TMP/sm1.out") $(grep -c '^  ✔ ' "$TMP/sm1.out")"
-t; assert_eq "T-1052: --no-link says it was skipped because of --no-link" 'yes' \
-  "$(case $(uname -s) in MINGW* | MSYS* | CYGWIN*) printf yes ;; *) grep -qF '  ! Command: not linked (skipped because of --no-link)' "$TMP/sm1.out" && ! grep -qF 'install.ps1' "$TMP/sm1.out" && printf yes || printf no ;; esac)"
+# Outside $( ): bash 3.2 (macOS) cannot parse a case pattern's ')' inside a command substitution.
+case $(uname -s) in
+  MINGW* | MSYS* | CYGWIN*) SM52=yes ;;
+  *) SM52=no; grep -qF '  ! Command: not linked (skipped because of --no-link)' "$TMP/sm1.out" && ! grep -qF 'install.ps1' "$TMP/sm1.out" && SM52=yes ;;
+esac
+t; assert_eq "T-1052: --no-link says it was skipped because of --no-link" 'yes' "$SM52"
 t; assert_eq "T-1053: a missing git identity is a skipped item with a fix line" 'yes' \
   "$(grep -qF '  ! No baseline commit' "$TMP/sm1.out" && grep -qF '    fix: git config --global user.name' "$TMP/sm1.out" && printf yes || printf no)"
 sm_inst sm2 GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t
@@ -12614,7 +12620,8 @@ mkvault vsh72; QUIPU_VAULT="$TMP/vsh72" sh "$ROOT/knotlog" init --plain --no-pro
 SH72_DOC=$(PATH="$SH72_OLD:$INSTALL_TOOLS" QUIPU_VAULT="$TMP/vsh72" QUIPU_LANG=en sh "$ROOT/knotlog" doctor 2>&1); SH72_RC=$?
 t; assert_eq "T-1072: doctor warns (exit 0) when an older knotlog is first on PATH, naming its path and both versions" 'yes 0' \
   "$(printf '%s\n' "$SH72_DOC" | grep -qF "warn	knotlog	hooks will run $SH72_OLD/knotlog (knotlog 1.1.1), but this is knotlog 1.2.0" && printf yes || printf no) $SH72_RC"
-SH72_DOC=$(PATH="$(dirname "$INSTALL_SHELL")" QUIPU_VAULT="$TMP/vsh72" QUIPU_LANG=en sh "$ROOT/knotlog" doctor 2>&1)
+SH72_NOKL=$(printf '%s\n' "$INSTALL_TOOLS" | tr ':' '\n' | while IFS= read -r _d; do [ -e "$_d/knotlog" ] || printf '%s:' "$_d"; done)
+SH72_DOC=$(PATH="${SH72_NOKL%:}" QUIPU_VAULT="$TMP/vsh72" QUIPU_LANG=en sh "$ROOT/knotlog" doctor 2>&1)
 t; assert_eq "T-1072: doctor warns when knotlog is not on PATH at all" 'yes' \
   "$(printf '%s\n' "$SH72_DOC" | grep -qF "warn	knotlog	knotlog is not on PATH" && printf yes || printf no)"
 if [ "$TRUE_SYMLINKS" -eq 1 ]; then
@@ -12631,7 +12638,7 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
       --no-prompt --user Ada --no-git >"$TMP/sh72.out" 2>"$TMP/sh72.err"; IRC=$?
     assert_install_rc "T-1072: install past a shadowing knotlog still succeeds (exit 0)" '0' "$IRC" "$TMP/sh72.err"
     t; assert_eq "T-1072: the summary lists the shadowing path and version under Skipped with a fix line" 'yes yes' \
-      "$(grep -qF "  ! Command: PATH finds $SH72_OLD/knotlog (knotlog 1.1.1) before the link above; hooks will run that one" "$TMP/sh72.out" && printf yes || printf no) $(grep -qF "    fix: remove $SH72_OLD/knotlog or put $SH72_BIN before it on PATH" "$TMP/sh72.out" && printf yes || printf no)"
+      "$(grep -qF "  ! Command: PATH finds $SH72_OLD/knotlog (knotlog 1.1.1) before the link above; hooks will run that one" "$TMP/sh72.out" && printf yes || printf no) $(grep -qF "    fix: remove $SH72_OLD/knotlog or put $(cd "$SH72_BIN" && pwd -P) before it on PATH" "$TMP/sh72.out" && printf yes || printf no)"
   fi
   chmod 755 "$SH72_OLD"
 fi
@@ -12680,12 +12687,13 @@ chmod 755 "$TMP/l74b-tools"
 mkvault vun75; QUIPU_VAULT="$TMP/vun75" sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang en >/dev/null 2>&1
 for _a in codex gemini omp cursor; do QUIPU_VAULT="$TMP/vun75" sh "$ROOT/knotlog" setup "$_a" >/dev/null 2>&1; done
 printf '\n' >> "$TMP/vun75/.gemini/settings.json"
+UN75_V=$(cd "$TMP/vun75" && pwd -P)  # uninstall prints the resolved vault path (macOS /private/var)
 UN75_D=$(cd "$TMP/vun75" && PATH="$INSTALL_TOOLS" QUIPU_LANG=en sh "$ROOT/knotlog" uninstall --dry-run 2>&1)
 t; assert_eq "T-1075: --dry-run lists the unchanged hook files and removes nothing" 'yes yes' \
-  "$(printf '%s\n' "$UN75_D" | grep -qF "Would remove: $TMP/vun75/.codex/hooks.json (hook file" && printf yes || printf no) $([ -f "$TMP/vun75/.codex/hooks.json" ] && [ -f "$TMP/vun75/.omp/hooks/pre/knotlog.ts" ] && printf yes || printf no)"
+  "$(printf '%s\n' "$UN75_D" | grep -qF "Would remove: $UN75_V/.codex/hooks.json (hook file" && printf yes || printf no) $([ -f "$TMP/vun75/.codex/hooks.json" ] && [ -f "$TMP/vun75/.omp/hooks/pre/knotlog.ts" ] && printf yes || printf no)"
 UN75=$(cd "$TMP/vun75" && PATH="$INSTALL_TOOLS" QUIPU_LANG=en sh "$ROOT/knotlog" uninstall 2>&1)
 t; assert_eq "T-1075: unchanged hook files (and the directories they leave empty) are gone, the edited one stays and is named" 'yes yes yes' \
-  "$([ ! -e "$TMP/vun75/.codex" ] && [ ! -e "$TMP/vun75/.cursor" ] && [ ! -e "$TMP/vun75/.omp/hooks" ] && printf yes || printf no) $(printf '%s\n' "$UN75" | grep -qF "Kept: $TMP/vun75/.gemini/settings.json differs from the template" && [ -f "$TMP/vun75/.gemini/settings.json" ] && printf yes || printf no) $(printf '%s\n' "$UN75" | grep -qF "Removed: $TMP/vun75/.cursor/hooks.json (hook file" && printf yes || printf no)"
+  "$([ ! -e "$TMP/vun75/.codex" ] && [ ! -e "$TMP/vun75/.cursor" ] && [ ! -e "$TMP/vun75/.omp/hooks" ] && printf yes || printf no) $(printf '%s\n' "$UN75" | grep -qF "Kept: $UN75_V/.gemini/settings.json differs from the template" && [ -f "$TMP/vun75/.gemini/settings.json" ] && printf yes || printf no) $(printf '%s\n' "$UN75" | grep -qF "Removed: $UN75_V/.cursor/hooks.json (hook file" && printf yes || printf no)"
 t; assert_eq "T-1075: the vault's config and bridge file are untouched" 'yes' \
   "$([ -f "$TMP/vun75/.knotlog/config" ] && [ -f "$TMP/vun75/AGENTS.md" ] && printf yes || printf no)"
 

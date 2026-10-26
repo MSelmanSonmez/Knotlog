@@ -1098,7 +1098,8 @@ _q_bridge_refresh() {
   fi
   if [ "$_q_br_have" -eq 1 ]; then
     for _q_br_f in AGENTS.md CLAUDE.md; do
-      [ -f "$1/$_q_br_f" ] && [ -f "$_q_br_d/$_q_br_f" ] || continue
+      [ -f "$1/$_q_br_f" ] || continue
+      [ -f "$_q_br_d/$_q_br_f" ] || continue
       grep -Eq '^<!-- (knotlog|quipu):start -->$' "$1/$_q_br_f" || continue
       cmp -s "$1/$_q_br_f" "$_q_br_d/$_q_br_f" || cat "$_q_br_d/$_q_br_f" > "$1/$_q_br_f"
     done
