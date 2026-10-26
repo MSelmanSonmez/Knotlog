@@ -12551,6 +12551,59 @@ sm_inst ih0 PATH="$TMP/ih0-bin:$TMP/ih-clean"
 sm_inst ih1 PATH="$TMP/ih-bin:$TMP/ih1-bin:$TMP/ih-clean"
 t; assert_eq "T-1065: a client on PATH gets a Skipped line with its setup remedy; without it nothing is added" 'yes yes yes no no' \
   "$(grep -qF '  ! OpenCode found' "$TMP/ih1.out" && printf yes) $(grep -qF 'fix: knotlog setup opencode' "$TMP/ih1.out" && printf yes) $(grep -qF 'fix: knotlog setup windsurf' "$TMP/ih1.out" && printf yes) $(grep -qF 'setup opencode' "$TMP/ih0.out" && printf yes || printf no) $(grep -qF 'setup windsurf' "$TMP/ih0.out" && printf yes || printf no)"
+# ---- install scenarios from the 1.2.0 audit (T-1070..T-1075) ----
+# T-1070: the arrow-key language menu used to hand an unshipped layout name on
+# (es, ja, pt-br, zh-cn have a language but no layout file) and died with
+# "unknown layout". Needs a pty: Linux and python3 only, like T-1025.
+if [ "$(uname -s)" = Linux ] && command -v python3 >/dev/null 2>&1; then
+  cat > "$TMP/menu-drive.py" <<'PYEOF'
+import os, pty, sys, time, select
+kl, home, target, downs = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
+env = dict(os.environ, HOME=home, GIT_CONFIG_NOSYSTEM="1", TERM="xterm")
+pid, fd = pty.fork()
+if pid == 0:
+    os.execve("/bin/sh", ["sh", kl, "install", "--no-link", "--no-git", "--user", "Ada", target], env)
+seq = [b"\x1b[B"] * downs + [b"\r"] * 16
+end = time.time() + 40
+while time.time() < end:
+    r, _, _ = select.select([fd], [], [], 0.4)
+    if r:
+        try: d = os.read(fd, 4096)
+        except OSError: d = b""
+        if not d: break
+    elif seq:
+        os.write(fd, seq.pop(0))
+    else:
+        break
+p, st = os.waitpid(pid, os.WNOHANG)
+if p == 0:
+    os.kill(pid, 9); os.waitpid(pid, 0); print(99)
+else:
+    print(os.waitstatus_to_exitcode(st))
+PYEOF
+  M70=
+  for _m in es:1 ja:2 pt-br:3 zh-cn:5; do
+    mkdir -p "$TMP/m70-${_m%:*}-h" "$TMP/m70-${_m%:*}"
+    M70="$M70$(env PATH="$INSTALL_TOOLS" python3 -I "$TMP/menu-drive.py" "$ROOT/knotlog" "$TMP/m70-${_m%:*}-h" "$TMP/m70-${_m%:*}" "${_m#*:}" </dev/null 2>/dev/null | tail -1) "
+  done
+  t; assert_eq "T-1070: picking es, ja, pt-br or zh-cn in the arrow-key menu completes the install (exit 0)" '0 0 0 0 ' "$M70"
+else
+  t; skip "T-1070: language menu picks without a shipped layout" "needs Linux and python3 for a pty"
+fi
+
+# T-1071: tone/flair also refresh the dynamic context block (knotlog:context), not only the static one.
+br_mk vbr5 'flair=emoji'
+QUIPU_VAULT="$TMP/vbr5" sh "$ROOT/knotlog" context --bridge >/dev/null 2>&1
+BR5_E=$(head -1 "$ROOT/flair/en/emoji.md"); BR5_K=$(head -1 "$ROOT/flair/en/kaomoji.md")
+# br5_out FILE: the lines outside both marker pairs
+br5_out() { awk '/^<!-- knotlog:(context:)?start -->$/ {s=1} !s {print} /^<!-- knotlog:(context:)?end -->$/ {s=0}' "$1"; }
+br5_out "$TMP/vbr5/AGENTS.md" > "$TMP/vbr5.before"
+t; assert_eq "T-1071 setup: both files carry the emoji text twice (static + context block) before the change" '2 2' \
+  "$(grep -cF -- "$BR5_E" "$TMP/vbr5/AGENTS.md") $(grep -cF -- "$BR5_E" "$TMP/vbr5/CLAUDE.md")"
+QUIPU_VAULT="$TMP/vbr5" sh "$ROOT/knotlog" flair kaomoji >/dev/null 2>&1
+t; assert_eq "T-1071: after flair kaomoji the old emoji text is gone from both files, the new text is in both blocks, outside text is identical" '0 0 2 2 yes' \
+  "$(grep -cF -- "$BR5_E" "$TMP/vbr5/AGENTS.md") $(grep -cF -- "$BR5_E" "$TMP/vbr5/CLAUDE.md") $(grep -cF -- "$BR5_K" "$TMP/vbr5/AGENTS.md") $(grep -cF -- "$BR5_K" "$TMP/vbr5/CLAUDE.md") $(br5_out "$TMP/vbr5/AGENTS.md" | cmp -s - "$TMP/vbr5.before" && printf yes || printf no)"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0

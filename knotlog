@@ -1104,6 +1104,12 @@ _q_bridge_refresh() {
     done
   fi
   rm -rf "$_q_br_d"
+  # The dynamic context block (hook-less `context --bridge`) carries the same
+  # tone/flair text; refresh it too when it exists.
+  if grep -qs '^<!-- knotlog:context:start -->$' "$1/AGENTS.md" "$1/CLAUDE.md"; then
+    # shellcheck disable=SC2030,SC2031 # subshell on purpose
+    (QUIPU_VAULT="$1"; export QUIPU_VAULT; unset QUIPU_HOOK; _q_cmd_context --bridge) >/dev/null 2>&1 || true
+  fi
 }
 
 _q_doctor_stale_topics() {
@@ -3402,6 +3408,7 @@ _q_install_menu_lang() {
   _q_install_menu_pick '' "$(_q_msg install_menu_lang_title)" "$_q_ml_codes" "$_q_ml_labels" || return 1
   _q_i_lang=$_q_menu_pick
   _q_i_layout=$_q_i_lang
+  _q_layout_ok "$_q_i_layout" || _q_i_layout=en
   return 0
 }
 
