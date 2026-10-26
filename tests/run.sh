@@ -5666,8 +5666,8 @@ t; assert_eq "T-320b: menu up/down move in opposite directions, sized by option 
 # T-320c: menu option labels come from i18n (install_menu_lang_name_<code>),
 # not hardcoded English spellings baked into the sh source -- the earlier
 # version shipped 'Turkce' as a typo. Maintainer decision (2026-09-02, live
-# Windows run): both option labels stay in English ('Turkish', not
-# 'Türkçe') since the language is not chosen yet -- and the menu screen
+# Windows run) kept 'Turkish'; 1.2.0 shows every language by its own
+# name ('Türkçe', 'Español', ...) in every i18n file -- and the menu screen
 # itself carries no question line or hint line any more, just a bare
 # "Language" title, so install_menu_lang_hint is now a dead key that must
 # not linger in either i18n file or the menu source.
@@ -5676,8 +5676,8 @@ t; assert_eq "T-320c: menu labels come from i18n as English-only; hint key retir
      && printf '%s\n' "$IMENU_SOURCE" | grep -Fq 'install_menu_lang_title' \
      && ! printf '%s\n' "$IMENU_SOURCE" | grep -Fq 'Turkce' \
      && ! printf '%s\n' "$IMENU_SOURCE" | grep -Fq 'install_menu_lang_hint' \
-     && grep -qF 'install_menu_lang_name_tr=Turkish' "$ROOT/i18n/en.txt" \
-     && grep -qF 'install_menu_lang_name_tr=Turkish' "$ROOT/i18n/tr.txt" \
+     && grep -qF 'install_menu_lang_name_tr=Türkçe' "$ROOT/i18n/en.txt" \
+     && grep -qF 'install_menu_lang_name_tr=Türkçe' "$ROOT/i18n/tr.txt" \
      && grep -qF 'install_menu_lang_title=Language' "$ROOT/i18n/en.txt" \
      && grep -qF 'install_menu_lang_title=Language' "$ROOT/i18n/tr.txt" \
      && ! grep -q '^install_menu_lang_hint=' "$ROOT/i18n/en.txt" \
