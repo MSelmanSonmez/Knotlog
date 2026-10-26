@@ -5330,7 +5330,10 @@ mkdir -p "$TMP/v299" "$TMP/home299"
   printf '# Work note\n\nAbout Istanbul.\n' > note.md
   QUIPU_VAULT="$TMP/v299" QUIPU_HOME="$ROOT" HOME="$TMP/home299" sh "$ROOT/knotlog" index >/dev/null 2>&1
 )
-V299_DOCTOR=$(QUIPU_VAULT="$TMP/v299" QUIPU_HOME="$ROOT" HOME="$TMP/home299" QUIPU_LANG=en sh "$ROOT/knotlog" doctor 2>&1)
+# README's reader installed knotlog, so it is on PATH; without it doctor's
+# PATH row warns (1.2.0 shadowing check) and the count drifts from README.
+mkdir -p "$TMP/bin299" && ln -sf "$ROOT/knotlog" "$TMP/bin299/knotlog"
+V299_DOCTOR=$(PATH="$TMP/bin299:$PATH" QUIPU_VAULT="$TMP/v299" QUIPU_HOME="$ROOT" HOME="$TMP/home299" QUIPU_LANG=en sh "$ROOT/knotlog" doctor 2>&1)
 V299_DOCTOR_LINE=$(printf '%s\n' "$V299_DOCTOR" | grep '^summary:')
 t; assert_eq "T-299: README's doctor summary line matches a real knotlog doctor run" \
   "$README_DOCTOR_LINE" "$V299_DOCTOR_LINE"
