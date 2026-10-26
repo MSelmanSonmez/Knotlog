@@ -141,6 +141,9 @@ _q_lang() {
   case "$_q_lang_l" in
     *[[:upper:]_]*) _q_lang_l=$(printf '%s' "$_q_lang_l" | tr 'A-Z_' 'a-z-') ;;
   esac
+  # A code is a file name, never a path: a cloned repository's config must not
+  # point asset reads (i18n/, tone/, flair/, templates/) outside the checkout.
+  case "$_q_lang_l" in */* | .* | *..*) _q_lang_l=en ;; esac
   [ -f "$_q_HOME/i18n/$_q_lang_l.txt" ] || _q_lang_l=${_q_lang_l%%-*}
   printf '%s\n' "$_q_lang_l"
 }
@@ -250,6 +253,10 @@ _q_fold_prof() {
   if [ -n "$_q_fp_v" ] && [ -f "$_q_fp_v/$_q_SD/config" ]; then
     _q_fp=$(awk -F= -v k=fold '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_fp_v/$_q_SD/config" 2>/dev/null || true)
   fi
+  # fold= names a shipped fold/<name>.sed, never a path: index and search run
+  # it with sed -f, and a cloned repository's config must not choose the script.
+  case "$_q_fp" in */* | .* | *..*) _q_fp= ;; esac
+  [ -z "$_q_fp" ] || [ -f "$_q_HOME/fold/$_q_fp.sed" ] || _q_fp=
   if [ -z "$_q_fp" ]; then
     _q_fp=$(_q_fold_for_lang)
   fi
@@ -1052,11 +1059,15 @@ _q_tone_resolve() {
   _q_tres_valid=0
   _q_tres_source=none
   _q_tres_body=
-  _q_tres_tl=$(_q_lang_pick tone/ "/$_q_tres_slug.md")
-  if [ -n "$_q_tres_slug" ] && [ -f "$_q_HOME/tone/$_q_tres_tl/$_q_tres_slug.md" ]; then
+  # A preset is a file name, never a path (same reason as in _q_lang).
+  # doctor still sees the raw value and reports it as invalid.
+  _q_tres_file=$_q_tres_slug
+  case "$_q_tres_file" in */* | .* | *..*) _q_tres_file= ;; esac
+  _q_tres_tl=$(_q_lang_pick tone/ "/$_q_tres_file.md")
+  if [ -n "$_q_tres_file" ] && [ -f "$_q_HOME/tone/$_q_tres_tl/$_q_tres_file.md" ]; then
     _q_tres_valid=1
     _q_tres_source=preset
-    _q_tres_body=$(cat "$_q_HOME/tone/$_q_tres_tl/$_q_tres_slug.md")
+    _q_tres_body=$(cat "$_q_HOME/tone/$_q_tres_tl/$_q_tres_file.md")
   fi
   if [ "$_q_tres_source" = none ]; then
     _q_tres_cp=$(_q_companion_path "$_q_tres_v")
@@ -1440,7 +1451,7 @@ _q_doctor() {
     fi
     if [ -z "$_q_fpr" ]; then
       _q_line warn "$(_q_msg doc_fold)" "$(_q_msg doc_fold_missing)"
-    elif [ -f "$_q_HOME/fold/$_q_fpr.sed" ]; then
+    elif case "$_q_fpr" in */* | .* | *..*) false ;; *) [ -f "$_q_HOME/fold/$_q_fpr.sed" ] ;; esac; then
       _q_line ok "$(_q_msg doc_fold)" "$_q_fpr"
     else
       _q_line fail "$(_q_msg doc_fold)" "$(_q_msg doc_fold_unknown)"

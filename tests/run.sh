@@ -12783,6 +12783,37 @@ R85N=$(QUIPU_HOME="$H85" QUIPU_VAULT="$TMP/s85" QUIPU_LANG=en sh "$H85/knotlog" 
 t; assert_eq "T-1085: sessions=../x: manual remember exits 1, hook remember 0, note 1; nothing is written outside the vault" '1 0 1 no' \
   "$R85M $R85H $R85N $([ -e "$TMP/s85-out" ] && printf yes || printf no)"
 
+# T-1087/T-1088: config values that name shipped files (fold=, tone=, lang=) are
+# names, never paths -- a cloned repository's config must not pick a sed script
+# for index to run, or a file outside the checkout for context to print.
+SEC87_ABS=$(cd "$TMP" && pwd -P)
+SEC87_UP=../../../../../../../../../../../../../../../../../../../..
+mkdir -p "$SEC87_ABS/sec87-out"
+printf 'w %s/sec87-out/ran\n' "$SEC87_ABS" > "$SEC87_ABS/sec87-out/evil.sed"
+printf 'SEC87 PRIVATE NOTE\n' > "$SEC87_ABS/sec87-out/private.md"
+mkvault vsec87; QUIPU_VAULT="$TMP/vsec87" sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang en >/dev/null 2>&1
+printf '# n\n\nbody\n' > "$TMP/vsec87/n.md"
+# init wrote fold=default and the first fold= wins; a hostile config carries only its own.
+grep -v '^fold=' "$TMP/vsec87/.knotlog/config" > "$TMP/vsec87.cfg"
+printf 'fold=%s%s/sec87-out/evil\n' "$SEC87_UP" "$SEC87_ABS" >> "$TMP/vsec87.cfg"
+cat "$TMP/vsec87.cfg" > "$TMP/vsec87/.knotlog/config"
+KNOTLOG_HOOK=1 QUIPU_VAULT="$TMP/vsec87" sh "$ROOT/knotlog" index --full >/dev/null 2>&1
+QUIPU_VAULT="$TMP/vsec87" sh "$ROOT/knotlog" search body >/dev/null 2>&1
+SEC87_DOC=$(QUIPU_VAULT="$TMP/vsec87" QUIPU_LANG=en sh "$ROOT/knotlog" doctor 2>&1)
+t; assert_eq "T-1087: a path in fold= never runs as index's or search's sed script, and doctor fails it" 'no yes' \
+  "$([ -e "$SEC87_ABS/sec87-out/ran" ] && printf yes || printf no) $(printf '%s\n' "$SEC87_DOC" | grep -q '^fail	' && printf yes || printf no)"
+mkvault vsec88; QUIPU_VAULT="$TMP/vsec88" sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang en >/dev/null 2>&1
+printf 'tone=%s%s/sec87-out/private\n' "$SEC87_UP" "$SEC87_ABS" >> "$TMP/vsec88/.knotlog/config"
+SEC88_A=$(KNOTLOG_HOOK=1 QUIPU_VAULT="$TMP/vsec88" sh "$ROOT/knotlog" context 2>&1)
+mkvault vsec88b; QUIPU_VAULT="$TMP/vsec88b" sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang en >/dev/null 2>&1
+mkdir -p "$SEC87_ABS/sec87-out/x"; cp "$SEC87_ABS/sec87-out/private.md" "$SEC87_ABS/sec87-out/x/dostane.md"
+sed 's/^lang=.*//' "$TMP/vsec88b/.knotlog/config" > "$TMP/vsec88b.cfg" && cat "$TMP/vsec88b.cfg" > "$TMP/vsec88b/.knotlog/config"
+printf 'lang=%s%s/sec87-out/x\ntone=dostane\n' "$SEC87_UP" "$SEC87_ABS" >> "$TMP/vsec88b/.knotlog/config"
+SEC88_B=$(KNOTLOG_HOOK=1 QUIPU_VAULT="$TMP/vsec88b" sh "$ROOT/knotlog" context 2>&1)
+# The lang= half is defence in depth: _q_lang already cut such a path at its first '-'.
+t; assert_eq "T-1088: a path in tone= or lang= never pulls a file from outside the checkout into context" 'no no' \
+  "$(printf '%s\n' "$SEC88_A" | grep -qF 'SEC87 PRIVATE NOTE' && printf yes || printf no) $(printf '%s\n' "$SEC88_B" | grep -qF 'SEC87 PRIVATE NOTE' && printf yes || printf no)"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0

@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Security
 - A repository carrying symlinks inside `.knotlog/` could make hooks write outside the vault. Knotlog now refuses to run when the state directory is a symbolic link or holds one (hooks exit 0 silently, manual runs exit 1, `doctor` reports it), and refuses to write a vault file that is a link or whose folder resolves outside the vault. The vault root itself may still be a link. Present in 1.1.1 and earlier.
 - `remember` and `note` ignore a `layout=` value that is not a shipped layout (falling back to `emoji`, as `context`, `import` and `digest` already did), and refuse a sessions folder that is absolute or contains `..`.
+- `fold=`, `tone=` and `lang=` in a vault's config are names of shipped files, never paths: a value with `/` or `..` falls back to the default (`doctor` fails a bad `fold=`), so a cloned repository's config can no longer choose the sed script `index` and `search` run, or pull a file from outside the checkout into `context`. Present in 1.1.1 and earlier.
 
 ### Fixed
 - The arrow-key language menu no longer fails with "unknown layout" when you pick `es`, `ja`, `pt-br` or `zh-cn` (languages without their own folder layout); it falls back to English folders like every other install path. Present in 1.1.1.
