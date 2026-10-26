@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - `flair=none|kaomoji|emoji` config key and `knotlog flair [--list | none|kaomoji|emoji]`: a reply decoration independent of the tone preset, appended after the tone block in `knotlog context`. `init --flair` and `install --flair` set it. English and Turkish text ship under `flair/`; other languages use the English text. `doctor` warns on an invalid value. `tone=kaomoji` is unchanged.
 - Install wizard: a new Style step after Identity (tone preset, flair, folder names). Each menu is skipped by its flag (`--tone`, `--flair`, `--plain`) and the step is skipped in `--no-prompt` runs; the step counter is now `[n/5]`.
+- Install summary: grouped under Vault, Hooks, Safety and Skipped, `✔` done / `!` skipped with a reason and a `fix:` line where one command fixes it; coloured only on a terminal (honours `NO_COLOR`). Fixed: `--no-link` on Linux/macOS no longer claims "use install.ps1 on Windows".
 
 ## [1.1.1] - 2026-10-25
 
