@@ -12633,6 +12633,46 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
   chmod 755 "$SH72_OLD"
 fi
 
+# T-1073: the replace-the-link question accepts the language's own yes and shows its letters.
+if [ "$TRUE_SYMLINKS" -eq 1 ]; then
+  l73() { # name lang answer -> exit code; the foreign-symlink fixture of T-1020
+    L20_BIN="$TMP/l73-$1-bin"; L20_PAR="$TMP/l73-$1-par"; L20_TGT="$TMP/l73-$1-target"
+    mkdir -p "$L20_BIN" "$L20_PAR"; printf 'dev checkout\n' > "$L20_TGT"
+    make_true_symlink "$L20_TGT" "$L20_BIN/knotlog" || exit 1
+    printf '%s\nL73\n\n\n\n\n%s\n' "$2" "$3" | PATH="$L20_BIN:$INSTALL_TOOLS" HOME="$TMP/l73-$1-home" QUIPU_LANG="$2" QUIPU_FORCE_TTY=1 \
+      sh "$ROOT/knotlog" install "$L20_PAR" >"$TMP/l73-$1.out" 2>"$TMP/l73-$1.err"
+  }
+  l73 tre tr e; R73A=$?; l73 trh tr H; R73B=$?; l73 tre2 tr evet; R73C=$?; l73 es es si; R73D=$?; l73 pt pt-br sim; R73E=$?
+  t; assert_eq "T-1073: tr e, tr evet, es si and pt-br sim replace the link (exit 0); tr H refuses (2)" '0 2 0 0 0' "$R73A $R73B $R73C $R73D $R73E"
+  t; assert_eq "T-1073: the tr question shows [e/H], es and pt-br show [s/N]; the link stays when refused" 'yes yes yes yes' \
+    "$(grep -qF '[e/H]' "$TMP/l73-trh.out" && printf yes || printf no) $(grep -qF '[s/N]' "$TMP/l73-es.out" && printf yes || printf no) $(grep -qF '[s/N]' "$TMP/l73-pt.out" && printf yes || printf no) $([ "$(readlink "$TMP/l73-trh-bin/knotlog")" = "$TMP/l73-trh-target" ] && printf yes || printf no)"
+fi
+
+# T-1074: a PATH that names $HOME/.local/bin before it exists gets the directory made; a PATH with no usable directory gets a concrete remedy.
+mkdir -p "$TMP/l74-home" "$TMP/l74-par"
+PATH="$TMP/l74-home/.local/bin:$INSTALL_TOOLS" HOME="$TMP/l74-home" QUIPU_LANG=en sh "$ROOT/knotlog" install "$TMP/l74-par" \
+  --no-prompt --user Ada --no-git >"$TMP/l74.out" 2>"$TMP/l74.err"; IRC=$?
+assert_install_rc "T-1074: install creates a missing \$HOME/.local/bin that PATH names (exit 0)" '0' "$IRC" "$TMP/l74.err"
+t; assert_eq "T-1074: the command is linked in that directory" 'yes' \
+  "$([ -d "$TMP/l74-home/.local/bin" ] && [ -e "$TMP/l74-home/.local/bin/knotlog" ] && printf yes || printf no)"
+# Tools only, in a directory nobody can write to (skipped where modes are ignored, e.g. root).
+mkdir -p "$TMP/l74b-home" "$TMP/l74b-par" "$TMP/l74b-tools"
+for _x in awk basename cat chmod cmp cp cut date dd dirname find git grep head ln ls mkdir mktemp mv paste rm sed sh sort stty tail touch tr uname wc; do
+  _p=$(command -p -v "$_x" 2>/dev/null) && [ -f "$_p" ] && ln -s "$_p" "$TMP/l74b-tools/$_x"
+done
+chmod 555 "$TMP/l74b-tools"
+if [ -w "$TMP/l74b-tools" ]; then
+  t; skip "T-1074: no usable PATH directory names the remedy" "running as a user that ignores directory modes"
+else
+  PATH="$TMP/l74b-tools" HOME="$TMP/l74b-home" QUIPU_LANG=en "$INSTALL_SHELL" "$ROOT/knotlog" install "$TMP/l74b-par" \
+    --no-prompt --user Ada --no-git >"$TMP/l74b.out" 2>"$TMP/l74b.err"; IRC=$?
+  assert_install_rc "T-1074: no usable PATH directory still exits 2" '2' "$IRC" "$TMP/l74b.err"
+  t; assert_eq "T-1074: the message names the mkdir and PATH commands and --no-link; nothing is created" 'yes' \
+    "$(grep -qF 'mkdir -p "$HOME/.local/bin"' "$TMP/l74b.err" && grep -qF -- '--no-link' "$TMP/l74b.err" \
+       && [ ! -e "$TMP/l74b-home/.local" ] && printf yes || printf no)"
+fi
+chmod 755 "$TMP/l74b-tools"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0

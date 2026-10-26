@@ -179,6 +179,7 @@ install_ask_location_default=什么都不输入直接按 Enter，即安装到默
 install_ask_location_move=之后你也可以把知识库移动到任何位置。
 install_ask_location_prompt=: 
 install_ask_link_replace=%s 是指向 %s 的符号链接。是否替换该链接（不会改动其目标）？[y/N]
+install_yes_words=y yes
 install_location_selected=父目录：%s
 install_busy=正在安装
 install_step_identity=[%d/%d] 身份
@@ -235,7 +236,7 @@ err_install_parent=安装父路径不是目录：%s
 err_install_home_required=HOME 未设置；请使用明确的父路径代替 ~
 err_install_extra_arg=install 有多余的参数：%s
 err_install_target_occupied=安装目标是一个非空且不属于 Knotlog 的位置：%s
-err_install_no_path=PATH 中没有可写的现有目录；请向 PATH 添加一个后重试
+err_install_no_path=PATH 中没有可写的现有目录；请运行：mkdir -p "$HOME/.local/bin"，把它加入 PATH（export PATH="$HOME/.local/bin:$PATH"）后重试，或使用 --no-link
 err_install_source=Knotlog 源脚本缺失或不可执行：%s
 err_install_claude_source=Claude Code 适配器缺失或不可读：%s
 err_install_asset_source=安装资源缺失或不可读：%s

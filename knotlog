@@ -4028,6 +4028,10 @@ _q_cmd_install() {
           _q_i_more=0
           ;;
       esac
+      # A fresh account has $HOME/.local/bin on PATH but not on disk: make it.
+      if [ "$_q_i_entry" = "${HOME:-/nonexistent}/.local/bin" ] && [ ! -e "$_q_i_entry" ]; then
+        mkdir -p -- "$_q_i_entry" 2>/dev/null || true
+      fi
       if [ -n "$_q_i_entry" ] && [ -d "$_q_i_entry" ] && [ -w "$_q_i_entry" ]; then
         _q_i_bindir=$(CDPATH='' cd -- "$_q_i_entry" && pwd -P)
         break
@@ -4060,8 +4064,10 @@ _q_cmd_install() {
           # shellcheck disable=SC2059
           printf "$(_q_msg install_ask_link_replace) " "$_q_i_link" "$_q_i_tgt"
           IFS= read -r _q_i_ans || _q_i_ans=
-          case $_q_i_ans in
-            y | Y | yes | Yes | YES) _q_i_link_replace=1 ;;
+          _q_i_ans=$(printf '%s' "$_q_i_ans" | tr '[:upper:]' '[:lower:]')
+          # English y/yes always count; install_yes_words adds the language's own.
+          case " y yes $(_q_msg install_yes_words) " in
+            *" $_q_i_ans "*) [ -z "$_q_i_ans" ] || _q_i_link_replace=1 ;;
           esac
           _q_install_busy_start
         fi

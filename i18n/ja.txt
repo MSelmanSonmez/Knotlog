@@ -179,6 +179,7 @@ install_ask_location_default=何も入力せずに Enter を押すと既定の�
 install_ask_location_move=ボールトは後から好きな場所へ移動できます。
 install_ask_location_prompt=: 
 install_ask_link_replace=%s は %s へのシンボリックリンクです。リンクを置き換えますか（リンク先は変更しません）？ [y/N]
+install_yes_words=y yes
 install_location_selected=親ディレクトリ: %s
 install_busy=インストール中
 install_step_identity=[%d/%d] アイデンティティ
@@ -235,7 +236,7 @@ err_install_parent=インストール先の親がディレクトリではあり�
 err_install_home_required=HOME が未設定です; ~ の代わりに親パスを明示してください
 err_install_extra_arg=install に余分な引数があります: %s
 err_install_target_occupied=インストール先は Knotlog ではない空でない場所です: %s
-err_install_no_path=PATH に書き込み可能な既存ディレクトリがありません; PATH に追加して再試行してください
+err_install_no_path=PATH に書き込み可能な既存ディレクトリがありません; mkdir -p "$HOME/.local/bin" を実行して PATH に追加 (export PATH="$HOME/.local/bin:$PATH") し再試行するか、--no-link を使ってください
 err_install_source=Knotlog のソーススクリプトがないか実行できません: %s
 err_install_claude_source=Claude Code アダプターがないか読み取れません: %s
 err_install_asset_source=インストール用アセットがないか読み取れません: %s

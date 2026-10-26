@@ -179,6 +179,7 @@ install_ask_location_default=Press Enter without typing anything to install in t
 install_ask_location_move=If you like, you can move the vault wherever you want.
 install_ask_location_prompt=: 
 install_ask_link_replace=%s is a symlink to %s. Replace the link (its target is left alone)? [y/N]
+install_yes_words=y yes
 install_location_selected=Parent: %s
 install_busy=Installing
 install_step_identity=[%d/%d] Identity
@@ -235,7 +236,7 @@ err_install_parent=install parent is not a directory: %s
 err_install_home_required=HOME is unset; use an explicit parent path instead of ~
 err_install_extra_arg=unexpected extra install argument: %s
 err_install_target_occupied=install target is a non-empty non-Knotlog location: %s
-err_install_no_path=no existing writable directory in PATH; add one to PATH and retry
+err_install_no_path=no existing writable directory in PATH; run: mkdir -p "$HOME/.local/bin" and add it to PATH (export PATH="$HOME/.local/bin:$PATH"), then retry, or use --no-link
 err_install_source=Knotlog source script is missing or not executable: %s
 err_install_claude_source=Claude Code adapter is missing or unreadable: %s
 err_install_asset_source=install asset is missing or unreadable: %s
