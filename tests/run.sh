@@ -12121,8 +12121,9 @@ done
 printf 'profile=normal\n' >> "$TMP/vprofn/.knotlog/config"
 export QUIPU_NUDGE_AFTER=2
 unset QUIPU_CTX_MAX KNOTLOG_CTX_MAX
+# The "now: YYYY-MM-DD HH:MM" line is stripped too: a slow runner can cross a minute between the two calls.
 t; assert_eq "T-965: profile=normal hook output is byte-identical to no profile (SessionStart and UserPromptSubmit)" 'yes' \
-  "$([ "$(prof_ctx "$TMP/vprof" SessionStart | sed 's/[0-9:T-]\{16\}//g')" = "$(prof_ctx "$TMP/vprofn" SessionStart | sed 's/[0-9:T-]\{16\}//g')" ] && [ "$(prof_ctx "$TMP/vprof" UserPromptSubmit | sed 's/[0-9:T-]\{16\}//g')" = "$(prof_ctx "$TMP/vprofn" UserPromptSubmit | sed 's/[0-9:T-]\{16\}//g')" ] && printf yes || printf no)"
+  "$([ "$(prof_ctx "$TMP/vprof" SessionStart | sed 's/[0-9:T-]\{16\}//g; s/[0-9-]\{10\} [0-9:]\{5\}//g')" = "$(prof_ctx "$TMP/vprofn" SessionStart | sed 's/[0-9:T-]\{16\}//g; s/[0-9-]\{10\} [0-9:]\{5\}//g')" ] && [ "$(prof_ctx "$TMP/vprof" UserPromptSubmit | sed 's/[0-9:T-]\{16\}//g; s/[0-9-]\{10\} [0-9:]\{5\}//g')" = "$(prof_ctx "$TMP/vprofn" UserPromptSubmit | sed 's/[0-9:T-]\{16\}//g; s/[0-9-]\{10\} [0-9:]\{5\}//g')" ] && printf yes || printf no)"
 printf 'profile=economical\n' >> "$TMP/vprof/.knotlog/config"
 t; P966=$(prof_ctx "$TMP/vprof" SessionStart | awk -f "$LIB/jsonfield.awk" -f "$DRV/hookctx.awk" - | LC_ALL=C wc -c | tr -d ' ')
 assert_eq "T-966: economical caps session-start context at 4000 bytes" 'yes' \
