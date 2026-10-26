@@ -3463,6 +3463,56 @@ _q_install_tty() {
   return 0
 }
 
+_q_sum_color() {
+  # Summary colour: a real terminal and NO_COLOR unset (https://no-color.org).
+  # Evaluated once into _q_sum_c: inside $(...) stdout is a pipe, so the
+  # terminal test cannot run where the text is painted.
+  _q_sum_c=0
+  if _q_install_tty && [ -z "${NO_COLOR:-}" ]; then _q_sum_c=1; fi
+}
+
+_q_sum_paint() {
+  # $1 SGR code, $2 text.
+  if [ "$_q_sum_c" -eq 1 ]; then
+    printf '\033[%sm%s\033[0m' "$1" "$2"
+  else
+    printf '%s' "$2"
+  fi
+}
+
+_q_sum_ok() {
+  # $1 group (vault|hooks|safety), $2 text: queue one done line.
+  _q_so_line="  $(_q_sum_paint 32 '✔') $2
+"
+  case $1 in
+    vault) _q_sum_vault="$_q_sum_vault$_q_so_line" ;;
+    hooks) _q_sum_hooks="$_q_sum_hooks$_q_so_line" ;;
+    *) _q_sum_safety="$_q_sum_safety$_q_so_line" ;;
+  esac
+}
+
+_q_sum_skip() {
+  # $1 text, $2 optional fix command: queue one not-done line (+ dim fix line).
+  _q_sum_skipped="$_q_sum_skipped  $(_q_sum_paint 33 '!') $1
+"
+  [ -z "${2:-}" ] || _q_sum_skipped="$_q_sum_skipped$(_q_sum_paint 2 "    $2")
+"
+}
+
+_q_sum_print() {
+  for _q_sp in vault hooks safety skipped; do
+    case $_q_sp in
+      vault) _q_sp_body=$_q_sum_vault ;;
+      hooks) _q_sp_body=$_q_sum_hooks ;;
+      safety) _q_sp_body=$_q_sum_safety ;;
+      *) _q_sp_body=$_q_sum_skipped ;;
+    esac
+    [ -n "$_q_sp_body" ] || continue
+    _q_sum_paint 1 "$(_q_msg "install_summary_h_$_q_sp")"
+    printf '\n%s' "$_q_sp_body"
+  done
+}
+
 _q_install_busy_loop() {
   # Background tick loop: the label once, then one dot per second. `sleep 1`
   # keeps the POSIX contract (no fractional sleeps); the install work this
@@ -4041,7 +4091,7 @@ _q_cmd_install() {
   # the animation) -- the raw escape is never emitted outside that gate, so
   # a terminal without VT support can never show garbage bytes. Everything
   # else is plain text in both branches.
-  if _q_install_tty; then
+  if _q_install_tty && [ -z "${NO_COLOR:-}" ]; then
     printf '\033[32m%s\033[0m\n' "$(_q_msg install_done_title)"
   else
     _q_msg install_done_title
@@ -4054,47 +4104,65 @@ _q_cmd_install() {
   _q_msg install_done_body_2
   printf '\n'
 
+  # Grouped summary: done items go under their heading, anything not done
+  # under Skipped with its reason (and a fix line when one command fixes it).
+  _q_sum_vault=
+  _q_sum_hooks=
+  _q_sum_safety=
+  _q_sum_skipped=
+  _q_sum_color
   if [ "$_q_i_fresh" -eq 1 ]; then
     # shellcheck disable=SC2059
-    printf "$(_q_msg install_summary_vault_created)\n" "$_q_i_target"
+    _q_sum_ok vault "$(printf "$(_q_msg install_summary_vault_created)" "$_q_i_target")"
   else
     # shellcheck disable=SC2059
-    printf "$(_q_msg install_summary_vault_existing)\n" "$_q_i_target"
+    _q_sum_ok vault "$(printf "$(_q_msg install_summary_vault_existing)" "$_q_i_target")"
   fi
   if [ "$_q_i_no_link" -eq 1 ]; then
-    _q_msg install_summary_command_skipped
+    # install.ps1 passes --no-link on Windows; elsewhere it is the user's flag.
+    case $(uname -s 2>/dev/null) in
+      MINGW* | MSYS* | CYGWIN*) _q_sum_skip "$(_q_msg install_summary_command_skipped)" ;;
+      *) _q_sum_skip "$(_q_msg install_summary_command_nolink)" ;;
+    esac
   elif [ "$_q_i_link_same" -eq 1 ]; then
     # shellcheck disable=SC2059
-    printf "$(_q_msg install_summary_command_existing)\n" "$_q_i_link"
+    _q_sum_ok vault "$(printf "$(_q_msg install_summary_command_existing)" "$_q_i_link")"
   else
     # shellcheck disable=SC2059
-    printf "$(_q_msg install_summary_command_linked)\n" "$_q_i_link"
+    _q_sum_ok vault "$(printf "$(_q_msg install_summary_command_linked)" "$_q_i_link")"
   fi
   if [ "$_q_i_claude_state" = preserved ]; then
     # shellcheck disable=SC2059
-    printf "$(_q_msg install_summary_claude_preserved)\n" \
-      "$_q_i_claude_dest" "$_q_i_claude_source" >&2
+    _q_sum_skip "$(printf "$(_q_msg install_summary_claude_preserved)" "$_q_i_claude_dest" "$_q_i_claude_source")"
   else
     # shellcheck disable=SC2059
-    printf "$(_q_msg install_summary_claude_ready)\n" "$_q_i_claude_dest"
+    _q_sum_ok hooks "$(printf "$(_q_msg install_summary_claude_ready)" "$_q_i_claude_dest")"
   fi
   # shellcheck disable=SC2059
-  printf "$(_q_msg install_summary_omp_ready)\n" "$_q_i_target/.omp/hooks/pre/knotlog.ts"
+  _q_sum_ok hooks "$(printf "$(_q_msg install_summary_omp_ready)" "$_q_i_target/.omp/hooks/pre/knotlog.ts")"
   # B1: sır kapanı — kurulum, kasa git deposuysa hook'u bağlamıştır;
   # değilse hataya düşmeden yol gösteren satır basılır.
-  _q_hooks_state=${_q_hooks_state:-none}
-  _q_hooks_report
+  case "${_q_hooks_state:-none}" in
+    installed) _q_sum_ok safety "$(_q_msg hooks_installed)" ;;
+    current) _q_sum_ok safety "$(_q_msg hooks_current)" ;;
+    kept) _q_sum_skip "$(_q_msg hooks_kept)" ;;
+    *) _q_sum_skip "$(_q_msg hooks_none)" ;;
+  esac
   # Baseline commit last, once every integration above is on disk, so the
   # vault's first commit is the whole finished vault rather than init's half.
   _q_init_baseline "$_q_i_target"
-  _q_baseline_report
+  case "${_q_baseline_state:-none}" in
+    made) _q_sum_ok vault "$(_q_msg init_commit)" ;;
+    skip) _q_sum_skip "$(_q_msg init_commit_skip)" "$(_q_msg install_summary_fix_git)" ;;
+  esac
   if [ "$_q_i_metadata_ok" -eq 1 ]; then
     # shellcheck disable=SC2059
-    printf "$(_q_msg install_summary_icon_ready)\n" "$_q_i_target/.directory"
+    _q_sum_ok vault "$(printf "$(_q_msg install_summary_icon_ready)" "$_q_i_target/.directory")"
   else
     # shellcheck disable=SC2059
-    printf "$(_q_msg install_summary_icon_failed)\n" "$_q_i_target/.directory"
+    _q_sum_skip "$(printf "$(_q_msg install_summary_icon_failed)" "$_q_i_target/.directory")"
   fi
+  _q_sum_print
   printf '\n'
   printf '%s\n' "$(_q_msg install_summary_next)"
   printf '%s\n' "$(_q_msg install_summary_help)"
