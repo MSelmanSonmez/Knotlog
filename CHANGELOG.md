@@ -5,7 +5,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [1.2.0] - unreleased
 
+### Fixed
+- The arrow-key language menu no longer fails with "unknown layout" when you pick `es`, `ja`, `pt-br` or `zh-cn` (languages without their own folder layout); it falls back to English folders like every other install path. Present in 1.1.1.
+- `knotlog tone` and `knotlog flair` also rewrite the `knotlog:context` block that `context --bridge` writes, so old style text no longer lingers beside the new one.
+- The replace-the-link question in the install wizard shows the language's own yes/no letters (`[e/H]` Turkish, `[s/N]` Spanish and Portuguese) and accepts that language's yes along with `y`/`yes`.
+- `install` makes `$HOME/.local/bin` when `PATH` names it but it is missing, and otherwise says exactly which folder to create and add to `PATH`.
+
+### Changed
+- `--version` reports `1.2.0`.
+- `knotlog uninstall` also removes the client hook files in the vault that are still identical to their shipped template, and lists those you changed as `Kept:`.
+
 ### Added
+- `install` and `doctor` report a different `knotlog` earlier on PATH (hooks call plain `knotlog`, so that one runs): the install summary lists it under Skipped with its version and a `fix:` line, `doctor` warns when `knotlog` is missing from PATH or reports another version.
 - `flair=none|kaomoji|emoji` config key and `knotlog flair [--list | none|kaomoji|emoji]`: a reply decoration independent of the tone preset, appended after the tone block in `knotlog context`. `init --flair` and `install --flair` set it. English and Turkish text ship under `flair/`; other languages use the English text. `doctor` warns on an invalid value. `tone=kaomoji` is unchanged.
 - Install wizard: a new Style step after Identity (tone preset, flair, folder names). Each menu is skipped by its flag (`--tone`, `--flair`, `--plain`) and the step is skipped in `--no-prompt` runs; the step counter is now `[n/5]`.
 - The `AGENTS.md`/`CLAUDE.md` bridge block ends with a Style section (the active tone preset and flair text) when `tone=` or `flair=` is set, so agents with no context hook (OpenCode, Windsurf) see it; `knotlog tone` and `knotlog flair` rewrite the block in place. Unchanged when neither is set.
