@@ -12488,7 +12488,8 @@ sm_pty() {
     sh "$ROOT/knotlog" install --no-link --no-prompt --user Ada "$TMP/$_sm_n" >"$TMP/$_sm_n.out" 2>"$TMP/$_sm_n.err" </dev/null
 }
 SM_ESC=$(awk 'BEGIN { printf "%c", 27 }')
-SM_PTY=0; command -v python3 >/dev/null 2>&1 && SM_PTY=1
+# Linux only, like T-1025: Windows Python has no pty and a macOS pty.spawn hung CI for hours (2026-10-25).
+SM_PTY=0; [ "$(uname -s)" = Linux ] && command -v python3 >/dev/null 2>&1 && SM_PTY=1
 sm_inst sm1
 t; assert_eq "T-1050: the summary under a pipe has no ESC byte and no colour codes" 'no' \
   "$(grep -q "$SM_ESC" "$TMP/sm1.out" && printf yes || printf no)"
@@ -12508,7 +12509,7 @@ if [ "$SM_PTY" -eq 1 ]; then
 $(! grep -q "${SM_ESC}\[3[23]m" "$TMP/sm4.out" && grep -qF '✔ Vault: created' "$TMP/sm4.out" && printf yes) \
 $(! grep -q "${SM_ESC}\[3[23]m" "$TMP/sm5.out" && grep -qF '✔ Vault: created' "$TMP/sm5.out" && printf yes)"
 else
-  t; skip "T-1055: coloured summary on a terminal" "python3 not found"
+  t; skip "T-1055: coloured summary on a terminal" "needs Linux and python3 for a pty"
 fi
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
