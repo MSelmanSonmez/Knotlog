@@ -3986,8 +3986,8 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
     "$(cmp -s "$TMP/install-claude-keep.json" \
             "$ITARGET/.claude/settings.json" && printf yes || printf no)"
   t; assert_eq "install: Claude preservation warning names destination and source" 'yes' \
-    "$(grep -qF "$ICLAUDE_DEST_RESOLVED" "$TMP/install-claude-diff.err" \
-       && grep -qF "$ICLAUDE_SRC_RESOLVED" "$TMP/install-claude-diff.err" \
+    "$(grep -qF "$ICLAUDE_DEST_RESOLVED" "$TMP/install-claude-diff.out" \
+       && grep -qF "$ICLAUDE_SRC_RESOLVED" "$TMP/install-claude-diff.out" \
        && printf yes || printf no)"
   # install resolves the parent with `pwd -P`, so on macOS and Git Bash it
   # prints the physically resolved path; grep that form, not $TMP verbatim.
@@ -4582,8 +4582,8 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
     >"$TMP/install-separate-status.out" 2>"$TMP/install-separate-status.err"; IRC=$?
   assert_install_rc "install: new vault with existing matching command exits 0" '0' "$IRC" "$TMP/install-separate-status.err"
   t; assert_eq "install: summary separates created vault from available command" 'yes' \
-    "$(grep -q '^Vault: created at ' "$TMP/install-separate-status.out" \
-       && grep -q '^Command: already on PATH at ' "$TMP/install-separate-status.out" \
+    "$(grep -q '^  ✔ Vault: created at ' "$TMP/install-separate-status.out" \
+       && grep -q '^  ✔ Command: already on PATH at ' "$TMP/install-separate-status.out" \
        && ! grep -q 'Quipu already installed' "$TMP/install-separate-status.out" \
        && printf yes || printf no)"
   t; assert_eq "install: English next guidance is static, clear, and unescaped" 'yes' \
@@ -6220,8 +6220,8 @@ t; assert_eq "T-338: the closing screen names the installed directory in full" '
 # that the plain-text fallback branch exists right beside it.
 t; assert_eq "T-339: green closing title is gated on _q_install_tty with a plain fallback" 'yes' \
   "$(grep -Fq '\033[32m%s\033[0m\n' "$ROOT/knotlog" \
-     && grep -B2 -F '\033[32m%s\033[0m\n' "$ROOT/knotlog" | grep -Fq 'if _q_install_tty; then' \
-     && grep -A2 -F 'if _q_install_tty; then' "$ROOT/knotlog" | grep -Fq 'install_done_title' \
+     && grep -B2 -F '\033[32m%s\033[0m\n' "$ROOT/knotlog" | grep -Fq 'if _q_install_tty && [ -z "${NO_COLOR:-}" ]; then' \
+     && grep -A2 -F 'if _q_install_tty && [ -z "${NO_COLOR:-}" ]; then' "$ROOT/knotlog" | grep -Fq 'install_done_title' \
      && printf yes || printf no)"
 t; assert_eq "T-339: the wizard closing keys exist in both languages" 'yes' \
   "$(for _k in install_busy install_done_title install_done_waiting install_done_body_1 install_done_body_2; do
@@ -12471,6 +12471,45 @@ st_inst st8 'en\nAda\n\n99\n'
 t; assert_eq "T-1046: an out-of-range Style answer exits 2" '2' "$ST_RC"
 t; assert_eq "T-1047: every language has the Style keys" '' \
   "$(for _f in "$ROOT"/i18n/*.txt; do for _k in install_step_style install_ask_pick install_style_tone install_style_flair install_style_folders install_style_emoji install_style_emoji_ex install_style_plain install_review_tone install_review_flair install_review_folders err_install_style_invalid; do grep -q "^$_k=." "$_f" || printf '%s:%s ' "$_f" "$_k"; done; done)"
+# ---- install summary: grouped, colour only on a real terminal (T-1050..T-1055) ----
+# sm_inst NAME [ENV=VAL ...] -- install --no-link over a pipe, no git identity.
+sm_inst() {
+  _sm_n=$1; shift
+  mkdir -p "$TMP/$_sm_n" "$TMP/$_sm_n-bin"
+  env HOME="$TMP/$_sm_n-bin" GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 PATH="$TMP/$_sm_n-bin:$INSTALL_TOOLS" \
+    QUIPU_LANG=en "$@" sh "$ROOT/knotlog" install --no-link --no-prompt --user Ada "$TMP/$_sm_n" >"$TMP/$_sm_n.out" 2>"$TMP/$_sm_n.err"
+}
+# sm_pty NAME [ENV=VAL ...] -- the same install on a pseudo-terminal (python3 pty; skipped without it).
+sm_pty() {
+  _sm_n=$1; shift
+  mkdir -p "$TMP/$_sm_n" "$TMP/$_sm_n-bin"
+  env HOME="$TMP/$_sm_n-bin" GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 PATH="$TMP/$_sm_n-bin:$INSTALL_TOOLS" \
+    QUIPU_LANG=en TERM=xterm "$@" python3 -c 'import pty,sys; pty.spawn(sys.argv[1:])' \
+    sh "$ROOT/knotlog" install --no-link --no-prompt --user Ada "$TMP/$_sm_n" >"$TMP/$_sm_n.out" 2>"$TMP/$_sm_n.err" </dev/null
+}
+SM_ESC=$(awk 'BEGIN { printf "%c", 27 }')
+SM_PTY=0; command -v python3 >/dev/null 2>&1 && SM_PTY=1
+sm_inst sm1
+t; assert_eq "T-1050: the summary under a pipe has no ESC byte and no colour codes" 'no' \
+  "$(grep -q "$SM_ESC" "$TMP/sm1.out" && printf yes || printf no)"
+t; assert_eq "T-1051: groups print in order Vault, Hooks, Safety, Skipped, each item on one line" 'yes 5' \
+  "$(awk '/^Vault$/ {a=NR} /^Hooks$/ {b=NR} /^Safety$/ {c=NR} /^Skipped$/ {d=NR} END {print (a && a<b && b<c && c<d) ? "yes" : "no"}' "$TMP/sm1.out") $(grep -c '^  ✔ ' "$TMP/sm1.out")"
+t; assert_eq "T-1052: --no-link says it was skipped because of --no-link" 'yes' \
+  "$(case $(uname -s) in MINGW* | MSYS* | CYGWIN*) printf yes ;; *) grep -qF '  ! Command: not linked (skipped because of --no-link)' "$TMP/sm1.out" && ! grep -qF 'install.ps1' "$TMP/sm1.out" && printf yes || printf no ;; esac)"
+t; assert_eq "T-1053: a missing git identity is a skipped item with a fix line" 'yes' \
+  "$(grep -qF '  ! No baseline commit' "$TMP/sm1.out" && grep -qF '    fix: git config --global user.name' "$TMP/sm1.out" && printf yes || printf no)"
+sm_inst sm2 GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t
+t; assert_eq "T-1054: with an identity the baseline commit is a done item and no fix line prints" 'yes' \
+  "$(grep -qF '  ✔ Baseline commit made' "$TMP/sm2.out" && ! grep -qF 'fix:' "$TMP/sm2.out" && printf yes || printf no)"
+if [ "$SM_PTY" -eq 1 ]; then
+  sm_pty sm3; sm_pty sm4 NO_COLOR=1; sm_pty sm5 TERM=dumb
+  t; assert_eq "T-1055: on a terminal the marks are coloured; NO_COLOR=1 and TERM=dumb print none" 'yes yes yes' \
+    "$(grep -q "${SM_ESC}\[32m✔" "$TMP/sm3.out" && grep -q "${SM_ESC}\[33m!" "$TMP/sm3.out" && printf yes) \
+$(! grep -q "${SM_ESC}\[3[23]m" "$TMP/sm4.out" && grep -qF '✔ Vault: created' "$TMP/sm4.out" && printf yes) \
+$(! grep -q "${SM_ESC}\[3[23]m" "$TMP/sm5.out" && grep -qF '✔ Vault: created' "$TMP/sm5.out" && printf yes)"
+else
+  t; skip "T-1055: coloured summary on a terminal" "python3 not found"
+fi
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
