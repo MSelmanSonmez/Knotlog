@@ -12673,6 +12673,19 @@ else
 fi
 chmod 755 "$TMP/l74b-tools"
 
+# T-1075: uninstall removes client hook files still identical to their template, keeps and names changed ones.
+mkvault vun75; QUIPU_VAULT="$TMP/vun75" sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang en >/dev/null 2>&1
+for _a in codex gemini omp cursor; do QUIPU_VAULT="$TMP/vun75" sh "$ROOT/knotlog" setup "$_a" >/dev/null 2>&1; done
+printf '\n' >> "$TMP/vun75/.gemini/settings.json"
+UN75_D=$(cd "$TMP/vun75" && PATH="$INSTALL_TOOLS" QUIPU_LANG=en sh "$ROOT/knotlog" uninstall --dry-run 2>&1)
+t; assert_eq "T-1075: --dry-run lists the unchanged hook files and removes nothing" 'yes yes' \
+  "$(printf '%s\n' "$UN75_D" | grep -qF "Would remove: $TMP/vun75/.codex/hooks.json (hook file" && printf yes || printf no) $([ -f "$TMP/vun75/.codex/hooks.json" ] && [ -f "$TMP/vun75/.omp/hooks/pre/knotlog.ts" ] && printf yes || printf no)"
+UN75=$(cd "$TMP/vun75" && PATH="$INSTALL_TOOLS" QUIPU_LANG=en sh "$ROOT/knotlog" uninstall 2>&1)
+t; assert_eq "T-1075: unchanged hook files (and the directories they leave empty) are gone, the edited one stays and is named" 'yes yes yes' \
+  "$([ ! -e "$TMP/vun75/.codex" ] && [ ! -e "$TMP/vun75/.cursor" ] && [ ! -e "$TMP/vun75/.omp/hooks" ] && printf yes || printf no) $(printf '%s\n' "$UN75" | grep -qF "Kept: $TMP/vun75/.gemini/settings.json differs from the template" && [ -f "$TMP/vun75/.gemini/settings.json" ] && printf yes || printf no) $(printf '%s\n' "$UN75" | grep -qF "Removed: $TMP/vun75/.cursor/hooks.json (hook file" && printf yes || printf no)"
+t; assert_eq "T-1075: the vault's config and bridge file are untouched" 'yes' \
+  "$([ -f "$TMP/vun75/.knotlog/config" ] && [ -f "$TMP/vun75/AGENTS.md" ] && printf yes || printf no)"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0

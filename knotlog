@@ -4376,6 +4376,30 @@ _q_cmd_uninstall() {
   if [ -n "$_q_u_vault" ] && [ -d "$_q_u_vault" ]; then
     # shellcheck disable=SC2059
     printf "$(_q_msg uninstall_vault_kept)\n" "$_q_u_vault"
+    # Client hook files `setup`/`install` wrote: gone without the command, so
+    # remove each one still byte-identical to its template; a changed one is
+    # the user's and is only reported.
+    for _q_u_pair in .claude/settings.json:claude-code.json .codex/hooks.json:codex/hooks.json \
+      .omp/hooks/pre/knotlog.ts:omp/hooks/pre/knotlog.ts .gemini/settings.json:gemini/settings.json \
+      .cursor/hooks.json:cursor/hooks.json .agents/hooks.json:antigravity/hooks.json \
+      .devin/hooks.json:windsurf/hooks.json .opencode/plugins/knotlog.js:opencode/knotlog.js; do
+      _q_u_rel=${_q_u_pair%%:*}
+      _q_u_tpl="$_q_HOME/adapters/${_q_u_pair#*:}"
+      [ -f "$_q_u_vault/$_q_u_rel" ] || continue
+      if cmp -s "$_q_u_tpl" "$_q_u_vault/$_q_u_rel"; then
+        if [ "$_q_u_dry" -eq 1 ]; then
+          # shellcheck disable=SC2059
+          printf "$(_q_msg uninstall_hook_would_remove)\n" "$_q_u_vault/$_q_u_rel"
+        elif rm -f -- "$_q_u_vault/$_q_u_rel"; then
+          (cd "$_q_u_vault" && rmdir -p "${_q_u_rel%/*}" 2>/dev/null) || true
+          # shellcheck disable=SC2059
+          printf "$(_q_msg uninstall_hook_removed)\n" "$_q_u_vault/$_q_u_rel"
+        fi
+      else
+        # shellcheck disable=SC2059
+        printf "$(_q_msg uninstall_hook_kept)\n" "$_q_u_vault/$_q_u_rel"
+      fi
+    done
     _q_u_left=
     # .githooks and .gitignore joined the list when install started making the
     # vault a git repository: under-reporting what Quipu left behind is the
