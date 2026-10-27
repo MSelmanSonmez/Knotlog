@@ -79,6 +79,13 @@ _q_vault() {
   _q_dir=$PWD
   while :; do
     if [ -f "$_q_dir/.knotlog/config" ] || [ -f "$_q_dir/.quipu/config" ]; then
+      # Another local user's vault (a /tmp/.knotlog/config left by someone
+      # else) is never adopted; the walk stops there, as git's does.
+      # shortcut: Git Bash (MSYSTEM set) maps ownership loosely, so it is not checked there.
+      # shellcheck disable=SC3067 # -O: dash, bash, ksh, zsh and busybox sh all have it
+      if [ -z "${MSYSTEM:-}" ] && [ ! -O "$_q_dir/.knotlog/config" ] && [ ! -O "$_q_dir/.quipu/config" ]; then
+        break
+      fi
       printf '%s\n' "$_q_dir"
       return 0
     fi
