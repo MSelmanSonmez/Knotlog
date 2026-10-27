@@ -305,13 +305,14 @@ _q_ctx_max() {
   fi
   case "$_q_cm_cfg" in
     '') _q_cm_cfg_bad=0 ;;
-    *[!0-9]*|0) _q_cm_cfg_bad=1 ;;
+    # A leading 0 reads as octal in $(( )) ("08" aborts it); 10+ digits overflow.
+    *[!0-9]*|0|0?*|??????????*) _q_cm_cfg_bad=1 ;;
     *) _q_cm_cfg_bad=0 ;;
   esac
 
   _q_cm_env=${QUIPU_CTX_MAX:-}
   case "$_q_cm_env" in
-    ''|*[!0-9]*|0) _q_cm_env_ok=0 ;;
+    ''|*[!0-9]*|0|0?*|??????????*) _q_cm_env_ok=0 ;;
     *) _q_cm_env_ok=1 ;;
   esac
 
@@ -635,10 +636,10 @@ _q_stat_batch() {
   # 200+-file vault — the default stays 200 for real use.
   [ -s "$1" ] || return 0
   _q_sb_n=${QUIPU_STAT_CHUNK:-200}
-  if xargs -0 -n "$_q_sb_n" stat -c '%Y %n' < "$1" > "$2" 2>/dev/null; then
+  if xargs -0 -n "$_q_sb_n" stat -c '%Y %n' -- < "$1" > "$2" 2>/dev/null; then
     :
   else
-    xargs -0 -n "$_q_sb_n" stat -f '%m %N' < "$1" > "$2"
+    xargs -0 -n "$_q_sb_n" stat -f '%m %N' -- < "$1" > "$2"
   fi
   awk '{ p = index($0, " "); if (p > 0) print substr($0, p + 1) "\t" substr($0, 1, p - 1) }' "$2"
 }
@@ -5517,7 +5518,7 @@ _q_cmd_context() {
     if [ -f "$_q_v/$_q_SD/checkpoint_nudged" ]; then
       _q_cp_nudged=$(cat "$_q_v/$_q_SD/checkpoint_nudged" 2>/dev/null || echo 0)
       case "$_q_cp_nudged" in
-        ''|*[!0-9]*) _q_cp_nudged=0 ;;
+        ''|*[!0-9]*|0?*) _q_cp_nudged=0 ;;
       esac
     fi
     _q_cp_after=${QUIPU_CHECKPOINT_AFTER:-1800}
@@ -5580,7 +5581,7 @@ _q_cmd_context() {
     if [ -f "$_q_v/$_q_SD/checkpoint_nudged" ]; then
       _q_cp_nudged=$(cat "$_q_v/$_q_SD/checkpoint_nudged" 2>/dev/null || echo 0)
       case "$_q_cp_nudged" in
-        ''|*[!0-9]*) _q_cp_nudged=0 ;;
+        ''|*[!0-9]*|0?*) _q_cp_nudged=0 ;;
       esac
     fi
     _q_cp_after=${QUIPU_CHECKPOINT_AFTER:-1800}

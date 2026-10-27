@@ -14,6 +14,13 @@
 # from code points via the jsonfield helpers (q_, bs_, tab_, cr_, nl_).
 # No regex: the diff scan uses substr only (PLAN 4.8).
 BEGIN { OFS = sprintf("%c", 9) }
+# Contract 8: no TAB/CR/LF may reach the log -- in any of the three fields.
+function strip_(s) {
+  gsub(tab_(), "", s)
+  gsub(cr_(), "", s)
+  gsub(nl_(), "", s)
+  return s
+}
 {
   ev = jsonfield($0, "hook_event_name")
   tool = jsonfield($0, "tool_name")
@@ -30,11 +37,10 @@ BEGIN { OFS = sprintf("%c", 9) }
     p = jsonfield($0, "file_path")
     if (p != "") tool = "Write"
   }
+  ev = strip_(ev)
+  tool = strip_(tool)
   if (p != "") {
-    # Contract 8: no TAB/CR/LF may reach the log.
-    gsub(tab_(), "", p)
-    gsub(cr_(), "", p)
-    gsub(nl_(), "", p)
+    p = strip_(p)
     if (ev != "" && tool != "" && p != "") {
       print ev, tool, p
     }
