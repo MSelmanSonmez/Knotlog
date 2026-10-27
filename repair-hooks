@@ -64,6 +64,16 @@ else
     [A-Za-z]:/*) _q_cmd="/${_q_cmd%:*}"${_q_cmd#*:} ;;
   esac
 fi
+# $_q_vault is a real path; a link at any name written below (or its folder)
+# would carry the write out of the vault.
+_q_writes='.icon .icon/knotlog.png .icon/Knotlog.ico .directory desktop.ini'
+[ "$_q_metadata" -eq 1 ] || _q_writes="$_q_writes .claude .claude/settings.json"
+for _q_w in $_q_writes; do
+  if [ -L "$_q_vault/$_q_w" ]; then
+    printf '%s\n' "repair-hooks: refusing to write through the symbolic link $_q_vault/$_q_w" >&2
+    exit 1
+  fi
+done
 mkdir -p "$_q_vault/.icon"
 if ! cmp -s "$_q_icon_source" "$_q_vault/.icon/knotlog.png"; then
   cp -- "$_q_icon_source" "$_q_vault/.icon/knotlog.png"

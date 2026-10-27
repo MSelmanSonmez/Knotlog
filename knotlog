@@ -225,6 +225,11 @@ _q_safe_target() {
   return 1
 }
 
+_q_guard() {
+  # _q_guard VAULT PATH — stop (err_unsafe_write) unless knotlog may write PATH.
+  _q_safe_target "$1" "$2" || _q_die err_unsafe_write 1 "${2#"$1"/}"
+}
+
 _q_sessions_ok() {
   # Is $1 a sessions folder that stays inside the vault (relative, no `..`)?
   case "$1" in
@@ -2571,6 +2576,11 @@ _q_cmd_init() {
 
   _q_changed=0
 
+  # The walk-up's link check never saw this folder (it may hold no config
+  # yet), and every init write below goes through the state directory.
+  if _q_has_link "$_q_v/$_q_SD"; then
+    _q_die err_state_link 1 "$_q_v/$_q_SD"
+  fi
   mkdir -p "$_q_v/$_q_SD"
 
   if [ ! -f "$_q_v/$_q_SD/config" ]; then
@@ -2791,6 +2801,7 @@ _q_cmd_init() {
     esac
     _q_name=${_q_ln#*"$_q_tab"}
     [ "$_q_name" = "$_q_ln" ] && continue
+    _q_guard "$_q_v" "$_q_v/$_q_name/.gitkeep"
     mkdir -p "$_q_v/$_q_name"
     if [ ! -f "$_q_v/$_q_name/.gitkeep" ]; then
       : > "$_q_v/$_q_name/.gitkeep"
@@ -2804,6 +2815,7 @@ _q_cmd_init() {
     if _q_scope_has full || _q_scope_has "$_q_scope"; then
       _q_scope_name=$(awk -F"$_q_tab" -v k="$_q_scope" '$1==k{print $2;exit}' "$_q_HOME/layout/scope-$_q_scope_lang.txt")
       [ -n "$_q_scope_name" ] || _q_die err_scope_unknown 2 "$_q_scope"
+      _q_guard "$_q_v" "$_q_v/$_q_scope_name/.gitkeep"
       mkdir -p "$_q_v/$_q_scope_name"
       if [ ! -f "$_q_v/$_q_scope_name/.gitkeep" ]; then
         : > "$_q_v/$_q_scope_name/.gitkeep"
@@ -2841,6 +2853,7 @@ _q_cmd_init() {
     if [ ! -f "$_q_HOME/persona/$_q_pers.md" ]; then
       _q_pers=en
     fi
+    _q_guard "$_q_v" "$_q_v/$_q_cname/companion.md"
     if [ ! -f "$_q_v/$_q_cname/companion.md" ]; then
       # FAZ 9 V-3: persona/<lang>.md is DATA carrying two %s placeholders
       # (companion name, then user name — printf arg order below). printf
@@ -2870,6 +2883,9 @@ _q_cmd_init() {
     fi
   fi
 
+  _q_guard "$_q_v" "$(_q_threads_path "$_q_v")"
+  _q_guard "$_q_v" "$(_q_rules_path "$_q_v")"
+  _q_guard "$_q_v" "$(_q_facts_path "$_q_v")"
   if [ ! -f "$(_q_threads_path "$_q_v")" ]; then
     printf '%s\n%s\n' "$(_q_msg threads_seed_title)" "$(_q_msg threads_seed_note)" > "$(_q_threads_path "$_q_v")"
     _q_changed=1
@@ -2906,6 +2922,7 @@ _q_cmd_init() {
     _q_facts=1
   fi
 
+  [ -z "$_q_dname" ] || _q_guard "$_q_v" "$_q_v/$_q_dname/Dashboard.md"
   if [ -n "$_q_dname" ] && [ ! -f "$_q_v/$_q_dname/Dashboard.md" ]; then
     {
       printf '%s\n' "$(_q_msg dashboard_seed_title)"
@@ -2945,6 +2962,7 @@ _q_cmd_init() {
       _q_tpl_lang=en
     fi
     for _q_tpl in note project session; do
+      _q_guard "$_q_v" "$_q_v/$_q_tname/$_q_tpl.md"
       if [ -f "$_q_HOME/templates/$_q_tpl_lang/$_q_tpl.md" ] && [ ! -f "$_q_v/$_q_tname/$_q_tpl.md" ]; then
         cp "$_q_HOME/templates/$_q_tpl_lang/$_q_tpl.md" "$_q_v/$_q_tname/$_q_tpl.md"
         _q_changed=1
@@ -2960,6 +2978,9 @@ _q_cmd_init() {
   # Both are marker-delimited and rewritten from this one source on every
   # init, so the two copies cannot drift apart -- the divergence risk of
   # duplicated text is answered by regenerating both, never by hand-editing.
+  for _q_f in AGENTS.md CLAUDE.md .gitattributes .gitignore; do
+    _q_guard "$_q_v" "$_q_v/$_q_f"
+  done
   : >> "$_q_v/AGENTS.md"
   : >> "$_q_v/CLAUDE.md"
   _q_had_block=0
@@ -4180,6 +4201,12 @@ _q_cmd_install() {
   [ "$_q_i_tone_set" -eq 0 ] || set -- "$@" --tone "$_q_i_tone"
   [ -z "$_q_i_flair" ] || set -- "$@" --flair "$_q_i_flair"
 
+  # A target that does not exist yet holds no links.
+  if [ -d "$_q_i_target" ]; then
+    for _q_i_w in .claude/settings.json repair-hooks repair-hooks.ps1 .omp/hooks/pre/knotlog.ts .icon/knotlog.png .icon/Knotlog.ico .directory desktop.ini; do
+      _q_guard "$_q_i_target" "$_q_i_target/$_q_i_w"
+    done
+  fi
   QUIPU_INTERNAL_INSTALL_QUIET=1 QUIPU_VAULT="$_q_i_target" _q_cmd_init "$@"
 
   if [ "$_q_i_claude_state" = copy ]; then
@@ -4449,6 +4476,8 @@ _q_cmd_uninstall() {
       _q_u_rel=${_q_u_pair%%:*}
       _q_u_tpl="$_q_HOME/adapters/${_q_u_pair#*:}"
       [ -f "$_q_u_vault/$_q_u_rel" ] || continue
+      # A linked folder (.claude -> ~/.claude) would make rm delete the real file.
+      _q_safe_target "$_q_u_vault" "$_q_u_vault/$_q_u_rel" || continue
       if cmp -s "$_q_u_tpl" "$_q_u_vault/$_q_u_rel"; then
         if [ "$_q_u_dry" -eq 1 ]; then
           # shellcheck disable=SC2059
@@ -7669,6 +7698,13 @@ _q_cmd_migrate() {
   if [ -d "$_q_mg_v/.quipu" ] && [ -d "$_q_mg_v/.knotlog" ]; then
     _q_die err_migrate_both 1 "$_q_mg_v/.quipu" "$_q_mg_v/.knotlog"
   fi
+  # Every fixed file migrate may rewrite; the *.md list below comes from
+  # find -type f, which neither lists nor descends into links.
+  for _q_mg_f in AGENTS.md CLAUDE.md .claude/settings.json .codex/hooks.json .gemini/settings.json \
+    .cursor/hooks.json .agents/hooks.json .omp/hooks/pre/quipu.ts .omp/hooks/pre/knotlog.ts \
+    .gitignore .gitattributes .githooks/pre-commit; do
+    _q_guard "$_q_mg_v" "$_q_mg_v/$_q_mg_f"
+  done
   _q_mg_tmp=$(mktemp -d "${TMPDIR:-/tmp}/knotlog-migrate-XXXXXX") || exit 1
   trap 'rm -rf "$_q_mg_tmp"' EXIT HUP INT TERM
   _q_mg_n=0
