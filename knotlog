@@ -464,6 +464,11 @@ _q_tui_key() {
 
 _q_tui_page() {
   # Built-in pager over one file: Space next page, b back, q return.
+  # $1 comes from the session folder or a search of index.tsv: page only a
+  # regular vault file, never a link or a path climbing out.
+  if [ ! -f "$_q_v/$1" ] || ! _q_safe_target "$_q_v" "$_q_v/$1"; then
+    return 0
+  fi
   _q_tp_total=$(awk 'END { print NR }' "$_q_v/$1")
   _q_tp_a=1
   while :; do
@@ -998,7 +1003,7 @@ _q_companion_path() {
   _q_layout_ok "$_q_cp_lay" || _q_cp_lay=emoji
   _q_cp_tab=$(printf '\t')
   _q_cp_comp=$(awk -F"$_q_cp_tab" '$1=="companion"{print $2;exit}' "$_q_HOME/layout/$_q_cp_lay.txt" 2>/dev/null || true)
-  if [ -n "$_q_cp_comp" ] && [ -f "$1/$_q_cp_comp/companion.md" ]; then
+  if [ -n "$_q_cp_comp" ] && [ -f "$1/$_q_cp_comp/companion.md" ] && _q_safe_target "$1" "$1/$_q_cp_comp/companion.md"; then
     printf '%s\n' "$1/$_q_cp_comp/companion.md"
   fi
 }
@@ -1166,6 +1171,10 @@ _q_doctor_stale_topics() {
   [ -f "$_q_dt_thr" ] || return 0
   [ -f "$_q_dt_idx" ] || return 0
   _q_dt_now=$(date +%s)
+  # Only index rows naming a real .md file of the vault are read (index.tsv
+  # may come from a cloned repository).
+  _q_dt_real=$(mktemp "${TMPDIR:-/tmp}/knotlog-doctor-XXXXXX") || return 0
+  (cd "$_q_dt_v" && _q_mdlist) > "$_q_dt_real"
   _q_dt_active=$(_q_msg threads_head_active)
   _q_dt_closed=$(_q_msg threads_head_closed)
   _q_dt_rows=$(Q_DOCTOR_VAULT="$_q_dt_v" awk -F"$(printf '\t')" \
@@ -1179,8 +1188,10 @@ _q_doctor_stale_topics() {
        }
      }
      BEGIN { live = 1 }
-     FILENAME == ARGV[1] {
+     FILENAME == ARGV[1] { real[$0] = 1; next }
+     FILENAME == ARGV[2] {
        if ($2 != "" && ($4 + 0) > latest[$2]) latest[$2] = $4 + 0
+       if (!($1 in real)) next
        f = ENVIRON["Q_DOCTOR_VAULT"] "/" $1
        while ((getline line < f) > 0) mention_(line, $4)
        close(f)
@@ -1197,7 +1208,8 @@ _q_doctor_stale_topics() {
        if ((c in latest) && latest[c] > 0 && now - latest[c] >= 7776000 && !seen[c]++) {
          print c "\t" int((now - latest[c]) / 86400)
        }
-     }' "$_q_dt_idx" "$_q_dt_thr")
+     }' "$_q_dt_real" "$_q_dt_idx" "$_q_dt_thr")
+  rm -f "$_q_dt_real"
   while IFS="$(printf '\t')" read -r _q_dt_topic _q_dt_days; do
     [ -n "$_q_dt_topic" ] || continue
     _q_dt_fmt=$(_q_msg compile_stale)
@@ -5169,6 +5181,9 @@ _q_ctx_text() {
   # $_q_max was already resolved at the top of this function (B-K4) --
   # reused here rather than calling _q_ctx_max a second time.
   _q_thr_p=$(_q_threads_path "$_q_v")
+  # A vault file that is a link (or sits in a folder resolving outside the
+  # vault) is never read into context, the same test writes get.
+  _q_safe_target "$_q_v" "$_q_thr_p" || _q_thr_p=
   if [ -f "$_q_thr_p" ]; then
     _q_pin_extract "$_q_thr_p"
   fi
@@ -5187,6 +5202,7 @@ _q_ctx_text() {
   # below still applies, so ctx_max stays the hard cap.
   _q_rul=
   _q_rul_path=$(_q_rules_path "$_q_v")
+  _q_safe_target "$_q_v" "$_q_rul_path" || _q_rul_path=
   if [ -f "$_q_rul_path" ]; then
     _q_rul_h=$(awk '/^#/ { print }' "$_q_rul_path")
     if [ -n "$_q_rul_h" ]; then
@@ -5296,6 +5312,7 @@ $_q_thr"
   # section keeps.
   _q_fts=
   _q_fts_path=$(_q_facts_path "$_q_v")
+  _q_safe_target "$_q_v" "$_q_fts_path" || _q_fts_path=
   if [ -f "$_q_fts_path" ]; then
     _q_facts_adopted "$_q_fts_path"
     if [ "$_q_fa" -eq 1 ]; then
@@ -6114,7 +6131,11 @@ _q_cmd_compile() {
   mkdir -p "$_q_cp" || exit 1
   _q_tmp=$(mktemp -d "${TMPDIR:-/tmp}/quipu-compile-XXXXXX") || exit 1
   trap 'rm -rf "$_q_tmp"' EXIT HUP INT TERM
-  awk -F"$_q_tab" '{if ($1 != "") print $1}' "$_q_v/$_q_SD/index.tsv" | sort > "$_q_tmp/paths.txt"
+  # Only paths that are real .md files of the vault are read: index.tsv may
+  # come from a cloned repository and name anything.
+  (cd "$_q_v" && _q_mdlist) > "$_q_tmp/real.txt"
+  awk -F"$_q_tab" '{if ($1 != "") print $1}' "$_q_v/$_q_SD/index.tsv" | sort |
+    awk 'NR == FNR { ok[$0] = 1; next } $0 in ok' "$_q_tmp/real.txt" - > "$_q_tmp/paths.txt"
   Q_COMPILE_VAULT="$_q_v" awk -v mode=scan \
     -v indexfile="$_q_v/$_q_SD/index.tsv" \
     -v pathsfile="$_q_tmp/paths.txt" \
