@@ -12814,6 +12814,151 @@ SEC88_B=$(KNOTLOG_HOOK=1 QUIPU_VAULT="$TMP/vsec88b" sh "$ROOT/knotlog" context 2
 t; assert_eq "T-1088: a path in tone= or lang= never pulls a file from outside the checkout into context" 'no no' \
   "$(printf '%s\n' "$SEC88_A" | grep -qF 'SEC87 PRIVATE NOTE' && printf yes || printf no) $(printf '%s\n' "$SEC88_B" | grep -qF 'SEC87 PRIVATE NOTE' && printf yes || printf no)"
 
+# ---- 1.2.0 security: input validation (T-1090..T-1103) ----
+# A cloned repository adopted as a vault, or a folder init/install is pointed at,
+# may carry links and hostile state. Each outside target is a marker file under
+# $SO; the test measures its bytes (cksum) or its absence from the output.
+SEC_TAB=$(printf '\t')
+SEC_COMP=$(awk -F"$SEC_TAB" '$1=="companion"{print $2;exit}' "$ROOT/layout/plain.txt")
+sec_init() { mkvault "$1"; QUIPU_VAULT="$TMP/$1" sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang en >/dev/null 2>&1; }
+sec_has() { if printf '%s\n' "$1" | grep -qF -- "$2"; then printf yes; else printf no; fi; }
+sec_empty() { if [ -z "$(ls -A "$1")" ]; then printf empty; else printf filled; fi; }
+sec_git() { HOME="$TMP/sec-home" GIT_CONFIG_GLOBAL="$TMP/sec-home/.gitconfig" GIT_CONFIG_SYSTEM=/dev/null "$@"; }
+sec_gitc() { (cd "$1" && shift && sec_git git "$@"); } # no git -C: Git for Windows misreads POSIX paths
+SEC_KNOW=$(awk -F"$SEC_TAB" '$1=="knowledge"{print $2;exit}' "$ROOT/layout/plain.txt")
+mkdir -p "$TMP/sec-home"
+
+if [ "$TRUE_SYMLINKS" -eq 1 ]; then
+  # T-1090: the hook's context never reads a linked Threads/Rules/Facts/companion file.
+  sec_init s90
+  printf '# Threads\n\nSEC90 OWN THREADS\n' > "$TMP/s90/Threads.md"
+  O90A=$(KNOTLOG_HOOK=1 QUIPU_VAULT="$TMP/s90" sh "$ROOT/knotlog" context --json UserPromptSubmit 2>&1)
+  printf '# Threads\n\nSEC90 THREADS\n' > "$SO/t90-thr"
+  printf '# SEC90 RULES\n' > "$SO/t90-rul"
+  printf -- '- Fact: SEC90 FACTS\n' > "$SO/t90-fts"
+  printf '# c\n\n## Tone\n\nSEC90 TONE\n' > "$SO/t90-cmp"
+  rm -f "$TMP/s90/Threads.md" "$TMP/s90/Rules.md" "$TMP/s90/Facts.md" "$TMP/s90/$SEC_COMP/companion.md"
+  sec_slink "$SO/t90-thr" "$TMP/s90/Threads.md"; sec_slink "$SO/t90-rul" "$TMP/s90/Rules.md"
+  sec_slink "$SO/t90-fts" "$TMP/s90/Facts.md"; sec_slink "$SO/t90-cmp" "$TMP/s90/$SEC_COMP/companion.md"
+  O90=$(KNOTLOG_HOOK=1 QUIPU_VAULT="$TMP/s90" sh "$ROOT/knotlog" context --json UserPromptSubmit 2>&1); R90=$?
+  t; assert_eq "T-1090: a real Threads.md reaches context; linked Threads/Rules/Facts/companion.md never do (hook exit 0)" 'yes 0 no no no no' \
+    "$(sec_has "$O90A" 'SEC90 OWN THREADS') $R90 $(sec_has "$O90" 'SEC90 THREADS') $(sec_has "$O90" 'SEC90 RULES') $(sec_has "$O90" 'SEC90 FACTS') $(sec_has "$O90" 'SEC90 TONE')"
+
+  # T-1091 (link half): a linked .githooks folder gets no pre-commit and no hooksPath.
+  mkdir -p "$TMP/s91b" "$SO/hk91b"; sec_gitc "$TMP/s91b" init -q; sec_slink "$SO/hk91b" "$TMP/s91b/.githooks"
+  sec_git env QUIPU_VAULT="$TMP/s91b" QUIPU_LANG=en sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang en >/dev/null 2>&1
+  t; assert_eq "T-1091: a symlinked .githooks folder: the outside folder stays empty and core.hooksPath is unset" 'empty none' \
+    "$(sec_empty "$SO/hk91b") $(sec_gitc "$TMP/s91b" config --local --get core.hooksPath || printf none)"
+
+  # T-1092: init on a folder whose .knotlog is a link (no config, so the walk-up never saw it).
+  mkdir -p "$TMP/s92" "$SO/sd92"; sec_slink "$SO/sd92" "$TMP/s92/.knotlog"
+  R92=$(cd "$TMP/s92" && unset QUIPU_VAULT KNOTLOG_VAULT && QUIPU_LANG=en sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang en >/dev/null 2>"$TMP/s92.err"; printf '%s' "$?")
+  t; assert_eq "T-1092: init refuses a symlinked state directory (exit 1, reason named) and writes nothing through it" '1 yes empty' \
+    "$R92 $(grep -qF -- "$SEC_MSG" "$TMP/s92.err" && printf yes || printf no) $(sec_empty "$SO/sd92")"
+
+  # T-1093: init never reads or writes through links in the vault tree.
+  mkdir -p "$TMP/s93"; C93=$(sec_target t93); sec_slink "$SO/t93" "$TMP/s93/AGENTS.md"
+  R93=$(QUIPU_VAULT="$TMP/s93" QUIPU_LANG=en sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang en >/dev/null 2>&1; printf '%s' "$?")
+  t; assert_eq "T-1093: a linked AGENTS.md: init exits 1, the outside file is byte-identical and its text is not copied in" '1 same no' \
+    "$R93 $(sec_same t93 "$C93") $(grep -qF 'ORIGINAL t93' "$TMP/s93/AGENTS.md" 2>/dev/null && [ ! -L "$TMP/s93/AGENTS.md" ] && printf yes || printf no)"
+  mkdir -p "$TMP/s93b" "$SO/cd93b"; sec_slink "$SO/cd93b" "$TMP/s93b/$SEC_COMP"
+  QUIPU_VAULT="$TMP/s93b" sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang en >/dev/null 2>&1
+  mkdir -p "$TMP/s93c"; sec_slink "$SO/t93c-new" "$TMP/s93c/Threads.md"
+  QUIPU_VAULT="$TMP/s93c" sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang en >/dev/null 2>&1
+  t; assert_eq "T-1093: a linked companion folder stays empty; a dangling Threads.md link creates nothing outside" 'empty no' \
+    "$(sec_empty "$SO/cd93b") $([ -e "$SO/t93c-new" ] && printf yes || printf no)"
+
+  # T-1094: uninstall never deletes a hook file through a linked folder (.claude -> elsewhere).
+  sec_init s94; mkdir -p "$SO/cl94"; cp "$ROOT/adapters/claude-code.json" "$SO/cl94/settings.json"
+  rm -rf "$TMP/s94/.claude"; sec_slink "$SO/cl94" "$TMP/s94/.claude"
+  (cd "$TMP/s94" && unset QUIPU_VAULT KNOTLOG_VAULT && PATH="$INSTALL_TOOLS" HOME="$TMP/sec-home" QUIPU_LANG=en sh "$ROOT/knotlog" uninstall >/dev/null 2>&1)
+  t; assert_eq "T-1094: uninstall leaves settings.json behind a symlinked .claude folder in place" 'yes' \
+    "$([ -f "$SO/cl94/settings.json" ] && printf yes || printf no)"
+
+  # T-1095: migrate --apply refuses a linked .gitattributes (it would append the union lines there).
+  sec_init s95; C95=$(sec_target t95); rm -f "$TMP/s95/.gitattributes"; sec_slink "$SO/t95" "$TMP/s95/.gitattributes"
+  R95=$(QUIPU_VAULT="$TMP/s95" QUIPU_LANG=en sh "$ROOT/knotlog" migrate --apply >/dev/null 2>&1; printf '%s' "$?")
+  t; assert_eq "T-1095: migrate --apply with a symlinked .gitattributes exits 1 and the outside file is byte-identical" '1 same' \
+    "$R95 $(sec_same t95 "$C95")"
+
+  # T-1096: repair-hooks refuses a linked .icon folder.
+  mkdir -p "$TMP/s96" "$SO/ic96"; cp "$ROOT/repair-hooks" "$TMP/s96/repair-hooks"; sec_slink "$SO/ic96" "$TMP/s96/.icon"
+  R96=$(sh "$TMP/s96/repair-hooks" --knotlog "$ROOT" --metadata-only >/dev/null 2>&1; printf '%s' "$?")
+  t; assert_eq "T-1096: repair-hooks with a symlinked .icon folder exits 1 and the outside folder stays empty" '1 empty' \
+    "$R96 $(sec_empty "$SO/ic96")"
+
+  # T-1097: a reinstall over a vault whose .omp folder is a link writes nothing through it.
+  P97="$TMP/p97"; V97="$P97/Ada's Knotlog"; mkdir -p "$V97/.knotlog" "$SO/omp97"; : > "$V97/.knotlog/config"
+  sec_slink "$SO/omp97" "$V97/.omp"
+  R97=$(sec_git env PATH="$INSTALL_TOOLS" QUIPU_HOME="$ROOT" QUIPU_LANG=en sh "$ROOT/knotlog" install --no-link "$P97" --no-prompt --user Ada --lang en --no-git >/dev/null 2>&1; printf '%s' "$?")
+  t; assert_eq "T-1097: install over a vault with a symlinked .omp folder exits 1 and the outside folder stays empty" '1 empty' \
+    "$R97 $(sec_empty "$SO/omp97")"
+else
+  for _s in T-1090 T-1091 T-1092 T-1093 T-1093 T-1094 T-1095 T-1096 T-1097; do
+    t; skip "$_s: symlink scenarios" "no native symlinks on this host"
+  done
+fi
+
+# T-1091: .githooks holding hooks besides pre-commit is not armed with core.hooksPath.
+mkdir -p "$TMP/s91/.githooks" "$TMP/s91c"; sec_gitc "$TMP/s91" init -q; sec_gitc "$TMP/s91c" init -q
+printf '#!/bin/sh\nexit 0\n' > "$TMP/s91/.githooks/post-commit"
+O91=$(sec_git env QUIPU_VAULT="$TMP/s91" QUIPU_LANG=en sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang en 2>&1)
+sec_git env QUIPU_VAULT="$TMP/s91c" QUIPU_LANG=en sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang en >/dev/null 2>&1
+t; assert_eq "T-1091: a .githooks with other hooks: no hooksPath, no pre-commit, the reason is named; a clean repo still gets .githooks" 'none no yes .githooks' \
+  "$(sec_gitc "$TMP/s91" config --local --get core.hooksPath || printf none) $([ -e "$TMP/s91/.githooks/pre-commit" ] && printf yes || printf no) $(sec_has "$O91" "$(i18n hooks_foreign)") $(sec_gitc "$TMP/s91c" config --local --get core.hooksPath)"
+
+# T-1098: compile and doctor read only real .md files of the vault, whatever index.tsv names.
+sec_init s98; printf '# Note\n\nbody\n' > "$TMP/s98/n.md"
+printf '# Threads\n\n## SEC98 TOPIC\n' > "$TMP/s98/Threads.md"
+QUIPU_VAULT="$TMP/s98" sh "$ROOT/knotlog" index >/dev/null 2>&1
+# Threads.md's own row would date the topic today; only the hostile rows may.
+grep -v '^Threads.md' "$TMP/s98/.knotlog/index.tsv" > "$TMP/s98.idx"; cat "$TMP/s98.idx" > "$TMP/s98/.knotlog/index.tsv"
+printf '# SEC98 SECRET\n\n# SEC98 TOPIC\n' > "$SO/t98.md"
+printf '../sec-out/t98.md\t\t\t1000000000\t\t\t\t\n' >> "$TMP/s98/.knotlog/index.tsv"
+if [ "$TRUE_SYMLINKS" -eq 1 ]; then
+  printf '# SEC98 LINKED\n' > "$SO/t98b.md"; sec_slink "$SO/t98b.md" "$TMP/s98/l98.md"
+  printf 'l98.md\t\t\t1000000000\t\t\t\t\n' >> "$TMP/s98/.knotlog/index.tsv"
+fi
+QUIPU_VAULT="$TMP/s98" QUIPU_LANG=en sh "$ROOT/knotlog" compile >/dev/null 2>&1
+D98=$(QUIPU_VAULT="$TMP/s98" QUIPU_LANG=en sh "$ROOT/knotlog" doctor 2>&1)
+t; assert_eq "T-1098: compile writes no heading of a file outside the vault or behind a link; doctor never dates a topic from one" 'no no no' \
+  "$(grep -rqF 'SEC98 SECRET' "$TMP/s98/$SEC_KNOW" && printf yes || printf no) $(grep -rqF 'SEC98 LINKED' "$TMP/s98/$SEC_KNOW" && printf yes || printf no) $(sec_has "$D98" 'SEC98 TOPIC')"
+
+# T-1099: a number with a leading 0 in config (ctx_max) or state (checkpoint_nudged) never aborts the hook.
+sec_init s99; printf 'ctx_max=08\n' >> "$TMP/s99/.knotlog/config"
+O99=$(KNOTLOG_HOOK=1 QUIPU_VAULT="$TMP/s99" sh "$ROOT/knotlog" context --json SessionStart 2>&1); R99=$?
+sec_init s99b; printf '08\n' > "$TMP/s99b/.knotlog/checkpoint_nudged"
+O99B=$(KNOTLOG_HOOK=1 QUIPU_VAULT="$TMP/s99b" sh "$ROOT/knotlog" context --json UserPromptSubmit 2>&1); R99B=$?
+t; assert_eq "T-1099: ctx_max=08 and checkpoint_nudged=08: context exits 0 with its usual output" '0 yes 0 yes' \
+  "$R99 $(sec_has "$O99" 'additionalContext') $R99B $(sec_has "$O99B" 'additionalContext')"
+
+# T-1100: an incremental index stats a note whose name starts with '-'.
+sec_init s100; QUIPU_VAULT="$TMP/s100" sh "$ROOT/knotlog" index >/dev/null 2>&1
+touch_at 1000000000 "$TMP/s100/.knotlog/index.tsv"
+printf '# Dash\n\nsec100zebra\n' > "$TMP/s100/-L.md"
+R100=$(QUIPU_VAULT="$TMP/s100" sh "$ROOT/knotlog" index >/dev/null 2>&1; printf '%s' "$?")
+t; assert_eq "T-1100: index of a changed -L.md exits 0 and search finds it" '0 yes' \
+  "$R100 $(QUIPU_VAULT="$TMP/s100" sh "$ROOT/knotlog" search sec100zebra 2>/dev/null | grep -qF -- '-L.md' && printf yes || printf no)"
+
+# T-1101: capture keeps TAB/CR/LF out of the event and tool fields (one payload, one log row).
+mkvault s101
+printf '%s\n' '{"hook_event_name":"PostToolUse\n2026-01-01T00:00 | Fake | Read | forged.md","tool_name":"Re\tad\r","tool_input":{"file_path":"a.md"}}' |
+  (cd "$TMP/s101" && unset QUIPU_VAULT KNOTLOG_VAULT && KNOTLOG_HOOK=1 sh "$ROOT/knotlog" capture >/dev/null 2>&1)
+t; assert_eq "T-1101: an event name carrying a newline adds exactly one activity.log row, naming the real path" '1 a.md' \
+  "$(wc -l < "$TMP/s101/.knotlog/activity.log" | tr -d ' ') $(awk -F' [|] ' 'END { print $NF }' "$TMP/s101/.knotlog/activity.log")"
+
+# T-1102: the walk-up still adopts a vault the running user owns (another user's vault
+# is refused by [ -O ]; a test cannot own a file as someone else, see the code comment).
+sec_init s102; mkdir -p "$TMP/s102/sub/dir"
+R102=$(cd "$TMP/s102/sub/dir" && unset QUIPU_VAULT KNOTLOG_VAULT && QUIPU_LANG=en sh "$ROOT/knotlog" context >/dev/null 2>&1; printf '%s' "$?")
+t; assert_eq "T-1102: context from a subfolder of the user's own vault finds it (exit 0)" '0' "$R102"
+
+# T-1103: init --lang takes a language code only (it lands in a sed replacement and config).
+mkvault s103
+R103=$(QUIPU_VAULT="$TMP/s103" QUIPU_LANG=en sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang 'en/x' >/dev/null 2>&1; printf '%s' "$?")
+t; assert_eq "T-1103: init --lang en/x exits 2 and writes no lang= line" '2 no' \
+  "$R103 $(grep -q '^lang=' "$TMP/s103/.knotlog/config" && printf yes || printf no)"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
