@@ -2559,7 +2559,13 @@ _q_cmd_init() {
         fi
         _q_lay_req=$2; shift 2 ;;
       --no-prompt) _q_noprompt=1; shift ;;
-      --lang) [ "$#" -ge 2 ] || _q_die err_missing_arg 2; _q_lang=$2; shift 2 ;;
+      --lang) [ "$#" -ge 2 ] || _q_die err_missing_arg 2
+        # The value lands in a sed replacement and in config; a code is letters,
+        # digits and - _ . @ only (unsupported codes still act as English).
+        case "$2" in
+          '' | *[!A-Za-z0-9_.@-]*) _q_die err_install_lang_invalid 2 "$2" "$(_q_langs | paste -sd/ -)" ;;
+        esac
+        _q_lang=$2; shift 2 ;;
       --user) [ "$#" -ge 2 ] || _q_die err_missing_arg 2
         case "$2" in
           -*) _q_die err_unknown_flag 2 "$2" ;;
