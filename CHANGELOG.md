@@ -9,6 +9,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - A repository carrying symlinks inside `.knotlog/` could make hooks write outside the vault. Knotlog now refuses to run when the state directory is a symbolic link or holds one (hooks exit 0 silently, manual runs exit 1, `doctor` reports it), and refuses to write a vault file that is a link or whose folder resolves outside the vault. The vault root itself may still be a link. Present in 1.1.1 and earlier.
 - `remember` and `note` ignore a `layout=` value that is not a shipped layout (falling back to `emoji`, as `context`, `import` and `digest` already did), and refuse a sessions folder that is absolute or contains `..`.
 - `fold=`, `tone=` and `lang=` in a vault's config are names of shipped files, never paths: a value with `/` or `..` falls back to the default (`doctor` fails a bad `fold=`), so a cloned repository's config can no longer choose the sed script `index` and `search` run, or pull a file from outside the checkout into `context`. Present in 1.1.1 and earlier.
+- `context` no longer reads a threads, rules, facts or `companion.md` file that is a symbolic link or resolves outside the vault; `compile`, `doctor` and `tui` read only the vault's own notes, whatever `index.tsv` lists. Present in 1.1.1 and earlier.
+- `init`, `install`, `migrate`, `uninstall` and `repair-hooks` refuse to write or remove a file through a symbolic link in the vault, and `init` refuses a linked state directory. Present in 1.1.1 and earlier.
+- The secret gate no longer sets `core.hooksPath` when `.githooks/` holds other hooks or a link: it reports it and leaves them inactive. Present in 1.1.1 and earlier.
+- The vault walk-up never adopts a vault whose config another user owns (not checked under Git Bash).
+- A `ctx_max=` or checkpoint value with a leading zero, a note named like an option (`-L.md`), and a hook event or tool name carrying a tab or newline no longer break `context`, `index` or `activity.log`. `init --lang` accepts only a language code.
 
 ### Fixed
 - The arrow-key language menu no longer fails with "unknown layout" when you pick `es`, `ja`, `pt-br` or `zh-cn` (languages without their own folder layout); it falls back to English folders like every other install path. Present in 1.1.1.
