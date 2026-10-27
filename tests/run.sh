@@ -12399,7 +12399,8 @@ t; assert_eq "T-1026: usage_install mentions --force in every language" '' \
   "$(for _f in "$ROOT"/i18n/*.txt; do grep -q '^usage_install=.*--force' "$_f" || printf '%s ' "$_f"; done)"
 
 # ---- flair: reply decoration independent of tone (T-1030..T-1037) ----
-fl_ctx() { QUIPU_VAULT="$TMP/$1" sh "$ROOT/knotlog" context 2>&1 | sed 's/[0-9:T-]\{16\}//g'; }
+# The "now: YYYY-MM-DD HH:MM" line is stripped too: a slow runner can cross a minute between two calls.
+fl_ctx() { QUIPU_VAULT="$TMP/$1" sh "$ROOT/knotlog" context 2>&1 | sed 's/[0-9:T-]\{16\}//g; s/[0-9-]\{10\} [0-9:]\{5\}//g'; }
 fl_mk() { # name lang [extra config lines]
   mkvault "$1"; printf 'lang=%s\n' "$2" > "$TMP/$1/.knotlog/config"
   QUIPU_VAULT="$TMP/$1" sh "$ROOT/knotlog" init --no-prompt >/dev/null 2>&1
