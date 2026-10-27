@@ -3,7 +3,7 @@
 All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.2.0] - 2026-10-26
+## [1.2.0] - 2026-10-27
 
 ### Security
 - A repository carrying symlinks inside `.knotlog/` could make hooks write outside the vault. Knotlog now refuses to run when the state directory is a symbolic link or holds one (hooks exit 0 silently, manual runs exit 1, `doctor` reports it), and refuses to write a vault file that is a link or whose folder resolves outside the vault. The vault root itself may still be a link. Present in 1.1.1 and earlier.
