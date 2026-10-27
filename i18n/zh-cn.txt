@@ -450,6 +450,7 @@ err_rollback_git_checkout_failed=回滚到 %s 时 git checkout 失败
 hooks_installed=密钥门已安装：.githooks/pre-commit（core.hooksPath=.githooks）
 hooks_current=密钥门已是最新：.githooks/pre-commit
 hooks_kept=密钥门已保留：.githooks/pre-commit 被手动编辑过（没有 knotlog 标记）— 未覆盖，hooksPath 保持不变
+hooks_foreign=密钥门未安装：.githooks/ 中有其他钩子或符号链接 — core.hooksPath 保持不变，它们不会生效
 hooks_none=密钥门未安装：知识库不是 git 仓库根目录 — 请运行 git init，然后再次运行 knotlog init
 
 # tone presets (B-preset)

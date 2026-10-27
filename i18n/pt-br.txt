@@ -450,6 +450,7 @@ err_rollback_git_checkout_failed=o git checkout falhou ao reverter para %s
 hooks_installed=Barreira de segredos instalada: .githooks/pre-commit (core.hooksPath=.githooks)
 hooks_current=Barreira de segredos atualizada: .githooks/pre-commit
 hooks_kept=Barreira de segredos preservada: o .githooks/pre-commit foi editado à mão (sem marcador do knotlog) — não foi sobrescrito, hooksPath intocado
+hooks_foreign=Barreira de segredos não instalada: .githooks/ contém outros hooks ou um link simbólico — core.hooksPath intocado, eles continuam inativos
 hooks_none=Barreira de segredos não instalada: o cofre não é a raiz de um repositório git — execute git init e depois knotlog init de novo
 
 # tone presets (B-preset)

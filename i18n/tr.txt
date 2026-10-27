@@ -450,6 +450,7 @@ err_rollback_git_checkout_failed=%s referansına dönerken git checkout başarı
 hooks_installed=Sır kapanı kuruldu: .githooks/pre-commit (core.hooksPath=.githooks)
 hooks_current=Sır kapanı güncel: .githooks/pre-commit
 hooks_kept=Sır kapanı korundu: .githooks/pre-commit elle düzenlenmiş (knotlog imzası yok) — üzerine yazılmadı, hooksPath'e dokunulmadı
+hooks_foreign=Sır kapanı kurulmadı: .githooks/ içinde başka kancalar ya da sembolik bağ var — core.hooksPath'e dokunulmadı, onlar etkin değil
 hooks_none=Sır kapanı kurulmadı: kasa bir git deposu kökü değil — git init sonrası knotlog init'i yeniden çalıştır
 
 # tone presets (B-preset)

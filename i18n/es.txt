@@ -450,6 +450,7 @@ err_rollback_git_checkout_failed=git checkout falló al revertir a %s
 hooks_installed=Barrera de secretos instalada: .githooks/pre-commit (core.hooksPath=.githooks)
 hooks_current=Barrera de secretos al día: .githooks/pre-commit
 hooks_kept=Barrera de secretos conservada: .githooks/pre-commit se editó a mano (sin marca de knotlog) — no se sobrescribió, hooksPath intacto
+hooks_foreign=Barrera de secretos no instalada: .githooks/ contiene otros hooks o un enlace simbólico — core.hooksPath intacto, siguen inactivos
 hooks_none=Barrera de secretos no instalada: la bóveda no es la raíz de un repositorio git — ejecuta git init y luego knotlog init otra vez
 
 # tone presets (B-preset)

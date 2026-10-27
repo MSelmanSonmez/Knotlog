@@ -450,6 +450,7 @@ err_rollback_git_checkout_failed=git checkout failed while rolling back to %s
 hooks_installed=Secret gate installed: .githooks/pre-commit (core.hooksPath=.githooks)
 hooks_current=Secret gate up to date: .githooks/pre-commit
 hooks_kept=Secret gate preserved: .githooks/pre-commit was hand-edited (no knotlog marker) — not overwritten, hooksPath untouched
+hooks_foreign=Secret gate not installed: .githooks/ holds other hooks or a symbolic link — core.hooksPath untouched, so they stay inactive
 hooks_none=Secret gate not installed: the vault is not a git repository root — run git init, then knotlog init again
 
 # tone presets (B-preset)

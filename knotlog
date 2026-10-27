@@ -2465,6 +2465,15 @@ _q_secret_hooks_setup() {
     _q_hooks_state=kept
     return 0
   fi
+  # core.hooksPath would also arm every other hook a cloned repository ships
+  # in .githooks/, so only a folder holding nothing but pre-commit is adopted.
+  if [ -e "$_q_sh_v/.githooks" ] || [ -L "$_q_sh_v/.githooks" ]; then
+    # shellcheck disable=SC2010 # an odd name (a newline in it) only counts as foreign
+    if _q_has_link "$_q_sh_v/.githooks" || ls -A -- "$_q_sh_v/.githooks" 2>/dev/null | grep -vqx pre-commit; then
+      _q_hooks_state=foreign
+      return 0
+    fi
+  fi
   mkdir -p "$_q_sh_v/.githooks"
   _q_hooks_state=installed
   if [ -f "$_q_sh_hook" ] && cmp -s "$_q_sh_hook" "$_q_sh_src"; then
@@ -2490,6 +2499,7 @@ _q_hooks_report() {
     installed) _q_msg hooks_installed ;;
     current) _q_msg hooks_current ;;
     kept) _q_warn hooks_kept ;;
+    foreign) _q_warn hooks_foreign ;;
     *) _q_msg hooks_none ;;
   esac
 }
@@ -4334,6 +4344,7 @@ _q_cmd_install() {
     installed) _q_sum_ok safety "$(_q_msg hooks_installed)" ;;
     current) _q_sum_ok safety "$(_q_msg hooks_current)" ;;
     kept) _q_sum_skip "$(_q_msg hooks_kept)" ;;
+    foreign) _q_sum_skip "$(_q_msg hooks_foreign)" ;;
     *) _q_sum_skip "$(_q_msg hooks_none)" ;;
   esac
   # Baseline commit last, once every integration above is on disk, so the

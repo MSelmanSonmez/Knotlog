@@ -450,6 +450,7 @@ err_rollback_git_checkout_failed=%s へのロールバック中に git checkout 
 hooks_installed=シークレットゲートをインストールしました: .githooks/pre-commit (core.hooksPath=.githooks)
 hooks_current=シークレットゲートは最新です: .githooks/pre-commit
 hooks_kept=シークレットゲートを保持しました: .githooks/pre-commit は手動で編集されています (knotlog マーカーなし) — 上書きせず、hooksPath も変更していません
+hooks_foreign=シークレットゲートは未インストール: .githooks/ に他のフックかシンボリックリンクがあります — core.hooksPath は変更していないため、それらは無効のままです
 hooks_none=シークレットゲートは未インストール: ボールトが git リポジトリのルートではありません — git init を実行してから、もう一度 knotlog init を実行してください
 
 # tone presets (B-preset)
