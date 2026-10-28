@@ -67,8 +67,9 @@ there, still readable.
 
 ## Offline, and local
 
-Knotlog makes no network calls. There is no `curl` in it, no upload, no telemetry,
-no account.
+Knotlog makes no network calls on its own. The one command that does is
+`knotlog update`, and only when you run it: it downloads the latest release
+from GitHub. No upload, no telemetry, no account.
 
 Your notes are on your disk. What your agent touched at 2 a.m. is on your disk.
 That matters if you work on client code, on anything under an NDA, or on a plane.

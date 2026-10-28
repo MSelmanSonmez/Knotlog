@@ -71,8 +71,9 @@ registrou continua lá, ainda legível.
 
 ## Offline e local
 
-O Knotlog não faz chamadas de rede. Não há `curl` nele, nem upload, nem
-telemetria, nem conta.
+O Knotlog não faz chamadas de rede por conta própria. O único comando que faz é
+`knotlog update`, e só quando você o executa: ele baixa a versão mais recente
+do GitHub. Nem upload, nem telemetria, nem conta.
 
 Suas notas estão no seu disco. O que o seu agente tocou às 2 da manhã está no seu
 disco. Isso importa se você trabalha com código de clientes, com qualquer coisa

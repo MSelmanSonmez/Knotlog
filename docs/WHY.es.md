@@ -72,8 +72,9 @@ legible.
 
 ## Sin conexión, y en local
 
-Knotlog no hace llamadas de red. No hay `curl` dentro, ni subidas, ni telemetría,
-ni cuenta.
+Knotlog no hace llamadas de red por su cuenta. El único comando que las hace es
+`knotlog update`, y solo cuando tú lo ejecutas: descarga la última versión
+desde GitHub. Ni subidas, ni telemetría, ni cuenta.
 
 Tus notas están en tu disco. Lo que tu agente tocó a las 2 de la madrugada está
 en tu disco. Eso importa si trabajas con código de clientes, con algo bajo un

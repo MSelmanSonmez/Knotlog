@@ -64,8 +64,9 @@ yazmaz. Yarın Knotlog'u silsen, kaydettiği her şey yerinde ve okunabilir kal�
 
 ## Çevrimdışı ve yerel
 
-Knotlog hiçbir ağ isteği yapmıyor. İçinde `curl` yok, yükleme yok, telemetri yok,
-hesap yok.
+Knotlog kendiliğinden hiçbir ağ isteği yapmıyor. Ağa çıkan tek komut
+`knotlog update`, o da yalnız sen çalıştırınca: GitHub'dan en son sürümü indirir.
+Yükleme yok, telemetri yok, hesap yok.
 
 Notların senin diskinde. Ajanın gece ikide neye dokunduğu senin diskinde. Müşteri
 koduyla çalışıyorsan, gizlilik sözleşmesi altındaki bir şeye bakıyorsan ya da
