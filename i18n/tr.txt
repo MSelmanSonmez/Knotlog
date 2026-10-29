@@ -576,3 +576,4 @@ distill_no_facts=distill: 1. katman atlandı, olgu dosyası yok
 distill_no_core=distill: 2. katman atlandı, çekirdek bloklu companion.md yok
 distill_summary=%d olgu, %d çekirdek satırı eklendi
 distill_busy=distill atlandı: başka bir işlem 5 saniye sonunda hâlâ kilidi tutuyor; hiçbir şey yazılmadı
+distill_facts_unsafe=distill: atlandı, olgu dosyası sembolik bağ ya da kasanın dışına çıkıyor

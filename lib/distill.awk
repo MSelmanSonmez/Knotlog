@@ -5,6 +5,8 @@
 #   mode=blockkey  same, only inside the knotlog:core block
 #   mode=plan      file 1 = folded target keys, file 2 = folded key TAB rel
 #                  TAB text -> ADD|DUP|UNTAGGED TAB rel TAB text
+#   mode=hasblock exit 0 when a core block opens and closes (knotlog: or
+#                  quipu: spelling; the marker must open an HTML comment)
 #   mode=insert    copy the file, adding the lines of DS_ADD before the core
 #                  block's end marker
 BEGIN {
@@ -16,6 +18,9 @@ BEGIN {
     while ((getline l < ENVIRON["DS_ADD"]) > 0) add[++nadd] = l
     close(ENVIRON["DS_ADD"])
   }
+}
+function mk(s, name) {
+  return substr(s, 1, 4) == "<!--" && (index(s, "knotlog:core:" name) || index(s, "quipu:core:" name))
 }
 function cut(s, m,   i) {
   if (m == "") return s
@@ -42,26 +47,39 @@ function tagged(t,   i, r) {
     }
   return 0
 }
+mode == "hasblock" {
+  if (mk($0, "start")) st = 1
+  else if (st && mk($0, "end")) ok = 1
+  next
+}
+END {
+  if (mode == "hasblock") exit !ok
+  if (mode == "insert") print (done ? nadd : 0) > ENVIRON["DS_COUNT"]
+}
 mode == "plan" {
   if (FILENAME == ARGV[1]) { seen[$0] = 1; next }
   k = $0; p = index(k, TAB); r = substr(k, p + 1); k = substr(k, 1, p - 1)
   if (ENVIRON["DS_LABEL"] == 1 && !tagged(substr(r, index(r, TAB) + 1))) st = "UNTAGGED"
   else if (k in seen) st = "DUP"
   else { st = "ADD"; seen[k] = 1 }
-  print st TAB r
+  print st TAB r TAB k
   next
 }
 mode == "insert" {
-  if (index($0, "knotlog:core:start")) ins = 1
-  if (ins && !done && index($0, "knotlog:core:end")) { for (i = 1; i <= nadd; i++) print add[i]; done = 1 }
+  if (mk($0, "start")) ins = 1
+  else if (ins && !done && mk($0, "end")) {
+    cr = (substr($0, length($0), 1) == CR) ? CR : ""
+    for (i = 1; i <= nadd; i++) print add[i] cr
+    done = 1
+  }
   print
   next
 }
 FNR == 1 { rel = FILENAME; if (PRE != "" && index(rel, PRE) == 1) rel = substr(rel, length(PRE) + 1) }
 substr($0, 1, 2) != "- " && mode != "blockkey" { next }
 mode == "blockkey" {
-  if (index($0, "knotlog:core:start")) { inb = 1; next }
-  if (index($0, "knotlog:core:end")) { inb = 0; next }
+  if (mk($0, "start")) { inb = 1; next }
+  if (mk($0, "end")) { inb = 0; next }
   if (inb && substr($0, 1, 2) == "- ") { t = clean(substr($0, 3)); if (t != "") print t }
   next
 }

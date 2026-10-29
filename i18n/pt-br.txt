@@ -576,3 +576,4 @@ distill_no_facts=distill: camada 1 ignorada, não há arquivo de fatos
 distill_no_core=distill: camada 2 ignorada, não há companion.md com bloco núcleo
 distill_summary=%d fato(s), %d linha(s) de núcleo adicionadas
 distill_busy=distill ignorado: outro processo ainda detém o bloqueio após 5 segundos; nada foi gravado
+distill_facts_unsafe=distill: ignorado, o arquivo de fatos é um link simbólico ou leva para fora do cofre

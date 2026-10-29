@@ -6178,29 +6178,53 @@ _q_ds_fold() {
 }
 
 _q_ds_plan() {
-  # _q_ds_plan LABEL KEYS CANDS OUT — folded dedupe plan: OUT rows are
-  # STATUS<TAB>rel<TAB>text. KEYS = target texts, CANDS = rel<TAB>text rows.
+  # _q_ds_plan LABEL KEYS CANDS OUT LAYER — folded dedupe plan: OUT rows are
+  # STATUS<TAB>rel<TAB>text<TAB>key. KEYS = target texts, CANDS = rel<TAB>text
+  # rows. The ledger of lines distilled earlier (.knotlog/distilled, rows
+  # layer<TAB>key) counts as "already there", so a line removed from its
+  # target is not added again.
   cut -f2 "$3" | _q_ds_fold > "$_q_ds_t/ck"
   paste "$_q_ds_t/ck" "$3" > "$_q_ds_t/join"
   _q_ds_fold < "$2" > "$_q_ds_t/keys"
+  if [ -f "$_q_ds_led" ]; then
+    awk -F"$_q_tab" -v l="$5" '$1 == l { print $2 }' "$_q_ds_led" >> "$_q_ds_t/keys"
+  fi
   DS_LABEL=$1 awk -v mode=plan -f "$_q_HOME/lib/distill.awk" "$_q_ds_t/keys" "$_q_ds_t/join" > "$4"
 }
 
-_q_ds_show() {
-  # _q_ds_show LAYER PLAN ADDLINES — print the plan rows; collect ADD lines.
-  : > "$3"
-  while IFS=$_q_tab read -r _q_dss_st _q_dss_rel _q_dss_txt; do
-    case "$_q_dss_st" in
-      ADD)
-        if [ "$_q_ds_apply" = 1 ]; then _q_dss_l=$(_q_msg distill_added); else _q_dss_l=$(_q_msg distill_add); fi
-        printf '%s %s %s\n' '-' "$_q_dss_txt" "($_q_ds_srcw: $_q_dss_rel)" >> "$3"
-        ;;
-      DUP) _q_dss_l=$(_q_msg distill_dup) ;;
-      *) _q_dss_l=$(_q_msg distill_untagged) ;;
-    esac
-    printf '%s\t%s\t%s\t%s\n' "$_q_dss_l" "$1" "$_q_dss_rel" "$_q_dss_txt"
-  done < "$2"
+_q_ds_plans() {
+  # Plan both layers from the files as they are right now: a fact added by
+  # layer 1 in this run reaches the core block on the next run, not this one.
+  set --
+  for _q_ds_f in "$_q_v/$_q_sessions"/*.md; do
+    [ -f "$_q_ds_f" ] && _q_safe_target "$_q_v" "$_q_ds_f" && set -- "$@" "$_q_ds_f"
+  done
+  : > "$_q_ds_t/c1"
+  if [ "$#" -gt 0 ]; then
+    DS_TIME=1 DS_MARK=$DS_FACT awk -v mode=cand -f "$_q_HOME/lib/distill.awk" "$@" > "$_q_ds_t/c1" </dev/null
+  fi
+  awk -v mode=key -f "$_q_HOME/lib/distill.awk" "$_q_ds_facts" </dev/null > "$_q_ds_t/k1"
+  _q_ds_plan 1 "$_q_ds_t/k1" "$_q_ds_t/c1" "$_q_ds_t/p1" facts
+  : > "$_q_ds_t/p2"
+  if [ "$_q_ds_l2" = 1 ]; then
+    DS_MARK=$DS_CORE awk -v mode=cand -f "$_q_HOME/lib/distill.awk" "$_q_ds_facts" </dev/null > "$_q_ds_t/c2"
+    awk -v mode=blockkey -f "$_q_HOME/lib/distill.awk" "$_q_ds_comp" </dev/null > "$_q_ds_t/k2"
+    _q_ds_plan 0 "$_q_ds_t/k2" "$_q_ds_t/c2" "$_q_ds_t/p2" core
+  fi
+  # The lines to add (a1, a2) and their ledger rows (l1, l2).
+  for _q_ds_i in 1 2; do
+    awk -F"$_q_tab" -v s="$_q_ds_srcw" '$1 == "ADD" { print "- " $3 " (" s ": " $2 ")" }' "$_q_ds_t/p$_q_ds_i" > "$_q_ds_t/a$_q_ds_i"
+    awk -F"$_q_tab" -v l="$([ "$_q_ds_i" = 1 ] && printf facts || printf core)" '$1 == "ADD" { print l "\t" $4 }' "$_q_ds_t/p$_q_ds_i" > "$_q_ds_t/l$_q_ds_i"
+  done
 }
+
+_q_ds_show() {
+  # _q_ds_show LAYER PLAN LABEL_ADD — one row per candidate, labels read once.
+  awk -F"$_q_tab" -v ly="$1" -v la="$3" -v ld="$_q_ds_lab_dup" -v lu="$_q_ds_lab_untag" \
+    '{ print ($1 == "ADD" ? la : ($1 == "DUP" ? ld : lu)) "\t" ly "\t" $2 "\t" $3 }' "$2"
+}
+
+_q_ds_nl() { wc -l < "$1" | tr -d ' '; }
 
 _q_cmd_distill() {
   _q_ds_apply=0
@@ -6218,6 +6242,7 @@ _q_cmd_distill() {
   _q_ds_srcw=$(_q_msg distill_source)
   _q_ds_facts=$(_q_facts_path "$_q_v")
   _q_ds_comp=$(_q_companion_path "$_q_v")
+  _q_ds_led="$_q_v/$_q_SD/distilled"
   _q_layout=
   if [ -f "$_q_v/$_q_SD/config" ]; then
     _q_layout=$(awk -F= -v k=layout '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_v/$_q_SD/config" 2>/dev/null || true)
@@ -6231,76 +6256,92 @@ _q_cmd_distill() {
   _q_ds_l2=0
   if [ -f "$_q_ds_facts" ]; then
     if [ "$_q_ds_apply" = 1 ]; then _q_guard "$_q_v" "$_q_ds_facts"; fi
-    if _q_safe_target "$_q_v" "$_q_ds_facts"; then _q_ds_l1=1; fi
-  fi
-  [ "$_q_ds_l1" = 1 ] || _q_msg distill_no_facts
-  if [ "$_q_ds_l1" = 1 ] && [ -n "$_q_ds_comp" ] && grep -q 'knotlog:core:start' "$_q_ds_comp" && grep -q 'knotlog:core:end' "$_q_ds_comp"; then
-    _q_ds_l2=1
-  elif [ "$_q_ds_l1" = 1 ]; then
-    _q_msg distill_no_core
+    if _q_safe_target "$_q_v" "$_q_ds_facts"; then _q_ds_l1=1; else _q_msg distill_facts_unsafe; fi
+  else
+    _q_msg distill_no_facts
   fi
   [ "$_q_ds_l1" = 1 ] || return 0
+  if [ -n "$_q_ds_comp" ] && awk -v mode=hasblock -f "$_q_HOME/lib/distill.awk" "$_q_ds_comp" </dev/null; then
+    _q_ds_l2=1
+  else
+    _q_msg distill_no_core
+  fi
 
   _q_ds_t=$(mktemp -d "${TMPDIR:-/tmp}/knotlog-distill-XXXXXX") || exit 1
   _q_lock=
+  _q_ds_ctmp=
   _q_ds_cleanup() {
     rm -rf "$_q_ds_t"
+    [ -z "$_q_ds_ctmp" ] || rm -f "$_q_ds_ctmp"
     if [ -n "$_q_lock" ]; then
       rm -f "$_q_lock/pid"
       rmdir "$_q_lock" 2>/dev/null || true
     fi
   }
   trap '_q_ds_cleanup' EXIT HUP INT TERM
-  if [ "$_q_ds_apply" = 1 ]; then
-    _q_lock="$_q_v/$_q_SD/remember.lock"
-    _q_remember_lock_acquire "$_q_lock" distill_busy || { _q_lock=; exit 1; }
-    printf '%s\n' "$$" > "$_q_lock/pid"
-  fi
 
-  export DS_FACT DS_CORE DS_TAGS DS_SRC DS_PRE DS_MARK DS_ADD DS_LABEL
+  export DS_FACT DS_CORE DS_TAGS DS_SRC DS_PRE DS_MARK DS_ADD DS_LABEL DS_TIME DS_COUNT
   DS_FACT=$(_q_msg distill_fact_mark)
   DS_CORE=$(_q_msg distill_core_mark)
   DS_TAGS=$(_q_msg distill_tags)
   DS_SRC=$_q_ds_srcw
   DS_PRE="$_q_v/"
-  _q_ds_n2=0
+  _q_ds_lab_dup=$(_q_msg distill_dup)
+  _q_ds_lab_untag=$(_q_msg distill_untagged)
+  _q_ds_lab=$(_q_msg distill_add)
 
-  # Both plans are made from the files as they are now: a fact added by
-  # layer 1 in this run is not a candidate for layer 2 until the next run.
-  set --
-  for _q_ds_f in "$_q_v/$_q_sessions"/*.md; do
-    [ -f "$_q_ds_f" ] && _q_safe_target "$_q_v" "$_q_ds_f" && set -- "$@" "$_q_ds_f"
-  done
-  : > "$_q_ds_t/c1"
-  if [ "$#" -gt 0 ]; then
-    DS_TIME=1 DS_MARK=$DS_FACT awk -v mode=cand -f "$_q_HOME/lib/distill.awk" "$@" > "$_q_ds_t/c1" </dev/null
+  # Plan without the lock. The lock is only for writing, and only when there
+  # is something to write.
+  _q_ds_plans
+  _q_ds_n1=$(_q_ds_nl "$_q_ds_t/a1")
+  _q_ds_n2=$(_q_ds_nl "$_q_ds_t/a2")
+  if [ "$_q_ds_apply" = 1 ] && [ $((_q_ds_n1 + _q_ds_n2)) -gt 0 ]; then
+    _q_lock="$_q_v/$_q_SD/remember.lock"
+    _q_remember_lock_acquire "$_q_lock" distill_busy || { _q_lock=; exit 1; }
+    printf '%s\n' "$$" > "$_q_lock/pid"
+    # The files may have changed while the lock was free: plan again under it.
+    _q_ds_plans
+    _q_ds_n1=$(_q_ds_nl "$_q_ds_t/a1")
+    _q_ds_n2=$(_q_ds_nl "$_q_ds_t/a2")
+    if [ "$_q_ds_n1" -gt 0 ]; then
+      # An empty file gets no leading blank line; a file without a final
+      # newline gets one; a CRLF file gets CRLF on the new lines.
+      _q_ds_crlf=0
+      if [ -s "$_q_ds_facts" ]; then
+        _q_ds_tail=$(tail -c 2 "$_q_ds_facts" | od -An -tx1 | tr -d ' \n')
+        case "$_q_ds_tail" in
+          *0d0a) _q_ds_crlf=1 ;;
+          *0a) ;;
+          *) printf '\n' >> "$_q_ds_facts" ;;
+        esac
+      fi
+      if [ "$_q_ds_crlf" = 1 ]; then
+        awk '{ printf "%s%c\n", $0, 13 }' "$_q_ds_t/a1" >> "$_q_ds_facts"
+      else
+        cat "$_q_ds_t/a1" >> "$_q_ds_facts"
+      fi || _q_die err_note_write 1 "${_q_ds_facts#"$_q_v"/}"
+    fi
+    if [ "$_q_ds_n2" -gt 0 ]; then
+      # Write beside the file, then rename: an interruption leaves the old
+      # companion.md, never half of a new one. cp -p keeps the permissions.
+      _q_ds_ctmp="$_q_ds_comp.distill-tmp"
+      _q_guard "$_q_v" "$_q_ds_ctmp"
+      rm -f "$_q_ds_ctmp"
+      if ! { DS_ADD="$_q_ds_t/a2" DS_COUNT="$_q_ds_t/count" awk -v mode=insert -f "$_q_HOME/lib/distill.awk" "$_q_ds_comp" > "$_q_ds_t/comp.new" </dev/null &&
+        cp -p "$_q_ds_comp" "$_q_ds_ctmp" && cat "$_q_ds_t/comp.new" > "$_q_ds_ctmp" && mv "$_q_ds_ctmp" "$_q_ds_comp"; }; then
+        _q_die err_note_write 1 "${_q_ds_comp#"$_q_v"/}"
+      fi
+      _q_ds_ctmp=
+      _q_ds_n2=$(cat "$_q_ds_t/count")
+      [ "$_q_ds_n2" -gt 0 ] || : > "$_q_ds_t/l2"
+    fi
+    _q_guard "$_q_v" "$_q_ds_led"
+    cat "$_q_ds_t/l1" "$_q_ds_t/l2" >> "$_q_ds_led"
+    _q_ds_lab=$(_q_msg distill_added)
   fi
-  awk -v mode=key -f "$_q_HOME/lib/distill.awk" "$_q_ds_facts" </dev/null > "$_q_ds_t/k1"
-  _q_ds_plan 1 "$_q_ds_t/k1" "$_q_ds_t/c1" "$_q_ds_t/p1"
-  if [ "$_q_ds_l2" = 1 ]; then
-    DS_MARK=$DS_CORE awk -v mode=cand -f "$_q_HOME/lib/distill.awk" "$_q_ds_facts" </dev/null > "$_q_ds_t/c2"
-    awk -v mode=blockkey -f "$_q_HOME/lib/distill.awk" "$_q_ds_comp" </dev/null > "$_q_ds_t/k2"
-    _q_ds_plan 0 "$_q_ds_t/k2" "$_q_ds_t/c2" "$_q_ds_t/p2"
-  fi
-
-  _q_ds_show facts "$_q_ds_t/p1" "$_q_ds_t/a1"
-  _q_ds_n1=$(wc -l < "$_q_ds_t/a1" | tr -d ' ')
-  if [ "$_q_ds_l2" = 1 ]; then
-    _q_ds_show core "$_q_ds_t/p2" "$_q_ds_t/a2"
-    _q_ds_n2=$(wc -l < "$_q_ds_t/a2" | tr -d ' ')
-  fi
+  _q_ds_show facts "$_q_ds_t/p1" "$_q_ds_lab"
+  if [ "$_q_ds_l2" = 1 ]; then _q_ds_show core "$_q_ds_t/p2" "$_q_ds_lab"; fi
   [ "$_q_ds_apply" = 1 ] || return 0
-
-  if [ "$_q_ds_n1" -gt 0 ]; then
-    # Keep the last line of a file without a final newline intact.
-    if [ "$(tail -c 1 "$_q_ds_facts" | od -An -tx1 | tr -d ' \n')" != 0a ]; then printf '\n' >> "$_q_ds_facts"; fi
-    cat "$_q_ds_t/a1" >> "$_q_ds_facts" || _q_die err_note_write 1 "${_q_ds_facts#"$_q_v"/}"
-  fi
-  if [ "$_q_ds_n2" -gt 0 ]; then
-    _q_guard "$_q_v" "$_q_ds_comp"
-    { DS_ADD="$_q_ds_t/a2" awk -v mode=insert -f "$_q_HOME/lib/distill.awk" "$_q_ds_comp" > "$_q_ds_t/comp.new" </dev/null &&
-      cat "$_q_ds_t/comp.new" > "$_q_ds_comp"; } || _q_die err_note_write 1 "${_q_ds_comp#"$_q_v"/}"
-  fi
   # shellcheck disable=SC2059
   printf "$(_q_msg distill_summary)\n" "$_q_ds_n1" "$_q_ds_n2"
 }
@@ -6675,7 +6716,7 @@ _q_cmd_search() {
     -v blocksfile="$_q_bf" -v blocks="$_q_blk" \
     -f "$_q_HOME/lib/search.awk" "$_q_df" "$_q_v/$_q_SD/index.tsv" "$_q_bf" \
     | sort $_q_sortk \
-    | LC_ALL=C awk -v n="$_q_limit" -v p="$_q_paths" -v blk="$_q_blk" -v mb="$_q_maxb" -v cutout="$_q_df.cut" -F "$_q_tab" '
+    | CUTOUT="$_q_df.cut" LC_ALL=C awk -v n="$_q_limit" -v p="$_q_paths" -v blk="$_q_blk" -v mb="$_q_maxb" -F "$_q_tab" '
         # The limit lives HERE, not in `head -n`: head closes the pipe as soon
         # as it has enough lines, which hands `sort` a SIGPIPE and makes GNU and
         # BSD sort write "Broken pipe" to stderr. That noise is harmless to the
@@ -6690,7 +6731,7 @@ _q_cmd_search() {
         #
         # --max-bytes (mb > 0): LC_ALL=C makes length() count bytes. A row that
         # would push the output past mb stops the output; the rows after it are
-        # only counted (cutout holds the count for the shell to report). A first
+        # only counted (CUTOUT (environment) names the file holding the count for the shell to report). A first
         # row that alone exceeds mb is cut to mb-1 bytes (plus its newline) on a
         # UTF-8 character boundary.
         BEGIN { for (i = 0; i < 256; i++) ord[sprintf("%c", i)] = i }
@@ -6718,7 +6759,7 @@ _q_cmd_search() {
           }
           print line
         }
-        END { if (cut > 0) print cut > cutout }'
+        END { if (cut > 0) print cut > ENVIRON["CUTOUT"] }'
   if [ -f "$_q_df.cut" ]; then
     _q_cutn=$(cat "$_q_df.cut")
     rm -f "$_q_df.cut"

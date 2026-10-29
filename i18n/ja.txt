@@ -576,3 +576,4 @@ distill_no_facts=distill: 第 1 層をスキップしました (事実ファイ�
 distill_no_core=distill: 第 2 層をスキップしました (コアブロックのある companion.md がありません)
 distill_summary=事実 %d 件、コア %d 行を追加しました
 distill_busy=distill をスキップしました: 5 秒経っても別のプロセスがロックを保持しています; 何も書き込みませんでした
+distill_facts_unsafe=distill: スキップしました (事実ファイルがシンボリックリンクであるか、ボールトの外を指しています)

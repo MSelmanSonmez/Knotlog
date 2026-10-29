@@ -576,3 +576,4 @@ distill_no_facts=distill: capa 1 omitida, no hay archivo de hechos
 distill_no_core=distill: capa 2 omitida, no hay companion.md con bloque núcleo
 distill_summary=%d hecho(s), %d línea(s) de núcleo añadidas
 distill_busy=distill omitido: otro proceso sigue teniendo el bloqueo tras 5 segundos; no se escribió nada
+distill_facts_unsafe=distill: omitido, el archivo de hechos es un enlace simbólico o sale de la bóveda

@@ -576,3 +576,4 @@ distill_no_facts=distill: layer 1 skipped, no facts file
 distill_no_core=distill: layer 2 skipped, no companion.md with a core block
 distill_summary=%d fact(s), %d core line(s) added
 distill_busy=distill skipped: another process still owns the lock after 5 seconds; nothing was written
+distill_facts_unsafe=distill: skipped, the facts file is a link or leads outside the vault

@@ -576,3 +576,4 @@ distill_no_facts=distill：已跳过第 1 层，没有事实文件
 distill_no_core=distill：已跳过第 2 层，没有带核心块的 companion.md
 distill_summary=已添加 %d 条事实、%d 行核心
 distill_busy=distill 已跳过：5 秒后另一个进程仍持有锁；未写入任何内容
+distill_facts_unsafe=distill：已跳过，事实文件是符号链接，或指向知识库之外
