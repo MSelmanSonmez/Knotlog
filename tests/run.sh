@@ -8957,7 +8957,7 @@ t; assert_eq "T-510: newer release names the new version" 'yes' \
 # in the scratch copy differs from the real script.
 VERPATCH="$TMP/verpatch"
 mkdir -p "$VERPATCH"
-sed 's/^_q_version=1\.2\.0$/_q_version=2.9.0/' "$ROOT/knotlog" > "$VERPATCH/knotlog"
+sed 's/^_q_version=.*$/_q_version=2.9.0/' "$ROOT/knotlog" > "$VERPATCH/knotlog"
 t; assert_eq "T-511 setup: the scratch copy's version constant was patched" 'yes' \
   "$(grep -qF '_q_version=2.9.0' "$VERPATCH/knotlog" && printf yes || printf no)"
 t; UPD511=$(QUIPU_LANG=en QUIPU_HOME="$ROOT" \
