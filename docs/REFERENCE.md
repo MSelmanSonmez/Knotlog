@@ -545,10 +545,11 @@ Knotlog enforces the format, not the meaning.
 | 2 | `- ` lines of the facts file | `[core]` (`distill_core_mark`; `[çekirdek]`) | `companion.md`, just before `<!-- knotlog:core:end -->` |
 
 - The marker is dropped, spaces are collapsed, and ` (source: <vault-relative path>)` is appended (`kaynak` in a Turkish vault). Layer 2 replaces a source suffix it finds with the facts file, so the chain is one hop.
+- Layer 1 drops a leading `HH:MM ` clock stamp (the form `knotlog note` writes) before the tag check and from the text it adds; the source suffix names the dated note. Facts-file lines are not touched.
 - A line already in the target is skipped. The comparison ignores the source suffix and the marker and uses the vault's fold profile, so case and accents do not matter. Two sources with the same text add it once.
 - Layer 1 adds only lines that open with a Preference, Decision or Convention tag (`distill_tags`; `Tercih`, `Karar`, `Konvansiyon` in Turkish). Others are listed as untagged and left out.
 - Both layers are planned from the files as they are when the command starts, so a fact added by layer 1 reaches the core block on the next run, not the same one.
-- A missing facts file skips layer 1 (and 2); a missing `companion.md` or core block skips layer 2. Each is one line, not an error.
+- A missing facts file skips layer 1 (and 2); a missing `companion.md` or core block skips layer 2. So does a `companion.md` that is a link or resolves outside the vault. Each is one line, not an error.
 - Without `--apply` the command writes nothing and prints one row per candidate: status, layer (`facts` or `core`), source, text. `--apply` takes the same lock as `remember` and `note`, refuses a facts file or `companion.md` that is a link or resolves outside the vault (see Symbolic links), skips session notes that are, and ends with `N fact(s), M core line(s) added`. Source lines are never edited. An unknown flag exits 2.
 
 ## Honest limits
