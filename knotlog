@@ -6273,7 +6273,7 @@ _q_cmd_distill() {
   done
   : > "$_q_ds_t/c1"
   if [ "$#" -gt 0 ]; then
-    DS_MARK=$DS_FACT awk -v mode=cand -f "$_q_HOME/lib/distill.awk" "$@" > "$_q_ds_t/c1" </dev/null
+    DS_TIME=1 DS_MARK=$DS_FACT awk -v mode=cand -f "$_q_HOME/lib/distill.awk" "$@" > "$_q_ds_t/c1" </dev/null
   fi
   awk -v mode=key -f "$_q_HOME/lib/distill.awk" "$_q_ds_facts" </dev/null > "$_q_ds_t/k1"
   _q_ds_plan 1 "$_q_ds_t/k1" "$_q_ds_t/c1" "$_q_ds_t/p1"

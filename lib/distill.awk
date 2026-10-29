@@ -66,4 +66,9 @@ mode == "blockkey" {
   next
 }
 mode == "key" { t = clean(substr($0, 3)); if (t != "") print t; next }
-mode == "cand" && index($0, MARK) { t = clean(substr($0, 3)); if (t != "") print rel TAB t }
+mode == "cand" && index($0, MARK) {
+  t = clean(substr($0, 3))
+  # knotlog note writes "- HH:MM text": the clock stamp is not part of the fact.
+  if (ENVIRON["DS_TIME"] == 1 && t ~ /^[0-9][0-9]:[0-9][0-9] /) t = substr(t, 7)
+  if (t != "") print rel TAB t
+}
