@@ -13069,6 +13069,23 @@ DSL=tr dsl s118 --apply >/dev/null
 t; assert_eq "T-1118: tr vault: [olgu] moved with (kaynak: ...), untagged left, [çekirdek] reached the core block" '1 0 1' \
   "$(grep -cF -- '- Karar: Quipu sıfır bağımlılıkla kalır (kaynak: 700-Sessions/2026-10-01.md)' "$TMP/s118/Gerçekler.md") $(grep -cF 'etiketsiz' "$TMP/s118/Gerçekler.md") $(grep -cF -- '- Karar: ÇEKİRDEK bir olgu (kaynak: Gerçekler.md)' "$TMP/s118/850-Companion/companion.md")"
 
+# T-1119: a line written by `knotlog note` ("- HH:MM text") reaches the facts file without the clock stamp.
+sec_init s119
+QUIPU_VAULT="$TMP/s119" QUIPU_LANG=en sh "$ROOT/knotlog" note 'Decision: notes keep no clock in facts. [fact]' </dev/null >/dev/null 2>&1
+dsl s119 --apply >/dev/null
+t; assert_eq "T-1119: note-written line becomes a stamp-free fact with the dated note as source" "- Decision: notes keep no clock in facts. (source: 700-Sessions/$(date +%Y-%m-%d).md)" \
+  "$(grep -F 'notes keep no clock' "$TMP/s119/Facts.md")"
+# T-1120: a companion.md that is a link is skipped in the dry run: layer 2 reported, exit 0, nothing written.
+if [ "$TRUE_SYMLINKS" -eq 1 ]; then
+  sec_init s120; printf -- '- Decision: up [core]\n' >> "$TMP/s120/Facts.md"
+  cp "$TMP/s120/850-Companion/companion.md" "$SO/t120.md"; rm "$TMP/s120/850-Companion/companion.md"; sec_slink "$SO/t120.md" "$TMP/s120/850-Companion/companion.md"
+  C120=$(cksum < "$SO/t120.md"); O120=$(dsl s120 ''); R120=$?
+  t; assert_eq "T-1120: linked companion.md: layer 2 skipped with a line, exit 0, no core row, target unchanged" '0 yes 0 same' \
+    "$R120 $(sec_has "$O120" "$(i18n distill_no_core)") $(printf '%s\n' "$O120" | grep -c "^would add${TAB}core") $([ "$(cksum < "$SO/t120.md")" = "$C120" ] && printf same || printf changed)"
+else
+  t; skip "T-1120: linked companion" "no native symlinks on this host"
+fi
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
