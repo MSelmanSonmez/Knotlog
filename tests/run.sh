@@ -13005,9 +13005,9 @@ mc109() { printf '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name"
   | awk -f "$LIB/jsonfield.awk" -f "$DRV/mcptext.awk"; }
 mc109 100 > "$TMP/s109.small"
 mc109 100000 > "$TMP/s109.big"
-sb search --brief --max-bytes 100 zebra > "$TMP/s109.cli" 2>/dev/null
+sb search --brief --max-bytes 100 zebra > "$TMP/s109.cli" 2>&1
 sb search --brief zebra > "$TMP/s109.all" 2>/dev/null
-t; assert_eq "T-1109: MCP search under ctx_max=100 equals the CLI under --max-bytes 100 and is shorter than the full result" 'yes yes' \
+t; assert_eq "T-1109: MCP search under ctx_max=100 equals the CLI (results, then the omitted-count line) under --max-bytes 100 and is shorter than the full result" 'yes yes' \
   "$(cmp -s "$TMP/s109.small" "$TMP/s109.cli" && printf yes || printf no) $([ "$(wc -c < "$TMP/s109.small")" -lt "$(wc -c < "$TMP/s109.all")" ] && printf yes || printf no)"
 t; assert_eq "T-1109: with a roomy ctx_max the MCP text equals the unbudgeted CLI output" 'yes' \
   "$(cmp -s "$TMP/s109.big" "$TMP/s109.all" && printf yes || printf no)"
@@ -13084,6 +13084,85 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
     "$R120 $(sec_has "$O120" "$(i18n distill_no_core)") $(printf '%s\n' "$O120" | grep -c "^would add${TAB}core") $([ "$(cksum < "$SO/t120.md")" = "$C120" ] && printf same || printf changed)"
 else
   t; skip "T-1120: linked companion" "no native symlinks on this host"
+fi
+
+# ---- distill, second round (T-1121..T-1130) ----
+dsv() { sec_init "$1"; mkdir -p "$TMP/$1/700-Sessions"; printf -- '- Decision: first [fact]\n- Decision: second [fact]\n' > "$TMP/$1/700-Sessions/2026-10-01.md"; }
+DSC="850-Companion/companion.md"
+# T-1121: planning and listing take no lock; --apply with nothing to add never waits for it.
+dsv s121; dsl s121 --apply >/dev/null
+mkdir "$TMP/s121/.knotlog/remember.lock"; printf '%s\n' "$$" > "$TMP/s121/.knotlog/remember.lock/pid"
+O121=$(dsl s121 --apply); R121=$?
+t; assert_eq "T-1121: a held remember lock does not stop a dry run or an --apply that adds nothing" '0 0 0 fact(s), 0 core line(s) added' \
+  "$R121 $(dsl s121 '' >/dev/null; printf '%s' "$?") $(printf '%s\n' "$O121" | tail -n 1)"
+rm -rf "$TMP/s121/.knotlog/remember.lock"
+# T-1122: a fact removed or reworded in the facts file is not added again; the ledger names it; deleting its row allows a second move.
+dsv s122; dsl s122 --apply >/dev/null
+grep -v 'first' "$TMP/s122/Facts.md" > "$TMP/s122.f"; cat "$TMP/s122.f" > "$TMP/s122/Facts.md"
+O122=$(dsl s122 --apply | tail -n 1)
+t; assert_eq "T-1122: the removed fact stays removed on the next --apply; the ledger holds both facts" '0 fact(s), 0 core line(s) added 0 2' \
+  "$O122 $(grep -c 'first' "$TMP/s122/Facts.md") $(grep -c "^facts${TAB}decision: " "$TMP/s122/.knotlog/distilled")"
+grep -v 'first' "$TMP/s122/.knotlog/distilled" > "$TMP/s122.l"; cat "$TMP/s122.l" > "$TMP/s122/.knotlog/distilled"
+dsl s122 --apply >/dev/null
+t; assert_eq "T-1122: with its ledger row deleted the fact moves again, and the move is recorded again" '1 1' "$(grep -c 'first' "$TMP/s122/Facts.md") $(cat "$TMP/s122/.knotlog/distilled" 2>/dev/null | grep -c 'first')"
+# T-1123: the same for the core block.
+dsv s123; printf -- '- Decision: up [core]\n' >> "$TMP/s123/Facts.md"; dsl s123 --apply >/dev/null
+grep -v 'Decision: up (source' "$TMP/s123/$DSC" > "$TMP/s123.c"; cat "$TMP/s123.c" > "$TMP/s123/$DSC"
+O123=$(dsl s123 --apply | tail -n 1)
+t; assert_eq "T-1123: a core line removed from the block is not added again" '0 fact(s), 0 core line(s) added 0' "$O123 $(grep -c 'Decision: up' "$TMP/s123/$DSC")"
+# T-1124: a block that never opens, or whose end comes first, is not a block; the summary counts what was written.
+dsv s124a; printf -- '- Decision: core a [core]\n' >> "$TMP/s124a/Facts.md"
+grep -v 'knotlog:core:start' "$TMP/s124a/$DSC" > "$TMP/s124a.c"; { printf 'Prose: the block opens with knotlog:core:start.\n'; cat "$TMP/s124a.c"; } > "$TMP/s124a/$DSC"
+cp "$TMP/s124a/$DSC" "$TMP/s124a.before"
+O124a=$(dsl s124a --apply)
+t; assert_eq "T-1124: no start marker: layer 2 skipped with its line, companion unchanged, summary 2 and 0" 'yes yes 2 fact(s), 0 core line(s) added' \
+  "$(sec_has "$O124a" "$(i18n distill_no_core)") $(cmp -s "$TMP/s124a/$DSC" "$TMP/s124a.before" && printf yes || printf no) $(printf '%s\n' "$O124a" | tail -n 1)"
+dsv s124b; printf -- '- Decision: core b [core]\n' >> "$TMP/s124b/Facts.md"
+grep -v 'knotlog:core:end' "$TMP/s124b/$DSC" > "$TMP/s124b.c"; { printf '<!-- knotlog:core:end -->\n'; cat "$TMP/s124b.c"; } > "$TMP/s124b/$DSC"
+cp "$TMP/s124b/$DSC" "$TMP/s124b.before"
+O124b=$(dsl s124b --apply)
+t; assert_eq "T-1124: an end marker before the start: companion unchanged, summary 0 core" 'yes 0' \
+  "$(cmp -s "$TMP/s124b/$DSC" "$TMP/s124b.before" && printf yes || printf no) $(printf '%s\n' "$O124b" | tail -n 1 | sed 's/.*, \([0-9]*\) core.*/\1/')"
+# T-1125: a pre-rename companion.md (quipu:core markers) still receives the line.
+dsv s125; sed 's/knotlog:core/quipu:core/' "$TMP/s125/$DSC" > "$TMP/s125.c"; cat "$TMP/s125.c" > "$TMP/s125/$DSC"
+printf -- '- Decision: old family [core]\n' >> "$TMP/s125/Facts.md"; dsl s125 --apply >/dev/null
+t; assert_eq "T-1125: quipu:core markers: the line lands just before the end marker" '- Decision: old family (source: Facts.md)|<!-- quipu:core:end -->' \
+  "$(grep -B1 'quipu:core:end' "$TMP/s125/$DSC" | tr '\n' '|' | sed 's/|$//')"
+# T-1126: knotlog_search appends the omitted-results line to the returned text.
+mc126() { printf '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"knotlog_search","arguments":{"query":"zebra"}}}\n' \
+  | QUIPU_CTX_MAX=100 QUIPU_VAULT="$TMP/s104" QUIPU_LANG=en sh "$ROOT/knotlog" mcp 2>/dev/null \
+  | awk -f "$LIB/jsonfield.awk" -f "$DRV/mcptext.awk"; }
+t; assert_eq "T-1126: a cut MCP search ends with the omitted-results line" 'yes' "$(mc126 | tail -n 1 | grep -q 'more result(s) not shown (--max-bytes 100)' && printf yes || printf no)"
+# T-1127: companion.md keeps its permissions and no temp file is left beside it.
+dsv s127; printf -- '- Decision: perm [core]\n' >> "$TMP/s127/Facts.md"; chmod 600 "$TMP/s127/$DSC"
+# shellcheck disable=SC2012,SC2010
+I127=$(ls -i "$TMP/s127/$DSC" | cut -d' ' -f1)
+dsl s127 --apply >/dev/null
+# shellcheck disable=SC2012,SC2010
+N127=$([ "$(ls -i "$TMP/s127/$DSC" | cut -d' ' -f1)" != "$I127" ] && printf new || printf same)
+# shellcheck disable=SC2012,SC2010
+M127=$(ls -l "$TMP/s127/$DSC" | cut -c1-10)
+# shellcheck disable=SC2012,SC2010
+L127=$(ls "$TMP/s127/850-Companion" | grep -c 'distill-tmp')
+t; assert_eq "T-1127: companion.md is replaced by rename (new inode), keeps mode 600, no .distill-tmp left" 'new -rw------- 0' "$N127 $M127 $L127"
+# T-1128: an empty facts file gets no leading blank line.
+dsv s128; : > "$TMP/s128/Facts.md"; dsl s128 --apply >/dev/null
+t; assert_eq "T-1128: first byte of a formerly empty Facts.md is the dash of the first fact" '-' "$(head -c 1 "$TMP/s128/Facts.md")"
+# T-1129: CRLF files get CRLF on the new lines (facts and companion).
+dsv s129; printf -- '- Decision: crlf up [core]\r\n' >> "$TMP/s129/Facts.md"
+sed 's/$/\r/' "$TMP/s129/$DSC" > "$TMP/s129.c"; cat "$TMP/s129.c" > "$TMP/s129/$DSC"
+sed 's/$/\r/' "$TMP/s129/Facts.md" > "$TMP/s129.f"; cat "$TMP/s129.f" > "$TMP/s129/Facts.md"
+dsl s129 --apply >/dev/null
+t; assert_eq "T-1129: new lines end with CR LF in Facts.md and in the core block" 'yes yes' \
+  "$(grep 'first (source' "$TMP/s129/Facts.md" | od -An -c | grep -q '\\r' && printf yes || printf no) $(grep 'crlf up (source' "$TMP/s129/$DSC" | od -An -c | grep -q '\\r' && printf yes || printf no)"
+# T-1130: a linked facts file in a dry run says so (not "no facts file").
+if [ "$TRUE_SYMLINKS" -eq 1 ]; then
+  dsv s130; printf '# out\n' > "$SO/t130.md"; rm "$TMP/s130/Facts.md"; sec_slink "$SO/t130.md" "$TMP/s130/Facts.md"
+  O130=$(dsl s130 ''); R130=$?
+  t; assert_eq "T-1130: linked Facts.md, dry run: the link message, not the missing-file one, exit 0" 'yes no 0' \
+    "$(sec_has "$O130" "$(i18n distill_facts_unsafe)") $(sec_has "$O130" "$(i18n distill_no_facts)") $R130"
+else
+  t; skip "T-1130: linked facts file, dry run" "no native symlinks on this host"
 fi
 
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
