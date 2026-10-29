@@ -5,7 +5,7 @@ usage_doctor=  doctor    ortamı denetle: araçlar, lehçeler, kasa, ajanlar
 usage_capture=  capture   activity.log'a araç kullanım olayı ekle (stdin okur)
 usage_index=  index     .knotlog/index.tsv üret/güncelle (artımlı)
 usage_compile=  compile   türetilmiş kavram notlarını deterministik üretir (elle; context'e girmez)
-usage_search=  search    indeks üzerinde katlanmış sözcüksel + BM25 arama (--brief: 120 baytlık künye; --tag/--status: front matter'a göre daraltma; --all: validity: rejected notları da dahil et)
+usage_search=  search    indeks üzerinde katlanmış sözcüksel + BM25 arama (--brief: 120 baytlık künye; --tag/--status: front matter'a göre daraltma; --all: validity: rejected notları da dahil et; --max-bytes N: çıktıyı N bayta sınırla)
 usage_init=  init      .knotlog/ ve AGENTS.md köprü bloğunu kur (--scope core|goals|money|body|mind|full; tekrarlanabilir)
 usage_install=  install   <kullanıcı>'nın Knotlog kasasını kur ve checkout'u PATH'e bağla (--no-link: sarmalayıcılar için; --force yabancı komut bağlantısını değiştirir; --no-git: kasayı git deposu yapma; --tone <slug>: üslup preseti ayarla; kasa içinde repair-hooks girişleri oluşturur)
 usage_uninstall=  uninstall `knotlog` komutunu PATH'ten kaldır; kasasına asla dokunmaz (--dry-run: önizleme)
@@ -133,6 +133,8 @@ compile_summary=# bilgi klasörü altında %d kavram derlendi
 compile_stale=%s canlı konu ama %d gündür anılmadı
 # search
 err_empty_query=boş sorgu
+err_max_bytes=geçersiz --max-bytes: %s (pozitif bir tamsayı kullanın)
+search_cut=search: %d sonuç daha gösterilmedi (--max-bytes %d)
 err_no_index=index.tsv yok; çalıştır: knotlog index
 # links
 usage_links=  links     bir notun giden/gelen [[wikilink]]'lerini bas

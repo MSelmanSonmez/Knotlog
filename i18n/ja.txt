@@ -5,7 +5,7 @@ usage_doctor=  doctor    環境を確認: ツール、方言、ボールト、�
 usage_capture=  capture   ツール使用イベントを activity.log に追記 (標準入力から読み取り)
 usage_index=  index     .knotlog/index.tsv を構築/更新 (増分)
 usage_compile=  compile   決定的な派生コンセプトノートを生成 (手動実行。コンテキストには入らない)
-usage_search=  search    インデックスに対する正規化字句検索 + BM25 検索 (--brief: 120 バイトのスニペット; --tag/--status: フロントマターで絞り込み; --all: validity: rejected のノートも含める)
+usage_search=  search    インデックスに対する正規化字句検索 + BM25 検索 (--brief: 120 バイトのスニペット; --tag/--status: フロントマターで絞り込み; --all: validity: rejected のノートも含める; --max-bytes N: 出力を N バイトに制限)
 usage_init=  init      .knotlog/ と AGENTS.md のブリッジブロックを作成 (--scope core|goals|money|body|mind|full; 複数指定可)
 usage_install=  install   <user> の Knotlog ボールトを作成し、このチェックアウトを PATH にリンク (--no-link: ラッパー用; --force: 他のコマンドリンクを置き換え; --no-git: ボールトを git リポジトリにしない; --tone <slug>: トーンプリセットを設定; ボールト内に repair-hooks のエントリポイントを作成)
 usage_uninstall=  uninstall PATH から `knotlog` コマンドを削除。ボールトには一切触れません (--dry-run: プレビュー)
@@ -133,6 +133,8 @@ compile_summary=# ナレッジフォルダー配下に %d 件のコンセプト�
 compile_stale=%s は現役のトピックですが、%d 日間言及されていません
 # search
 err_empty_query=クエリが空です
+err_max_bytes=--max-bytes が不正です: %s (正の整数を指定してください)
+search_cut=search: 残り %d 件の結果は表示されません (--max-bytes %d)
 err_no_index=index.tsv がありません; 実行してください: knotlog index
 # links
 usage_links=  links     ノートの発リンク/被リンク [[ウィキリンク]] を表示

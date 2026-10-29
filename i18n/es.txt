@@ -5,7 +5,7 @@ usage_doctor=  doctor    revisa el entorno: herramientas, dialectos, bóveda, ag
 usage_capture=  capture   añade un evento de uso de herramienta a activity.log (lee stdin)
 usage_index=  index     crea o actualiza .knotlog/index.tsv (incremental)
 usage_compile=  compile   genera notas de conceptos derivadas y deterministas (manual; nunca entra en el contexto)
-usage_search=  search    búsqueda léxica con plegado y BM25 sobre el índice (--brief: fragmento de 120 bytes; --tag/--status: filtra por frontmatter; --all: incluye notas con validity: rejected)
+usage_search=  search    búsqueda léxica con plegado y BM25 sobre el índice (--brief: fragmento de 120 bytes; --tag/--status: filtra por frontmatter; --all: incluye notas con validity: rejected; --max-bytes N: limita la salida a N bytes)
 usage_init=  init      crea .knotlog/ y el bloque puente de AGENTS.md (--scope core|goals|money|body|mind|full; repetible)
 usage_install=  install   crea la bóveda Knotlog de <usuario> y enlaza esta copia en el PATH (--no-link para wrappers; --force reemplaza un enlace de comando ajeno; --no-git para no convertir la bóveda en repositorio git; --tone <slug> para fijar un preset de tono; crea los puntos de entrada repair-hooks de la bóveda)
 usage_uninstall=  uninstall quita el comando `knotlog` del PATH; nunca toca tu bóveda (--dry-run para previsualizar)
@@ -133,6 +133,8 @@ compile_summary=# compilados %d concepto(s) en la carpeta de conocimiento
 compile_stale=%s es un tema activo pero no se menciona desde hace %d días
 # search
 err_empty_query=consulta vacía
+err_max_bytes=--max-bytes no válido: %s (use un entero positivo)
+search_cut=search: %d resultado(s) más sin mostrar (--max-bytes %d)
 err_no_index=falta index.tsv; ejecuta: knotlog index
 # links
 usage_links=  links     imprime los [[wikilinks]] salientes y entrantes de una nota

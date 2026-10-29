@@ -6423,9 +6423,17 @@ _q_cmd_search() {
   _q_all=0
   _q_status=
   _q_query=
+  _q_maxb=0
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --limit) [ "$#" -ge 2 ] || _q_die err_missing_arg 2; _q_limit=$2; shift 2 ;;
+      --max-bytes)
+        [ "$#" -ge 2 ] || _q_die err_missing_arg 2
+        # Natural number: digits only, no leading zero ($(( )) would read it as octal), at most 9 digits.
+        case "$2" in
+          ''|*[!0-9]*|0|0?*|??????????*) _q_die err_max_bytes 2 "$2" ;;
+        esac
+        _q_maxb=$2; shift 2 ;;
       --paths) _q_paths=1; shift ;;
       --brief) _q_brief=1; shift ;;
       --all) _q_all=1; shift ;;
@@ -6491,7 +6499,7 @@ _q_cmd_search() {
   # /tmp, and never raw user data through awk -v) with the shell PID appended
   # so two concurrent `quipu search` calls in the same vault cannot collide.
   _q_df="$_q_v/$_q_SD/search-dfstats.$$"
-  trap 'rm -f "$_q_df"' EXIT HUP INT TERM
+  trap 'rm -f "$_q_df" "$_q_df.cut"' EXIT HUP INT TERM
 
   # Block index (2026-09-30): blocks.tsv holds the text past index.tsv's
   # 2000-character cap for long notes. Absent or empty -> /dev/null and the
@@ -6531,7 +6539,7 @@ _q_cmd_search() {
     -v blocksfile="$_q_bf" -v blocks="$_q_blk" \
     -f "$_q_HOME/lib/search.awk" "$_q_df" "$_q_v/$_q_SD/index.tsv" "$_q_bf" \
     | sort $_q_sortk \
-    | awk -v n="$_q_limit" -v p="$_q_paths" -v blk="$_q_blk" -F "$_q_tab" '
+    | LC_ALL=C awk -v n="$_q_limit" -v p="$_q_paths" -v blk="$_q_blk" -v mb="$_q_maxb" -v cutout="$_q_df.cut" -F "$_q_tab" '
         # The limit lives HERE, not in `head -n`: head closes the pipe as soon
         # as it has enough lines, which hands `sort` a SIGPIPE and makes GNU and
         # BSD sort write "Broken pipe" to stderr. That noise is harmless to the
@@ -6543,18 +6551,45 @@ _q_cmd_search() {
         # block rows). Rows arrive best-first, so the first row of a path wins
         # and later ones are skipped; only the (at most n) paths already shown
         # are remembered, so memory stays bounded by the limit.
+        #
+        # --max-bytes (mb > 0): LC_ALL=C makes length() count bytes. A row that
+        # would push the output past mb stops the output; the rows after it are
+        # only counted (cutout holds the count for the shell to report). A first
+        # row that alone exceeds mb is cut to mb-1 bytes (plus its newline) on a
+        # UTF-8 character boundary.
+        BEGIN { for (i = 0; i < 256; i++) ord[sprintf("%c", i)] = i }
         blk == 1 && ($2 in shown) { next }
         cnt >= n { next }
         {
           cnt++
           if (blk == 1) shown[$2] = 1
-          if (p == 1) { print $2; next }
-          if (blk == 1) {
+          if (p == 1) line = $2
+          else if (blk == 1) {
             line = $1
             for (i = 2; i < NF; i++) line = line "\t" $i
-            print line
-          } else print $0
-        }'
+          } else line = $0
+          if (mb > 0) {
+            if (stop) { cut++; next }
+            if (used + length(line) + 1 > mb) {
+              if (used > 0) { stop = 1; cut++; next }
+              stop = 1
+              c = mb - 1
+              while (c > 0 && ord[substr(line, c + 1, 1)] >= 128 && ord[substr(line, c + 1, 1)] < 192) c--
+              line = substr(line, 1, c)
+              cut++
+            }
+            used += length(line) + 1
+          }
+          print line
+        }
+        END { if (cut > 0) print cut > cutout }'
+  if [ -f "$_q_df.cut" ]; then
+    _q_cutn=$(cat "$_q_df.cut")
+    rm -f "$_q_df.cut"
+    _q_dfmt=$(_q_msg search_cut)
+    # shellcheck disable=SC2059
+    printf "$_q_dfmt\n" "$_q_cutn" "$_q_maxb" >&2
+  fi
 
   rm -f "$_q_df"
 }
@@ -7800,8 +7835,12 @@ _q_cmd_mcp() {
   # applies that before explicit redirections (so `<&0` would copy /dev/null). Keep the
   # real stdin on fd 3 and hand it to awk from there; awk and the parent do not keep fd 3.
   exec 3<&0
+  # The search budget is the opening-context one. Resolved once here, numeric by
+  # construction (_q_ctx_max), so it is safe to hand to awk with -v.
+  # shortcut: read at server start; a ctx_max edit needs an MCP restart.
+  _q_ctx_max "$(_q_vault)"
   KNOTLOG_MCP_SELF="$_q_HOME/knotlog" KNOTLOG_MCP_ERR="$_q_mcp_err" \
-    awk -v ver="$_q_version" -v maxline="${QUIPU_MAX_STDIN:-65536}" \
+    awk -v ver="$_q_version" -v maxline="${QUIPU_MAX_STDIN:-65536}" -v ctxmax="$_q_cm" \
     -f "$_q_HOME/lib/jsonfield.awk" -f "$_q_HOME/lib/jsonemit.awk" -f "$_q_HOME/lib/mcp.awk" <&3 3<&- &
   _q_mcp_pid=$!
   exec 3<&-

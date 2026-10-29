@@ -1,6 +1,6 @@
 # knotlog mcp -- stdio MCP server loop. One JSON-RPC message per line in, one
 # per line out; stdout carries MCP messages only. Run after jsonfield.awk and
-# jsonemit.awk (-v ver=<knotlog version> -v maxline=<byte cap per line>).
+# jsonemit.awk (-v ver=<knotlog version> -v maxline=<byte cap per line> -v ctxmax=<search byte budget>).
 # No literal backslash here: strings go through je_str.
 
 function mc_ws(c) { return c == " " || c == tab_() || c == cr_() || c == nl_() }
@@ -174,7 +174,7 @@ function mc_call(id, s, r,   p, name, args, qtok, ltok, query, lim, a, ttok, tex
     if (ltok != "" && !mc_isint(ltok)) { mc_err(id, -32602, "Invalid params: limit must be an integer"); return }
     query = jf_read(args, mc_keypos(args, "query"))
     if (substr(query, 1, 1) == "-") { mc_tool_result(id, r, "query must not start with a dash", 1); return }
-    a = "search --brief"
+    a = "search --brief --max-bytes " (ctxmax + 0)
     if (ltok != "") {
       if (ltok + 0 < 1) { mc_tool_result(id, r, "limit must be at least 1", 1); return }
       a = a " --limit " (ltok + 0)

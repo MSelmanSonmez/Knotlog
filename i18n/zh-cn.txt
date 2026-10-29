@@ -5,7 +5,7 @@ usage_doctor=  doctor    检查环境：工具、方言、知识库、智能体
 usage_capture=  capture   向 activity.log 追加一条工具调用事件（从 stdin 读取）
 usage_index=  index     构建/更新 .knotlog/index.tsv（增量）
 usage_compile=  compile   构建确定性的派生概念笔记（手动；不会进入上下文）
-usage_search=  search    在索引上进行折叠词法 + BM25 搜索（--brief：120 字节摘要；--tag/--status：按 frontmatter 缩小范围；--all：包含 validity: rejected 的笔记）
+usage_search=  search    在索引上进行折叠词法 + BM25 搜索（--brief：120 字节摘要；--tag/--status：按 frontmatter 缩小范围；--all：包含 validity: rejected 的笔记；--max-bytes N：将输出限制为 N 字节）
 usage_init=  init      创建 .knotlog/ 和 AGENTS.md 桥接块（--scope core|goals|money|body|mind|full；可重复）
 usage_install=  install   创建 <user> 的 Knotlog 知识库，并将此检出链接到 PATH（--no-link 用于包装脚本；--force 替换他人的命令链接；--no-git 不把知识库初始化为 git 仓库；--tone <slug> 设置语气预设；创建知识库本地的 repair-hooks 入口）
 usage_uninstall=  uninstall 从 PATH 中移除 `knotlog` 命令；绝不触碰你的知识库（--dry-run 仅预览）
@@ -133,6 +133,8 @@ compile_summary=# 已在知识文件夹下编译 %d 个概念
 compile_stale=%s 是活跃主题，但已有 %d 天未被提及
 # search
 err_empty_query=查询为空
+err_max_bytes=无效的 --max-bytes：%s（请使用正整数）
+search_cut=search：另有 %d 条结果未显示（--max-bytes %d）
 err_no_index=缺少 index.tsv；请运行：knotlog index
 # links
 usage_links=  links     打印某篇笔记的出链/入链 [[wikilinks]]

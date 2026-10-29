@@ -5,7 +5,7 @@ usage_doctor=  doctor    check environment: tools, dialects, vault, agents
 usage_capture=  capture   append a tool-use event to activity.log (reads stdin)
 usage_index=  index     build/update .knotlog/index.tsv (incremental)
 usage_compile=  compile   build deterministic derived concept notes (manual; never enters context)
-usage_search=  search    folded lexical + BM25 search over the index (--brief: 120-byte snippet; --tag/--status: narrow by frontmatter; --all: include validity: rejected notes)
+usage_search=  search    folded lexical + BM25 search over the index (--brief: 120-byte snippet; --tag/--status: narrow by frontmatter; --all: include validity: rejected notes; --max-bytes N: cap the output at N bytes)
 usage_init=  init      create .knotlog/ and the AGENTS.md bridge block (--scope core|goals|money|body|mind|full; repeatable)
 usage_install=  install   create <user>'s Knotlog vault and link this checkout into PATH (--no-link for wrappers; --force replaces a foreign command link; --no-git to skip making the vault a git repo; --tone <slug> to set a tone preset; creates vault-local repair-hooks entrypoints)
 usage_uninstall=  uninstall remove the `knotlog` command from PATH; never touches your vault (--dry-run to preview)
@@ -133,6 +133,8 @@ compile_summary=# compiled %d concept(s) under the knowledge folder
 compile_stale=%s is a live topic but has not been mentioned for %d days
 # search
 err_empty_query=empty query
+err_max_bytes=invalid --max-bytes: %s (use a positive integer)
+search_cut=search: %d more result(s) not shown (--max-bytes %d)
 err_no_index=index.tsv missing; run: knotlog index
 # links
 usage_links=  links     print a note's outgoing/incoming [[wikilinks]]
