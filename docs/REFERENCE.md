@@ -319,9 +319,11 @@ Methods: `initialize`, `ping`, `server/discover`, `tools/list`, `tools/call`. No
 
 | Tool | Arguments | Returns |
 |---|---|---|
-| `knotlog_search` | `query` (string, required), `limit` (integer, optional, at least 1) | the lines of `knotlog search --brief [--limit N] <query>` |
+| `knotlog_search` | `query` (string, required), `limit` (integer, optional, at least 1) | the lines of `knotlog search --brief [--limit N] --max-bytes <ctx_max> <query>`; the budget is always applied (see below) |
 | `knotlog_context` | none | the output of `knotlog context` |
 | `knotlog_note` | `text` (string, required; not empty, not starting with `-`) | runs `knotlog note <text>`: one line appended to today's session reflection block; the only tool that writes, and it writes nothing else |
+
+**Search budget.** `knotlog_search` always passes `--max-bytes` with the same `ctx_max` the opening context uses (`KNOTLOG_CTX_MAX`, then `ctx_max=` in `.knotlog/config`, then the profile default, 4096 otherwise), so one tool call cannot return more than the session start does. The value is read when the server starts; changing `ctx_max` needs a restart of the MCP server. The omitted-results line goes to the tool's stderr and is not part of the returned text.
 
 A wrong argument shape or an unknown tool is a protocol error (`-32602`). A tool that ran and failed is a normal result with `isError: true` and the command's message as text.
 
@@ -484,6 +486,7 @@ Resolution goes through three stages, stopping at the first match: literal vault
 
 - `--paths` — path column only, one per line: `knotlog search dpi --paths | xargs $EDITOR`.
 - `--brief` — append a fifth column holding a 120-byte snippet (see [Large vaults](#large-vaults)). Mutually exclusive with `--paths` (exit 2).
+- `--max-bytes N` — the output never exceeds N bytes (newlines included). Rows print in order; the first row that would cross the budget stops the output, and stderr gets one line saying how many results were not shown. A first row that alone is longer than N is cut to N-1 bytes plus its newline, on a UTF-8 character boundary. Works with `--paths` and `--brief`. N is a positive integer without a leading zero (anything else exits 2). Without the flag the output is unchanged.
 - `--tag <etiket>` / `--status <durum>` — elimination filters on frontmatter, folded like the query, combined as AND: `knotlog search taskbar --tag ui --status active`. A non-matching note is dropped entirely, not just ranked lower.
 - `validity: rejected` — a note whose frontmatter says `validity: rejected` (case-insensitive; spaces and quotes around the value are ignored) is a retired record: it stays on disk but is skipped by `search` (and so by the MCP `knotlog_search` tool) and by `compile`. `--all` brings rejected notes back into the results. Any other value, or no field, changes nothing.
 - Unknown `-`-prefixed arguments are rejected (`unknown flag: --nope`, exit 2); bare words remain query terms.
