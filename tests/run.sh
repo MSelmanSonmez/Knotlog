@@ -12960,6 +12960,58 @@ R103=$(QUIPU_VAULT="$TMP/s103" QUIPU_LANG=en sh "$ROOT/knotlog" init --plain --n
 t; assert_eq "T-1103: init --lang en/x exits 2 and writes no lang= line" '2 no' \
   "$R103 $(grep -q '^lang=' "$TMP/s103/.knotlog/config" && printf yes || printf no)"
 
+# ---- search --max-bytes (T-1104..T-1109) ----
+mkvault s104
+mkdir -p "$TMP/s104/n"
+for i in 1 2 3 4 5; do printf '# Zebra %s\nzebra apples\n' "$i" > "$TMP/s104/n/z$i.md"; done
+sb() { QUIPU_VAULT="$TMP/s104" QUIPU_LANG=en sh "$ROOT/knotlog" "$@" </dev/null; }
+sb index >/dev/null 2>&1
+sb search --paths zebra > "$TMP/s104.full" 2>/dev/null
+sb search --paths --max-bytes 20 zebra > "$TMP/s104.out" 2> "$TMP/s104.err"
+# T-1104: output stops at the budget on a row boundary; stderr names the omitted count.
+t; assert_eq "T-1104: --max-bytes 20 --paths keeps 2 of 5 rows (8 bytes each incl. newline)" '2 16' \
+  "$(wc -l < "$TMP/s104.out" | tr -d ' ') $(wc -c < "$TMP/s104.out" | tr -d ' ')"
+t; assert_eq "T-1104: stderr says 3 results were not shown" 'search: 3 more result(s) not shown (--max-bytes 20)' "$(cat "$TMP/s104.err")"
+# T-1105: no flag -> all 5 rows, plain stderr silence (green on the old code too); a roomy budget changes nothing.
+sb search --paths zebra > "$TMP/s104.nf" 2> "$TMP/s104.nferr"
+t; assert_eq "T-1105: without the flag all 5 rows print, stderr empty, same bytes as before" '5 yes yes' \
+  "$(wc -l < "$TMP/s104.nf" | tr -d ' ') $(cmp -s "$TMP/s104.full" "$TMP/s104.nf" && printf yes || printf no) $([ ! -s "$TMP/s104.nferr" ] && printf yes || printf no)"
+sb search --paths --max-bytes 1000 zebra > "$TMP/s104.big" 2> "$TMP/s104.bigerr"
+t; assert_eq "T-1105: a budget that fits everything gives identical output and empty stderr" 'yes yes' \
+  "$(cmp -s "$TMP/s104.full" "$TMP/s104.big" && printf yes || printf no) $([ ! -s "$TMP/s104.bigerr" ] && printf yes || printf no)"
+# T-1106: a single row longer than the budget is cut to a character boundary.
+mkvault s106
+SH4=$(printf '\303\237')   # U+00DF, two bytes
+printf '# Longline\nzebra\n' > "$TMP/s106/a.md"
+mv "$TMP/s106/a.md" "$TMP/s106/${SH4}${SH4}${SH4}${SH4}${SH4}${SH4}${SH4}${SH4}.md"
+QUIPU_VAULT="$TMP/s106" QUIPU_LANG=en sh "$ROOT/knotlog" index </dev/null >/dev/null 2>&1
+QUIPU_VAULT="$TMP/s106" QUIPU_LANG=en sh "$ROOT/knotlog" search --paths --max-bytes 6 zebra </dev/null > "$TMP/s106.out" 2>/dev/null
+t; assert_eq "T-1106: a 19-byte row under --max-bytes 6 is cut at a character boundary (2 characters + newline)" 'c39fc39f0a' \
+  "$(od -An -v -tx1 "$TMP/s106.out" | tr -d ' \n')"
+# T-1107: invalid N exits 2 and prints no results.
+R107=$(sb search --max-bytes abc zebra 2>&1 >/dev/null)
+R107a=$(sb search --max-bytes abc zebra >/dev/null 2>&1; printf '%s' "$?")
+R107b=$(sb search --max-bytes 0 zebra >/dev/null 2>&1; printf '%s' "$?")
+R107c=$(sb search --max-bytes >/dev/null 2>&1; printf '%s' "$?")
+t; assert_eq "T-1107: --max-bytes abc / 0 / missing value all exit 2, stderr names the value" 'invalid --max-bytes: abc (use a positive integer)|2 2 2' \
+  "$R107|$R107a $R107b $R107c"
+# T-1108: --brief works with the budget too.
+sb search --brief --max-bytes 60 zebra > "$TMP/s108.out" 2>/dev/null
+t; assert_eq "T-1108: --brief --max-bytes 60 stays within 60 bytes and keeps at least one row" 'yes yes' \
+  "$([ "$(wc -c < "$TMP/s108.out")" -le 60 ] && printf yes || printf no) $([ -s "$TMP/s108.out" ] && printf yes || printf no)"
+# T-1109: MCP knotlog_search applies the ctx_max budget (env > config > default) on its own.
+mc109() { printf '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"knotlog_search","arguments":{"query":"zebra"}}}\n' \
+  | QUIPU_CTX_MAX=$1 QUIPU_VAULT="$TMP/s104" QUIPU_LANG=en sh "$ROOT/knotlog" mcp 2>/dev/null \
+  | awk -f "$LIB/jsonfield.awk" -f "$DRV/mcptext.awk"; }
+mc109 100 > "$TMP/s109.small"
+mc109 100000 > "$TMP/s109.big"
+sb search --brief --max-bytes 100 zebra > "$TMP/s109.cli" 2>/dev/null
+sb search --brief zebra > "$TMP/s109.all" 2>/dev/null
+t; assert_eq "T-1109: MCP search under ctx_max=100 equals the CLI under --max-bytes 100 and is shorter than the full result" 'yes yes' \
+  "$(cmp -s "$TMP/s109.small" "$TMP/s109.cli" && printf yes || printf no) $([ "$(wc -c < "$TMP/s109.small")" -lt "$(wc -c < "$TMP/s109.all")" ] && printf yes || printf no)"
+t; assert_eq "T-1109: with a roomy ctx_max the MCP text equals the unbudgeted CLI output" 'yes' \
+  "$(cmp -s "$TMP/s109.big" "$TMP/s109.all" && printf yes || printf no)"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
