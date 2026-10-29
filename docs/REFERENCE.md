@@ -208,6 +208,7 @@ left it says so and changes nothing.
 | `knotlog tone [--list\|<slug>]` | show which tone is active and why (preset or companion.md); `--list` browses the nine shipped presets; `<slug>` writes `tone=` to `.knotlog/config` (never touches companion.md) |
 | `knotlog flair [--list\|none\|kaomoji\|emoji]` | show or set the reply flair (`flair=` in `.knotlog/config`), independent of the tone; `init --flair` and `install --flair` set it too (never touches companion.md) |
 | `knotlog compact [--keep N] [--apply]` | move old `Closed threads` entries of `Threads.md` into the archive, losslessly; dry run unless `--apply`; the newest `--keep N` (default 20) stay; also trims the last-session file (newest 5 `## ` blocks stay, or `--keep N`); see Session reflection |
+| `knotlog distill [--apply]` | move marked lines up: session note `[fact]` to the facts file, facts-file `[core]` to the core block of `companion.md`; dry run unless `--apply`; see Distill |
 | `knotlog update --check` | compare this checkout's version against the latest GitHub release; network read only, touches no file |
 | `knotlog update --apply [--no-verify]` | update this checkout in place (tarball checkout: download, SHA-256 check, atomic swap; git-clone checkout: `git fetch` + checkout `<tag>`); bare `knotlog update` errors on purpose |
 | `knotlog rollback` | undo the last `update --apply`, restoring the checkout from its newest backup (`.knotlog-previous`); repeat to step back through up to three |
@@ -486,7 +487,7 @@ Resolution goes through three stages, stopping at the first match: literal vault
 
 - `--paths` — path column only, one per line: `knotlog search dpi --paths | xargs $EDITOR`.
 - `--brief` — append a fifth column holding a 120-byte snippet (see [Large vaults](#large-vaults)). Mutually exclusive with `--paths` (exit 2).
-- `--max-bytes N` — the output never exceeds N bytes (newlines included). Rows print in order; the first row that would cross the budget stops the output, and stderr gets one line saying how many results were not shown. A first row that alone is longer than N is cut to N-1 bytes plus its newline, on a UTF-8 character boundary. Works with `--paths` and `--brief`. N is a positive integer without a leading zero (anything else exits 2). Without the flag the output is unchanged.
+- `--max-bytes N` — the output never exceeds N bytes (newlines included). Rows print in order; the first row that would cross the budget stops the output, and stderr gets one line saying how many results were not shown. A first row that alone is longer than N is cut to N-1 bytes plus its newline, on a UTF-8 character boundary. Works with `--paths` and `--brief`. N is a positive integer without a leading zero (anything else exits 2). Without the flag the output is unchanged. There is no time limit: a search over a 10,000-note vault measured about 0.7 to 1.0 seconds, and POSIX sh has no portable `timeout`.
 - `--tag <etiket>` / `--status <durum>` — elimination filters on frontmatter, folded like the query, combined as AND: `knotlog search taskbar --tag ui --status active`. A non-matching note is dropped entirely, not just ranked lower.
 - `validity: rejected` — a note whose frontmatter says `validity: rejected` (case-insensitive; spaces and quotes around the value are ignored) is a retired record: it stays on disk but is skipped by `search` (and so by the MCP `knotlog_search` tool) and by `compile`. `--all` brings rejected notes back into the results. Any other value, or no field, changes nothing.
 - Unknown `-`-prefixed arguments are rejected (`unknown flag: --nope`, exit 2); bare words remain query terms.
@@ -533,6 +534,22 @@ Knotlog keeps the mechanical ledger; the meaning comes from the model. `remember
 - **Companion size limit.** The last-session file (`Last-Session.md`, `Son-Oturum.md` in a Turkish vault) and the journal only grow. `knotlog doctor` prints one warning when either is larger than `companion_max=` bytes (`.knotlog/config`, default 40000; a non-numeric value falls back to the default) and stays silent below it. `knotlog compact` also handles the last-session file: session blocks are `## ` sections appended at the bottom, so the first ones are the oldest. The newest 5 stay (`--keep N` sets both this and the threads count); older blocks move verbatim and in order to `Last-Session-Archive.md` (`Son-Oturum-Arsivi.md`) beside the threads archive, with the same dry run, append-verify-cut sequence and marker line. A file with 5 blocks or fewer is untouched. The journal is warned about but never rewritten.
 
 Knotlog enforces the format, not the meaning.
+
+## Distill
+
+`knotlog distill [--apply]` moves lines you have marked one layer up. Nothing is judged by Knotlog: you decide what is lasting and mark the line; it only moves and records. No model is involved.
+
+| Layer | Reads | Marker | Writes |
+|---|---|---|---|
+| 1 | `- ` lines of the session notes (`*.md` in the sessions folder) | `[fact]` (`distill_fact_mark`; `[olgu]` in a Turkish vault) | the facts file, at the end |
+| 2 | `- ` lines of the facts file | `[core]` (`distill_core_mark`; `[çekirdek]`) | `companion.md`, just before `<!-- knotlog:core:end -->` |
+
+- The marker is dropped, spaces are collapsed, and ` (source: <vault-relative path>)` is appended (`kaynak` in a Turkish vault). Layer 2 replaces a source suffix it finds with the facts file, so the chain is one hop.
+- A line already in the target is skipped. The comparison ignores the source suffix and the marker and uses the vault's fold profile, so case and accents do not matter. Two sources with the same text add it once.
+- Layer 1 adds only lines that open with a Preference, Decision or Convention tag (`distill_tags`; `Tercih`, `Karar`, `Konvansiyon` in Turkish). Others are listed as untagged and left out.
+- Both layers are planned from the files as they are when the command starts, so a fact added by layer 1 reaches the core block on the next run, not the same one.
+- A missing facts file skips layer 1 (and 2); a missing `companion.md` or core block skips layer 2. Each is one line, not an error.
+- Without `--apply` the command writes nothing and prints one row per candidate: status, layer (`facts` or `core`), source, text. `--apply` takes the same lock as `remember` and `note`, refuses a facts file or `companion.md` that is a link or resolves outside the vault (see Symbolic links), skips session notes that are, and ends with `N fact(s), M core line(s) added`. Source lines are never edited. An unknown flag exits 2.
 
 ## Honest limits
 

@@ -322,6 +322,16 @@ satırını yazana dek context ondan sessiz kalır. `doctor`, dosya varken
 gerçek satırı sayısını söyleyen tek bir `ok` satırı basar; katmandan önceki
 kasalarda sessizdir.
 
+### Kalıcı satırları yukarı taşımak: distill
+
+Oturum notu haberin yeridir; aylar sonra da doğru kalacak satır olgu dosyasına, asla unutulmaması gereken azı `companion.md`'nin çekirdek bloğuna girer. Hangisi olduğuna sen karar verir, satırı işaretlersin:
+
+```
+- Karar: kasa düz Markdown kalır. [olgu]
+```
+
+Neyin taşınacağını görmek için `knotlog distill` çalıştır (hiçbir şey yazmaz), sonra `knotlog distill --apply`. Oturum notlarındaki işaretli satırlar `(kaynak: <not>)` ekiyle olgu dosyasına gider; olgu dosyasında `[çekirdek]` işaretli satırlar çekirdek bloğuna çıkar. Tercih, Karar ya da Konvansiyon etiketiyle açılmayan satırlar listelenir ama eklenmez; zaten var olan satır atlanır, yani iki kez çalıştırmak güvenlidir. İşaretli satırlara dokunulmaz. İngilizce bir kasa `[fact]` ve `[core]` kullanır.
+
 ## 7. Bir şey ters gidince
 
 `knotlog doctor` her alan için bir bölüm ve sonda bir özet satırı basar. Yalnızca

@@ -315,6 +315,16 @@ stays quiet about it until you write your first line. `doctor` prints one
 `ok` row naming the fact-line count when the file exists and stays silent in
 vaults that predate the layer.
 
+### Moving lasting lines up: distill
+
+A session note is the place for news; a line that will still be true in months belongs in the facts file, and the few you must never forget belong in the core block of `companion.md`. You decide which, and mark the line:
+
+```
+- Decision: the vault stays plain Markdown. [fact]
+```
+
+Run `knotlog distill` to see what would move (it writes nothing), then `knotlog distill --apply`. Marked lines in session notes go to the facts file, each with `(source: <note>)`; lines in the facts file marked `[core]` go to the core block. Lines that do not open with a Preference, Decision or Convention tag are listed but never added, and a line already there is skipped, so running it twice is safe. The marked lines themselves are never edited. A Turkish vault uses `[olgu]` and `[çekirdek]`.
+
 ## 7. When something looks wrong
 
 `knotlog doctor` prints a section per area and a summary line. It exits 0 when
