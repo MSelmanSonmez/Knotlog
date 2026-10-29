@@ -13012,6 +13012,63 @@ t; assert_eq "T-1109: MCP search under ctx_max=100 equals the CLI under --max-by
 t; assert_eq "T-1109: with a roomy ctx_max the MCP text equals the unbudgeted CLI output" 'yes' \
   "$(cmp -s "$TMP/s109.big" "$TMP/s109.all" && printf yes || printf no)"
 
+# ---- distill (T-1110..T-1118) ----
+sec_init s110
+mkdir -p "$TMP/s110/700-Sessions"
+printf '# s\n- Decision: use sh [fact]\n- [fact] Convention: names in English (source: old.md)\n- [fact] loose line without a tag\n- unmarked line\n- Preference: tabs [fact]\n' > "$TMP/s110/700-Sessions/2026-10-01.md"
+printf -- '- Decision:  USE   SH [fact]\n' > "$TMP/s110/700-Sessions/2026-10-02.md"
+printf -- '- Decision: a core claim [core]\n' >> "$TMP/s110/Facts.md"
+dsl() { QUIPU_VAULT="$TMP/$1" QUIPU_LANG=${DSL:-en} sh "$ROOT/knotlog" distill ${2:+"$2"} </dev/null 2>&1; }
+ds_sum() { cksum "$TMP/s110/Facts.md" "$TMP/s110/700-Sessions/"*.md "$TMP/s110/850-Companion/companion.md" | tr '\n' ' '; }
+# T-1110: the dry run writes nothing and lists the additions and the skips.
+DS0=$(ds_sum); DSO=$(dsl s110 ''); DS1=$(ds_sum)
+t; assert_eq "T-1110: dry run leaves every file byte for byte as it was, and prints rows" "$DS0 yes" "$DS1 $(printf "%s\n" "$DSO" | grep -q "^would add" && printf yes || printf no)"
+t; assert_eq "T-1110: dry run lists 3 additions, 1 untagged, 1 duplicate (folded) and the core line" '3 1 1 1' \
+  "$(printf '%s\n' "$DSO" | grep -c "^would add${TAB}facts") $(printf '%s\n' "$DSO" | grep -c '^skipped (no tag)') $(printf '%s\n' "$DSO" | grep -c '^skipped (already there)') $(printf '%s\n' "$DSO" | grep -c "^would add${TAB}core")"
+# T-1111: --apply adds layer 1 with the source suffix and the mark dropped.
+DSA=$(dsl s110 --apply)
+t; assert_eq "T-1111: --apply adds the 3 facts to Facts.md with (source: <session note>) and no mark" '- Decision: use sh (source: 700-Sessions/2026-10-01.md)|- Convention: names in English (source: 700-Sessions/2026-10-01.md)|- Preference: tabs (source: 700-Sessions/2026-10-01.md)' \
+  "$(grep '(source: ' "$TMP/s110/Facts.md" | tr '\n' '|' | sed 's/|$//')"
+t; assert_eq "T-1111: the summary says 3 facts, 1 core line" '3 fact(s), 1 core line(s) added' "$(printf '%s\n' "$DSA" | tail -n 1)"
+# T-1112: layer 2 lands right before the end marker; the facts file is the source.
+t; assert_eq "T-1112: the core claim sits just before knotlog:core:end with the facts file as source" '- Decision: a core claim (source: Facts.md)|<!-- knotlog:core:end -->' \
+  "$(grep -B1 'knotlog:core:end' "$TMP/s110/850-Companion/companion.md" | tr '\n' '|' | sed 's/|$//')"
+# T-1113: a second --apply adds nothing and changes nothing.
+DS2=$(ds_sum); DSB=$(dsl s110 --apply); DS3=$(ds_sum)
+t; assert_eq "T-1113: second --apply reports 0 and 0, files unchanged" '0 fact(s), 0 core line(s) added yes' \
+  "$(printf '%s\n' "$DSB" | tail -n 1) $([ "$DS2" = "$DS3" ] && printf yes || printf no)"
+# T-1114: the untagged line never lands; the source session notes are unchanged.
+t; assert_eq "T-1114: untagged line absent from Facts.md, the 3 facts present; session notes keep their marks" 'no 3 yes' \
+  "$(grep -qF 'loose line' "$TMP/s110/Facts.md" && printf yes || printf no) $(grep -c '(source: 700' "$TMP/s110/Facts.md") $(grep -qF 'use sh [fact]' "$TMP/s110/700-Sessions/2026-10-01.md" && printf yes || printf no)"
+# T-1115: no core block -> layer 2 skipped, no error, layer 1 still runs.
+sec_init s115; mkdir -p "$TMP/s115/700-Sessions"
+printf -- '- Decision: one [fact]\n' > "$TMP/s115/700-Sessions/2026-10-01.md"
+printf -- '- Decision: two [core]\n' >> "$TMP/s115/Facts.md"
+rm "$TMP/s115/850-Companion/companion.md"
+O115=$(dsl s115 --apply); R115=$?
+t; assert_eq "T-1115: without companion.md layer 2 is skipped with a line, exit 0, layer 1 added" '0 yes 1' \
+  "$R115 $(sec_has "$O115" "$(i18n distill_no_core)") $(grep -c '(source: ' "$TMP/s115/Facts.md")"
+# T-1116: a flag distill does not know exits 2.
+R116=$(dsl s110 --bogus); R116c=$?
+t; assert_eq "T-1116: distill --bogus names the flag and exits 2" "$(i18n err_unknown_flag | sed 's/%s/--bogus/') 2" "$R116 $R116c"
+# T-1117: a facts file that is a link is refused by --apply and nothing is written.
+if [ "$TRUE_SYMLINKS" -eq 1 ]; then
+  sec_init s117; mkdir -p "$TMP/s117/700-Sessions"
+  printf -- '- Decision: one [fact]\n' > "$TMP/s117/700-Sessions/2026-10-01.md"
+  printf -- '# out\n' > "$SO/t117.md"; rm "$TMP/s117/Facts.md"; sec_slink "$SO/t117.md" "$TMP/s117/Facts.md"
+  R117=$(dsl s117 --apply >/dev/null; printf '%s' "$?")
+  t; assert_eq "T-1117: --apply on a linked Facts.md exits 1 and leaves the target alone" '1 # out' "$R117 $(cat "$SO/t117.md")"
+else
+  t; skip "T-1117: linked facts file" "no native symlinks on this host"
+fi
+# T-1118: a Turkish vault reads [olgu] and Tercih/Karar/Konvansiyon and writes (kaynak: ...).
+mkvault s118; QUIPU_VAULT="$TMP/s118" sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang tr </dev/null >/dev/null 2>&1
+printf -- '- Karar: Quipu sıfır bağımlılıkla kalır [olgu]\n- Not: etiketsiz [olgu]\n' > "$TMP/s118/700-Sessions/2026-10-01.md"
+printf -- '- Karar: ÇEKİRDEK bir olgu [çekirdek]\n' >> "$TMP/s118/Gerçekler.md"
+DSL=tr dsl s118 --apply >/dev/null
+t; assert_eq "T-1118: tr vault: [olgu] moved with (kaynak: ...), untagged left, [çekirdek] reached the core block" '1 0 1' \
+  "$(grep -cF -- '- Karar: Quipu sıfır bağımlılıkla kalır (kaynak: 700-Sessions/2026-10-01.md)' "$TMP/s118/Gerçekler.md") $(grep -cF 'etiketsiz' "$TMP/s118/Gerçekler.md") $(grep -cF -- '- Karar: ÇEKİRDEK bir olgu (kaynak: Gerçekler.md)' "$TMP/s118/850-Companion/companion.md")"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
