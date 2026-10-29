@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - `knotlog search --max-bytes N` caps the output at N bytes (works with `--paths` and `--brief`; the omitted count goes to stderr). The MCP `knotlog_search` tool always applies the `ctx_max` budget.
 - `knotlog distill [--apply]` moves lines you mark up a layer: `[fact]` lines of session notes to the facts file, `[core]` lines of the facts file to the core block of `companion.md`. Dry run by default; no model, no duplicates, source lines never edited.
+- `distill` remembers what it moved in `.knotlog/distilled`, so a line removed from its target does not come back. The MCP `knotlog_search` result ends with the omitted-results line when it was cut.
 
 ## [1.2.0] - 2026-10-27
 
