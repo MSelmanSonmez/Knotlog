@@ -563,3 +563,16 @@ doc_flair_invalid=flair=%s none, kaomoji ya da emoji değil — none kullanılı
 err_state_link=%s sembolik bağ ya da içinde sembolik bağ var; knotlog bağların üzerinden yazmaz. Bağları kaldır (doctor bu denetimi gösterir)
 err_unsafe_write=%s yazılmıyor: sembolik bağ ya da kasanın dışına çıkıyor
 doc_state_link=durum dizini sembolik bağ ya da içinde sembolik bağ var; kaldırılana kadar diğer komutlar çalışmaz
+usage_distill=  distill   işaretli satırları yukarı taşır: oturum notu -> olgu dosyası -> companion.md çekirdek bloğu (varsayılan kuru çalıştırma; --apply yazar; işaretler: [olgu] ve [çekirdek])
+distill_fact_mark=[olgu]
+distill_core_mark=[çekirdek]
+distill_tags=Tercih|Karar|Konvansiyon
+distill_source=kaynak
+distill_add=eklenecek
+distill_added=eklendi
+distill_untagged=atlandı (etiket yok)
+distill_dup=atlandı (zaten var)
+distill_no_facts=distill: 1. katman atlandı, olgu dosyası yok
+distill_no_core=distill: 2. katman atlandı, çekirdek bloklu companion.md yok
+distill_summary=%d olgu, %d çekirdek satırı eklendi
+distill_busy=distill atlandı: başka bir işlem 5 saniye sonunda hâlâ kilidi tutuyor; hiçbir şey yazılmadı

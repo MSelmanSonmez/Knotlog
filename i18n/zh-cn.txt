@@ -563,3 +563,16 @@ doc_flair_invalid=flair=%s 不是 none、kaomoji 或 emoji，改用 none（请�
 err_state_link=%s 是符号链接或包含符号链接；knotlog 不会通过链接写入。请删除这些链接（doctor 会显示此项检查）
 err_unsafe_write=拒绝写入 %s：它是符号链接，或指向知识库之外
 doc_state_link=状态目录是符号链接或包含符号链接；删除之前其他命令都不会运行
+usage_distill=  distill   把带标记的行逐层上移：会话笔记 -> 事实文件 -> companion.md 的核心块（默认为试运行；--apply 写入；标记：[事实] 和 [核心]）
+distill_fact_mark=[事实]
+distill_core_mark=[核心]
+distill_tags=偏好|决定|约定
+distill_source=来源
+distill_add=将添加
+distill_added=已添加
+distill_untagged=已跳过（无标签）
+distill_dup=已跳过（已存在）
+distill_no_facts=distill：已跳过第 1 层，没有事实文件
+distill_no_core=distill：已跳过第 2 层，没有带核心块的 companion.md
+distill_summary=已添加 %d 条事实、%d 行核心
+distill_busy=distill 已跳过：5 秒后另一个进程仍持有锁；未写入任何内容

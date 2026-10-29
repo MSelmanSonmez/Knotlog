@@ -563,3 +563,16 @@ doc_flair_invalid=flair=%s is not none, kaomoji or emoji — using none (run: kn
 err_state_link=%s is a symbolic link or contains one; knotlog does not write through links. Remove them (doctor lists the check)
 err_unsafe_write=refusing to write %s: it is a symbolic link or leads outside the vault
 doc_state_link=the state directory is a symbolic link or contains one; every other command refuses to run until it is removed
+usage_distill=  distill   move marked lines up: session note -> facts file -> core block of companion.md (dry run by default; --apply writes; marks: [fact] and [core])
+distill_fact_mark=[fact]
+distill_core_mark=[core]
+distill_tags=Preference|Decision|Convention
+distill_source=source
+distill_add=would add
+distill_added=added
+distill_untagged=skipped (no tag)
+distill_dup=skipped (already there)
+distill_no_facts=distill: layer 1 skipped, no facts file
+distill_no_core=distill: layer 2 skipped, no companion.md with a core block
+distill_summary=%d fact(s), %d core line(s) added
+distill_busy=distill skipped: another process still owns the lock after 5 seconds; nothing was written

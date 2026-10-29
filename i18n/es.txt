@@ -563,3 +563,16 @@ doc_flair_invalid=flair=%s no es none, kaomoji ni emoji — se usa none (ejecuta
 err_state_link=%s es un enlace simbólico o contiene uno; knotlog no escribe a través de enlaces. Elimínalos (doctor muestra esta comprobación)
 err_unsafe_write=no se escribe %s: es un enlace simbólico o sale de la bóveda
 doc_state_link=el directorio de estado es un enlace simbólico o contiene uno; los demás comandos no se ejecutan hasta que se elimine
+usage_distill=  distill   sube las líneas marcadas: nota de sesión -> archivo de hechos -> bloque núcleo de companion.md (simulación por defecto; --apply escribe; marcas: [hecho] y [núcleo])
+distill_fact_mark=[hecho]
+distill_core_mark=[núcleo]
+distill_tags=Preferencia|Decisión|Convención
+distill_source=fuente
+distill_add=se añadiría
+distill_added=añadido
+distill_untagged=omitido (sin etiqueta)
+distill_dup=omitido (ya está)
+distill_no_facts=distill: capa 1 omitida, no hay archivo de hechos
+distill_no_core=distill: capa 2 omitida, no hay companion.md con bloque núcleo
+distill_summary=%d hecho(s), %d línea(s) de núcleo añadidas
+distill_busy=distill omitido: otro proceso sigue teniendo el bloqueo tras 5 segundos; no se escribió nada
