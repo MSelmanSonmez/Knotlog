@@ -13065,7 +13065,7 @@ fi
 mkvault s118; QUIPU_VAULT="$TMP/s118" sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang tr </dev/null >/dev/null 2>&1
 printf -- '- Karar: Quipu sıfır bağımlılıkla kalır [olgu]\n- Not: etiketsiz [olgu]\n' > "$TMP/s118/700-Sessions/2026-10-01.md"
 printf -- '- Karar: ÇEKİRDEK bir olgu [çekirdek]\n' >> "$TMP/s118/Gerçekler.md"
-DSL=tr dsl s118 --apply >/dev/null
+(DSL=tr; dsl s118 --apply) >/dev/null
 t; assert_eq "T-1118: tr vault: [olgu] moved with (kaynak: ...), untagged left, [çekirdek] reached the core block" '1 0 1' \
   "$(grep -cF -- '- Karar: Quipu sıfır bağımlılıkla kalır (kaynak: 700-Sessions/2026-10-01.md)' "$TMP/s118/Gerçekler.md") $(grep -cF 'etiketsiz' "$TMP/s118/Gerçekler.md") $(grep -cF -- '- Karar: ÇEKİRDEK bir olgu (kaynak: Gerçekler.md)' "$TMP/s118/850-Companion/companion.md")"
 
