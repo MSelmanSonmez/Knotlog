@@ -6,7 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
-- `search` strips punctuation from the ends of query terms the way it already tolerates it after a word in a note: `knotlog search "spotify?"` now finds what `knotlog search spotify` finds. Leading `(` `'` `"` and trailing `. , ; : ! ? ) ' "` go; inner and other punctuation stays (`node.js`, `c++`, `#tag`, `--flag`, `2026-10-30`), and a term that is only punctuation is ignored. Present in 1.2.0 and earlier.
+- `search` strips punctuation from the ends of query terms the way it already tolerates it after a word in a note: `knotlog search "spotify?"` now finds what `knotlog search spotify` finds, and a trailing-punctuated query such as `"term."` matches the same notes as the bare term instead of only the notes where the word is followed by that punctuation. Leading `(` `'` `"` and trailing `. , ; : ! ? ) ' "` go; inner and other punctuation stays (`node.js`, `c++`, `#tag`, `--flag`, `2026-10-30`), and a term that is only punctuation is ignored. Present in 1.2.0 and earlier.
 - `search` counts a repeated query term once. `knotlog search "playlist playlist spotify"` scores like `knotlog search "playlist spotify"`; before, each repeat raised the term's document frequency again, which could push it past the note count and print `-nan` scores with awk warnings on stderr. Present in 1.2.0 and earlier.
 
 ## [1.2.0] - 2026-10-27
