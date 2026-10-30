@@ -12,12 +12,14 @@ usage_uninstall=  uninstall remove the `knotlog` command from PATH; never touche
 usage_context=  context   print session memory context for the agent
 help_profile=            config: profile=normal|economical|manual trims hook context (see REFERENCE)
 help_write_approval=            config: write_approval=on queues note / note --thread for review (knotlog pending; see REFERENCE)
+help_review=            config: review=off stops the session review ask; KNOTLOG_REVIEW_AFTER=N sets its threshold (default 40 events)
 usage_remember=  remember  write mechanical digest from activity.log (append-only)
 usage_mcp=  mcp       run the MCP server on stdin/stdout (JSON-RPC, one message per line)
 usage_note=  note      add one line to today's session reflection block (note "text")
 usage_digest=  digest    summarize one date's activity (--date YYYY-MM-DD) or a range (--since YYYY-MM-DD [--until YYYY-MM-DD]); --dry-run, --limit N
 usage_note_thread=  note --thread  add one line to the active threads section (note --thread "text")
 usage_pending=  pending   list notes waiting for review (write_approval=on); --approve N writes one, --reject N drops it
+usage_propose=  propose   queue a review finding for approval (propose --kind lesson|skill|fix "text"; knotlog pending)
 usage_import=  import    convert a local JSON conversation export into a session note (FILE, --date YYYY-MM-DD)
 usage_plan=  plan      open a project plan under <Projects>/<Project>/<Plans>/ from the front-matter template (--proje <Project>)
 usage_tone=  tone      show/set the active tone preset (--list to browse; a bare slug writes tone= to config)
@@ -39,6 +41,8 @@ err_pending_args=pending takes no argument, --approve N or --reject N
 err_pending_closed=#%s is not an open proposal (knotlog pending lists them)
 err_pending_tab=a note waiting for review must not contain a tab; nothing was queued
 err_pending_kind=#%s has an unknown kind %s; nothing was written
+err_propose_args=propose takes --kind lesson|skill|fix and one quoted text argument
+err_propose_kind=unknown kind %s: use lesson, skill or fix
 err_help_args=help accepts no arguments or exactly --<code> of a shipped language (e.g. --en, --tr)
 # doctor
 doc_head=knotlog doctor - environment check
@@ -283,6 +287,7 @@ ctx_truncated=… (truncated)
 ctx_threads_dropped=(%d bytes of the threads file never entered this context — see: knotlog compact)
 ctx_precompact=Context may be compacted: write your memory now — fill the reflection block in today's session file (%s) and update Threads.md.
 ctx_checkpoint_due=Checkpoint: session note was written %s min ago, there is work in vault since then — write a short bullet in session note (what was done, pending, next).
+ctx_review_ask=Review: %s events since the last review (most touched: %s). Did this work leave a lasting lesson, a repeated workflow worth a skill, or a corrected mistake? If so, propose each as one line: knotlog propose --kind lesson|skill|fix "<text>" (it waits for the user's approval in knotlog pending; nothing is written to memory yet). If not, do nothing.
 # remember
 remember_ok=wrote: %s
 remember_empty=no new lines to remember

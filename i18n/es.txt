@@ -12,12 +12,14 @@ usage_uninstall=  uninstall quita el comando `knotlog` del PATH; nunca toca tu b
 usage_context=  context   imprime el contexto de memoria de sesión para el agente
 help_profile=            config: profile=normal|economical|manual recorta el contexto de los hooks (ver REFERENCE)
 help_write_approval=            config: write_approval=on deja note / note --thread en espera de revisión (knotlog pending; ver REFERENCE)
+help_review=            config: review=off desactiva la petición de revisión de la sesión; KNOTLOG_REVIEW_AFTER=N fija su umbral (40 eventos por defecto)
 usage_remember=  remember  escribe un resumen mecánico a partir de activity.log (solo añade)
 usage_mcp=  mcp       ejecuta el servidor MCP en stdin/stdout (JSON-RPC, un mensaje por línea)
 usage_note=  note      añade una línea al bloque de reflexión de la sesión de hoy (note "texto")
 usage_digest=  digest    resume la actividad de una fecha (--date YYYY-MM-DD) o de un rango (--since YYYY-MM-DD [--until YYYY-MM-DD]); --dry-run, --limit N
 usage_note_thread=  note --thread  añade una línea a la sección de hilos activos (note --thread "texto")
 usage_pending=  pending   lista las notas en espera de revisión (write_approval=on); --approve N escribe una, --reject N la descarta
+usage_propose=  propose   pone en espera de aprobación un hallazgo de revisión (propose --kind lesson|skill|fix "texto"; knotlog pending)
 usage_import=  import    convierte una exportación JSON local de una conversación en una nota de sesión (FILE, --date YYYY-MM-DD)
 usage_plan=  plan      abre un plan de proyecto en <Projects>/<Project>/<Plans>/ a partir de la plantilla con front matter (--proje <Project>)
 usage_tone=  tone      muestra o fija el preset de tono activo (--list para verlos; un slug solo escribe tone= en la configuración)
@@ -39,6 +41,8 @@ err_pending_args=pending no admite argumentos, o bien --approve N o --reject N
 err_pending_closed=#%s no es una propuesta abierta (knotlog pending las lista)
 err_pending_tab=una nota en espera de revisión no puede contener un tabulador; no se encoló nada
 err_pending_kind=#%s tiene un tipo desconocido %s; no se escribió nada
+err_propose_args=propose admite --kind lesson|skill|fix y un único argumento de texto entre comillas
+err_propose_kind=tipo desconocido %s: usa lesson, skill o fix
 err_help_args=help no admite argumentos, salvo --<código> de un idioma incluido (p. ej. --en, --tr)
 # doctor
 doc_head=knotlog doctor - revisión del entorno
@@ -283,6 +287,7 @@ ctx_truncated=… (truncado)
 ctx_threads_dropped=(%d bytes del archivo de hilos nunca entraron en este contexto — mira: knotlog compact)
 ctx_precompact=Puede que el contexto se compacte: escribe tu memoria ahora — rellena el bloque de reflexión del archivo de sesión de hoy (%s) y actualiza Threads.md.
 ctx_checkpoint_due=Punto de control: la nota de sesión se escribió hace %s min y desde entonces hay trabajo en la bóveda — escribe una viñeta corta en la nota de sesión (qué se hizo, qué queda pendiente, siguiente paso).
+ctx_review_ask=Revisión: %s eventos desde la última revisión (lo más tocado: %s). ¿Dejó este trabajo una lección duradera, un flujo repetido que merezca un skill o un error corregido? Si es así, propón cada uno en una línea: knotlog propose --kind lesson|skill|fix "<texto>" (espera la aprobación del usuario en knotlog pending; aún no se escribe nada en la memoria). Si no, no hagas nada.
 # remember
 remember_ok=escrito: %s
 remember_empty=no hay líneas nuevas que recordar

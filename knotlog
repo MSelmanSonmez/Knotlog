@@ -25,6 +25,7 @@ _q_SD=.knotlog
 [ -z "${KNOTLOG_NUDGE_AFTER+x}" ] || QUIPU_NUDGE_AFTER=$KNOTLOG_NUDGE_AFTER
 [ -z "${KNOTLOG_CHECKPOINT_AFTER+x}" ] || QUIPU_CHECKPOINT_AFTER=$KNOTLOG_CHECKPOINT_AFTER
 [ -z "${KNOTLOG_LOG_MAX+x}" ] || QUIPU_LOG_MAX=$KNOTLOG_LOG_MAX
+[ -z "${KNOTLOG_REVIEW_AFTER+x}" ] || QUIPU_REVIEW_AFTER=$KNOTLOG_REVIEW_AFTER
 
 # ---- helpers ----------------------------------------------------------------
 
@@ -300,6 +301,41 @@ _q_write_approval() {
   [ "$_q_wa_raw" != on ] || _q_wa=on
 }
 
+_q_review_due() {
+  # _q_review_due VAULT -- 0 when the review ask is due: review= is not off,
+  # the profile is normal, and more than QUIPU_REVIEW_AFTER (default 40)
+  # activity events follow the .knotlog/reviewed watermark (the last log
+  # line at the previous ask; none -> the whole log). Leaves $_q_rv_msg (the
+  # ask: event count and the three most touched paths).
+  _q_rv_log="$1/$_q_SD/activity.log"
+  [ -s "$_q_rv_log" ] || return 1
+  _q_rv_off=$(awk -F= '$1=="review"{sub(/^[^=]*=/,"");print;exit}' "$1/$_q_SD/config" 2>/dev/null || true)
+  [ "$_q_rv_off" != off ] || return 1
+  _q_profile "$1"
+  [ "$_q_prof" = normal ] || return 1
+  _q_rv_after=${QUIPU_REVIEW_AFTER:-40}
+  case "$_q_rv_after" in '' | *[!0-9]*) _q_rv_after=40 ;; esac
+  _q_rv_wm="$1/$_q_SD/reviewed"
+  [ -s "$_q_rv_wm" ] || _q_rv_wm=/dev/null
+  # The watermark is data, so it is read as a file, never passed with -v.
+  # shortcut: the watermark is a line's text, so a later identical line (same minute, tool, path) restarts the count early; upgrade to a line offset if asks go missing.
+  _q_rv_d=$(awk 'FILENAME != ARGV[2] { wm = $0; next } { line[FNR] = $0; if ($0 == wm) last = FNR }
+    END { for (i = last + 1; i <= FNR; i++) print line[i] }' "$_q_rv_wm" "$_q_rv_log" |
+    awk -v mode=digest -f "$_q_HOME/lib/digest.awk")
+  _q_rv_tab=$(printf '\t')
+  _q_rv_n=$(printf '%s\n' "$_q_rv_d" | awk -F"$_q_rv_tab" '$1=="RANGE"{print $4 + 0; exit}')
+  [ "${_q_rv_n:-0}" -gt "$_q_rv_after" ] || return 1
+  _q_rv_files=$(printf '%s\n' "$_q_rv_d" | awk -F"$_q_rv_tab" 'BEGIN{OFS=sprintf("%c",9)} $1=="FILE"{print $2, $3}' |
+    sort -t "$_q_rv_tab" -k2,2nr | head -n 3 | awk -F"$_q_rv_tab" '{ printf "%s%s", (NR > 1 ? ", " : ""), $1 }')
+  # shellcheck disable=SC2059
+  _q_rv_msg=$(printf "$(_q_msg ctx_review_ask)" "$_q_rv_n" "$_q_rv_files")
+}
+
+_q_review_mark() {
+  # _q_review_mark VAULT -- move the review watermark to the last log line.
+  awk 'END { print }' "$1/$_q_SD/activity.log" > "$1/$_q_SD/reviewed"
+}
+
 _q_ctx_max() {
   # Global setter (mirrors _q_lang()/_q_fold_prof()'s config-awk read
   # pattern, but sets globals instead of printing -- doctor needs the
@@ -433,6 +469,8 @@ usage() {
   _q_msg usage_note_thread
   _q_msg usage_pending
   _q_msg help_write_approval
+  _q_msg usage_propose
+  _q_msg help_review
   _q_msg usage_digest
   _q_msg usage_import
   _q_msg usage_plan
@@ -3185,6 +3223,8 @@ _q_init_baseline() {
       printf '%s/remembered\n' "$_q_SD"
       printf '%s/nudged\n' "$_q_SD"
       printf '%s/checkpoint_nudged\n' "$_q_SD"
+      printf '%s/reviewed\n' "$_q_SD"
+      printf '%s/needs_review\n' "$_q_SD"
       printf '\n'
       printf '# Folder-icon metadata, rebuilt by repair-hooks --metadata-only.\n'
       printf 'desktop.ini\n'
@@ -5535,21 +5575,23 @@ _q_cmd_context() {
       esac
     fi
     _q_cp_after=${QUIPU_CHECKPOINT_AFTER:-1800}
-    if [ $((_q_now_epoch - _q_cp_nudged)) -lt "$_q_cp_after" ]; then
-      [ "$_q_ag" -eq 0 ] || printf '{"decision":"allow"}\n'
-      exit 0
-    fi
-    if _q_checkpoint_due "$_q_v"; then
+    # One reminder per Stop: a due checkpoint first (throttled by time), else
+    # the review ask (throttled by the .knotlog/reviewed watermark).
+    _q_reason=
+    if [ $((_q_now_epoch - _q_cp_nudged)) -ge "$_q_cp_after" ] && _q_checkpoint_due "$_q_v"; then
       # shellcheck disable=SC2059
       _q_reason=$(printf "$(_q_msg ctx_checkpoint_due)" "$_q_cp_dk")
-      if [ "$_q_ag" -eq 1 ]; then
-        printf '%s' "$_q_reason" | awk -f "$_q_HOME/lib/jsonemit.awk" -f "$_q_HOME/lib/emit_agstop.awk"
-      else
-        printf '%s' "$_q_reason" | awk -f "$_q_HOME/lib/jsonemit.awk" -f "$_q_HOME/lib/emit_hookblock.awk"
-      fi
       printf '%s\n' "$_q_now_epoch" > "$_q_v/$_q_SD/checkpoint_nudged"
+    elif _q_review_due "$_q_v"; then
+      _q_reason=$_q_rv_msg
+      _q_review_mark "$_q_v"
+    fi
+    if [ -z "$_q_reason" ]; then
+      [ "$_q_ag" -eq 0 ] || printf '{"decision":"allow"}\n'
     elif [ "$_q_ag" -eq 1 ]; then
-      printf '{"decision":"allow"}\n'
+      printf '%s' "$_q_reason" | awk -f "$_q_HOME/lib/jsonemit.awk" -f "$_q_HOME/lib/emit_agstop.awk"
+    else
+      printf '%s' "$_q_reason" | awk -f "$_q_HOME/lib/jsonemit.awk" -f "$_q_HOME/lib/emit_hookblock.awk"
     fi
     exit 0
   fi
@@ -5611,6 +5653,14 @@ _q_cmd_context() {
 
   # FAZ 8 (Y-3/Y-4): SessionStart-only reflection prompts.
   if [ -n "$_q_ev" ] && [ "$_q_ev" = SessionStart ]; then
+    # B2: the review ask `remember` left for agents without a Stop channel
+    # (and for the SessionStart after a compaction); shown once, then deleted.
+    if [ -f "$_q_v/$_q_SD/needs_review" ]; then
+      _q_rvask=$(cat "$_q_v/$_q_SD/needs_review")
+      rm -f "$_q_v/$_q_SD/needs_review"
+      _q_text="${_q_rvask}
+${_q_text}"
+    fi
     # Y-3: one-shot missed-reflection notice, placed at the TOP of the
     # context; the flag file is deleted here (single shot).
     if [ -f "$_q_v/$_q_SD/needs_reflection" ]; then
@@ -5912,6 +5962,14 @@ _q_cmd_remember() {
   fi
 
   printf '%s\n' "$_q_last" > "$_q_wm"
+
+  # B2: SessionEnd cannot reach the model, so a due review ask waits in
+  # .knotlog/needs_review for the next `context --json SessionStart`; the
+  # watermark moves now, so Stop does not ask for the same events again.
+  if _q_review_due "$_q_v"; then
+    printf '%s\n' "$_q_rv_msg" > "$_q_v/$_q_SD/needs_review"
+    _q_review_mark "$_q_v"
+  fi
 
   # FAZ 8 (Y-3): missed-reflection catcher. When the most recent previous
   # session file's block is empty, a one-line flag (day + event count) is
@@ -6235,7 +6293,7 @@ _q_note_plain_write() {
 # ---- admission + write approval ---------------------------------------------
 
 _q_admit() {
-  # _q_admit TEXT -- the admission gate in front of every note. Leaves
+  # _q_admit TEXT [KIND] -- the admission gate in front of every note. Leaves
   # $_q_ad_rc (0 remembered, 4 refused, 5 pending_review) and $_q_ad_why
   # (the reason code). The secret check always runs; the instruction and
   # relative-time checks, and the review queue itself, only with
@@ -6255,7 +6313,8 @@ _q_admit() {
   fi
   _q_write_approval "$_q_v"
   [ "$_q_wa" = on ] || return 0
-  if _q_admit_hit admit_inject_marks "$1"; then
+  # A skill proposal is a workflow, imperative by nature: no instruction check.
+  if [ "${2:-}" != skill ] && _q_admit_hit admit_inject_marks "$1"; then
     _q_ad_rc=4
     _q_ad_why=instruction_shaped
   elif _q_admit_hit admit_reltime_words "$1"; then
@@ -6324,6 +6383,24 @@ _q_pending_add() {
   _q_admit_say 5 "$_q_pa_id"
 }
 
+_q_cmd_propose() {
+  # knotlog propose --kind lesson|skill|fix "<text>" -- the agent's answer to
+  # the review ask. Always queued in .knotlog/pending (setting on or off) after
+  # the admission gate; a human approves it with `knotlog pending`.
+  [ "$#" -eq 3 ] && [ "$1" = --kind ] || _q_die err_propose_args 2
+  case "$2" in lesson | skill | fix) ;; *) _q_die err_propose_kind 2 "$2" ;; esac
+  [ -n "$3" ] || _q_die err_propose_args 2
+  _q_lf=$(printf '\nx')
+  _q_lf=${_q_lf%x}
+  case "$3" in *"$_q_lf"* | *"$(printf '\r')"*) _q_die err_note_newline 2 ;; esac
+  _q_v=$(_q_vault)
+  [ -n "$_q_v" ] || _q_die err_no_vault
+  _q_admit "$3" "$2"
+  [ "$_q_ad_rc" -ne 4 ] || _q_admit_say 4
+  [ -n "$_q_ad_why" ] || _q_ad_why=policy_review_first
+  _q_pending_add "$2" "$3"
+}
+
 _q_pending_open() {
   # _q_pending_open FILE -- the open proposals (P lines with no A/R line), oldest first.
   [ -f "$1" ] || return 0
@@ -6378,7 +6455,7 @@ _q_cmd_pending() {
   _q_pd_kind=$(printf '%s\n' "$_q_pd_line" | awk -F"$(printf '\t')" '{ print $4 }')
   _q_pd_text=$(printf '%s\n' "$_q_pd_line" | awk -F"$(printf '\t')" '{ print $6 }')
   # The queue file is state, not trust: approval runs the refusing checks again.
-  _q_admit "$_q_pd_text"
+  _q_admit "$_q_pd_text" "$_q_pd_kind"
   [ "$_q_ad_rc" -ne 4 ] || _q_admit_say 4
   case "$_q_pd_kind" in
     note) _q_note_plain_write "$_q_v" "$_q_pd_text" ;;
@@ -8071,6 +8148,7 @@ case "$_q_cmd" in
   mcp) shift; _q_cmd_mcp "$@" ;;
   note) shift; _q_cmd_note "$@" ;;
   pending) shift; _q_cmd_pending "$@" ;;
+  propose) shift; _q_cmd_propose "$@" ;;
   digest) shift; _q_cmd_digest "$@" ;;
   import) shift; _q_cmd_import "$@" ;;
   search) shift; _q_cmd_search "$@" ;;

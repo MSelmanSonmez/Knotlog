@@ -12,12 +12,14 @@ usage_uninstall=  uninstall PATH から `knotlog` コマンドを削除。ボー
 usage_context=  context   エージェント向けにセッションのメモリコンテキストを出力
 help_profile=            config: profile=normal|economical|manual でフックのコンテキストを調整 (REFERENCE を参照)
 help_write_approval=            config: write_approval=on で note / note --thread をレビュー待ちにする (knotlog pending、REFERENCE 参照)
+help_review=            config: review=off でセッションのレビュー依頼を止める。KNOTLOG_REVIEW_AFTER=N でしきい値を設定 (既定 40 イベント)
 usage_remember=  remember  activity.log から機械的なダイジェストを書き込み (追記のみ)
 usage_mcp=  mcp       標準入出力で MCP サーバーを実行 (JSON-RPC、1 行 1 メッセージ)
 usage_note=  note      今日のセッションの振り返りブロックに 1 行追加 (note "テキスト")
 usage_digest=  digest    1 日分の活動 (--date YYYY-MM-DD) または期間 (--since YYYY-MM-DD [--until YYYY-MM-DD]) を要約; --dry-run, --limit N
 usage_note_thread=  note --thread  進行中スレッドのセクションに 1 行追加 (note --thread "テキスト")
 usage_pending=  pending   レビュー待ちのノートを一覧 (write_approval=on)、--approve N で書き込み、--reject N で破棄
+usage_propose=  propose   レビューで得た知見を承認待ちに入れる (propose --kind lesson|skill|fix "テキスト"、knotlog pending)
 usage_import=  import    ローカルの JSON 会話エクスポートをセッションノートに変換 (FILE, --date YYYY-MM-DD)
 usage_plan=  plan      フロントマター付きテンプレートから <Projects>/<Project>/<Plans>/ にプロジェクト計画を作成 (--proje <Project>)
 usage_tone=  tone      有効なトーンプリセットを表示/設定 (--list: 一覧; スラッグだけ指定すると config に tone= を書き込み)
@@ -39,6 +41,8 @@ err_pending_args=pending は引数なし、または --approve N か --reject N 
 err_pending_closed=#%s は未決の提案ではありません (knotlog pending で一覧)
 err_pending_tab=レビュー待ちのノートにタブは使えません。キューには何も追加していません
 err_pending_kind=#%s の種類 %s は不明です。何も書き込んでいません
+err_propose_args=propose は --kind lesson|skill|fix と引用符で囲んだテキスト引数 1 つを取ります
+err_propose_kind=不明な種類 %s: lesson、skill、fix のいずれかを使ってください
 err_help_args=help は引数なし、または同梱言語の --<コード> のみ指定できます (例: --en, --tr)
 # doctor
 doc_head=knotlog doctor - 環境チェック
@@ -283,6 +287,7 @@ ctx_truncated=… (切り捨て)
 ctx_threads_dropped=(スレッドファイルの %d バイトはこのコンテキストに入りませんでした — 参照: knotlog compact)
 ctx_precompact=コンテキストが圧縮される可能性があります: 今すぐメモリを書き込んでください — 今日のセッションファイル (%s) の振り返りブロックを埋め、Threads.md を更新してください。
 ctx_checkpoint_due=チェックポイント: セッションノートは %s 分前に書かれましたが、それ以降ボールトで作業がありました — セッションノートに短い箇条書き (実施内容、保留、次の一手) を書いてください。
+ctx_review_ask=レビュー: 前回のレビュー以降 %s 件のイベント (よく触れたファイル: %s)。この作業から、残すべき教訓、skill にする価値のある繰り返し手順、修正した誤りはありますか? あれば 1 行ずつ提案してください: knotlog propose --kind lesson|skill|fix "<テキスト>" (knotlog pending でユーザーの承認を待ち、まだ記憶には書き込まれません)。なければ何もしないでください。
 # remember
 remember_ok=書き込み: %s
 remember_empty=記憶する新しい行はありません

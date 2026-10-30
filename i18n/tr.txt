@@ -12,12 +12,14 @@ usage_uninstall=  uninstall `knotlog` komutunu PATH'ten kaldır; kasasına asla 
 usage_context=  context   ajan için oturum hafızası bağlamını bas
 help_profile=            config: profile=normal|economical|manual hook bağlamını kısar (bkz. REFERENCE)
 help_write_approval=            config: write_approval=on, note / note --thread yazılarını onaya bekletir (knotlog pending; bkz. REFERENCE)
+help_review=            config: review=off oturum inceleme isteğini kapatır; KNOTLOG_REVIEW_AFTER=N eşiği belirler (varsayılan 40 etkinlik)
 usage_remember=  remember  activity.log'dan mekanik özeti yaz (salt-eklemeli)
 usage_mcp=  mcp       MCP sunucusunu stdin/stdout üzerinde çalıştır (JSON-RPC, satır başına bir mesaj)
 usage_note=  note      bugünün oturum yansıma bloğuna tek satır ekle (note "metin")
 usage_digest=  digest    tek bir tarihin etkinliklerini özetle (--date YYYY-MM-DD) ya da aralık (--since YYYY-MM-DD [--until YYYY-MM-DD]); --dry-run, --limit N
 usage_note_thread=  note --thread  açık konular bölümüne tek satır ekle (note --thread "metin")
 usage_pending=  pending   onay bekleyen notları listeler (write_approval=on); --approve N birini yazar, --reject N düşürür
+usage_propose=  propose   inceleme bulgusunu onaya sıraya koyar (propose --kind lesson|skill|fix "metin"; knotlog pending)
 usage_import=  import    yerel JSON sohbet dışa aktarımını oturum notuna çevir (DOSYA, --date YYYY-MM-DD)
 usage_plan=  plan      proje planını <Projeler>/<Proje>/<Planlar>/ altında frontmatter'lı şablonla açar (--proje <Proje>)
 usage_tone=  tone      etkin üslup setini gösterir/ayarlar (--list ile listele; çıplak bir slug config'e tone= yazar)
@@ -39,6 +41,8 @@ err_pending_args=pending argümansız, --approve N ya da --reject N ile çalış
 err_pending_closed=#%s açık bir öneri değil (knotlog pending listeler)
 err_pending_tab=onaya bekleyen not sekme içeremez; kuyruğa bir şey eklenmedi
 err_pending_kind=#%s bilinmeyen tür taşıyor: %s; hiçbir şey yazılmadı
+err_propose_args=propose --kind lesson|skill|fix ve tırnak içinde tek bir metin argümanı alır
+err_propose_kind=bilinmeyen tür %s: lesson, skill ya da fix kullan
 err_help_args=help argüman kabul etmez; yalnızca gönderilen bir dilin --<kod> bayrağı kullanılabilir (örn. --en, --tr)
 # doctor
 doc_head=knotlog doctor - ortam denetimi
@@ -283,6 +287,7 @@ ctx_truncated=… (kırpıldı)
 ctx_threads_dropped=(konu dosyasının %d baytı bu bağlama hiç girmedi — bkz: knotlog compact)
 ctx_precompact=Bağlam sıkışabilir: hafızanı şimdi yaz — bugünkü oturum dosyasındaki (%s) yansıma bloğunu doldur ve Konular.md'yi güncelle.
 ctx_checkpoint_due=Ara kayıt: oturum notu %s dk önce yazıldı, o zamandan beri kasada iş var — oturum notuna kısa bir madde yaz (ne yapıldı, yarım, sıradaki).
+ctx_review_ask=İnceleme: son incelemeden beri %s etkinlik (en çok dokunulan: %s). Bu işten kalıcı bir ders, skill olmaya değer tekrar eden bir iş akışı ya da düzeltilmiş bir yanlış çıktı mı? Varsa her birini tek satırla öner: knotlog propose --kind lesson|skill|fix "<metin>" (knotlog pending'de kullanıcının onayını bekler; hafızaya henüz bir şey yazılmaz). Yoksa bir şey yapma.
 # remember
 remember_ok=yazıldı: %s
 remember_empty=hatırlanacak yeni satır yok
