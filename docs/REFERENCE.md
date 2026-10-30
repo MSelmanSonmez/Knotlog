@@ -10,7 +10,7 @@ One line, no checkout (macOS/Linux; needs `curl`, or `wget` as a fallback):
 curl -fsSL https://raw.githubusercontent.com/MSelmanSonmez/Knotlog/main/install.sh | sh
 ```
 
-The script downloads the release tarball, verifies it against a version anchor before unpacking anything, and hands over to `knotlog install`. Note: the `main`-branch copy of `install.sh` is the development channel — it tracks the tip of `main` rather than a frozen release tag.
+The script downloads the release tarball, checks it against a version anchor before unpacking anything (a text match that the archive holds the expected script, not a signature), and hands over to `knotlog install`. Note: the `main`-branch copy of `install.sh` is the development channel — it tracks the tip of `main` rather than a frozen release tag.
 
 Or start from a local checkout — `install` itself is deliberately **not** a bootstrap downloader:
 
@@ -154,7 +154,7 @@ as `sha256sum` writes it). The hash is computed with `sha256sum`, else
 is extracted; a mismatch, a missing hash file, or a hash file that names a
 different file stops the update and leaves the checkout untouched. With none of
 those tools installed the update refuses; `--no-verify` skips the check
-(use it only for an archive you made yourself). Before downloading, `--apply`
+(use it only for an archive you made yourself). The hash file comes from the same release, so the check catches a broken or truncated download, not a release that was itself replaced; releases are not signed. Before downloading, `--apply`
 also refuses if the directory holding the checkout is not writable, if an
 interrupted update (`….quipu-update-staging`) or rollback
 (`….quipu-rollback-tmp`) left its tree behind, or if free space (`df -P`) is

@@ -80,6 +80,16 @@ git clone https://github.com/MSelmanSonmez/Knotlog.git && cd Knotlog
 
 次にユーザーガイド [docs/GUIDE.ja.md](docs/GUIDE.ja.md)([English](docs/GUIDE.md) · [Türkçe](docs/GUIDE.tr.md))で、日々の流れと手で入力するコマンドを確認してください。自分に合うかまだ分からない場合は、[docs/WHY.ja.md](docs/WHY.ja.md)([English](docs/WHY.md) · [Türkçe](docs/WHY.tr.md))が一度読めば分かる形でその理由を説明しています。
 
+## 既存のコードリポジトリで使う
+
+フックは vault の `.claude/settings.json` にあるため、エージェントが vault フォルダを開いたときにだけ動きます。別のリポジトリで作業しながら同じメモリを使うには、vault はそのままにして、リポジトリから vault を指します。[`adapters/claude-code.json`](adapters/claude-code.json) の `hooks` ブロックをリポジトリの `.claude/settings.json` (すべてのプロジェクトで使うなら `~/.claude/settings.json`) にコピーし、vault のパスを加えます:
+
+```json
+{ "env": { "KNOTLOG_VAULT": "/path/to/your/vault" } }
+```
+
+以後、どのフックもその vault を読み書きし、リポジトリで編集したファイルはフルパスで最近のアクティビティに表示されます。代わりにリポジトリ内で `knotlog init` を実行すると、リポジトリ自体がフォルダごと vault になります。
+
 ## 仕組み
 
 ```mermaid

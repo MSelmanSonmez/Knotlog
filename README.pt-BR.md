@@ -80,6 +80,16 @@ A configuração pergunta quatro coisas — idioma, local do vault, seu nome e, 
 
 Depois, leia o guia do usuário — [docs/GUIDE.pt-BR.md](docs/GUIDE.pt-BR.md) ([English](docs/GUIDE.md) · [Türkçe](docs/GUIDE.tr.md)) — para conhecer o ciclo diário e os comandos que você digita à mão. Ainda não tem certeza se é para você? [docs/WHY.pt-BR.md](docs/WHY.pt-BR.md) ([English](docs/WHY.md) · [Türkçe](docs/WHY.tr.md)) defende a ideia em uma só leitura.
 
+## Uso com um repositório de código existente
+
+Os hooks ficam no `.claude/settings.json` do vault, então só rodam quando o agente abre a pasta do vault. Para manter a mesma memória enquanto trabalha em outro repositório, deixe o vault onde está e aponte o repositório para ele: copie o bloco `hooks` de [`adapters/claude-code.json`](adapters/claude-code.json) para o `.claude/settings.json` do repositório (ou para `~/.claude/settings.json`, valendo para todos os projetos) e adicione o caminho do vault:
+
+```json
+{ "env": { "KNOTLOG_VAULT": "/path/to/your/vault" } }
+```
+
+A partir daí cada hook lê e escreve esse vault, e os arquivos que você edita no repositório aparecem na atividade recente com o caminho completo. Se em vez disso você rodar `knotlog init` dentro do repositório, o próprio repositório vira um vault, com as pastas.
+
 ## Como funciona
 
 ```mermaid

@@ -81,6 +81,16 @@ git clone https://github.com/MSelmanSonmez/Knotlog.git && cd Knotlog
 
 接着阅读用户指南——[docs/GUIDE.zh-CN.md](docs/GUIDE.zh-CN.md)（[English](docs/GUIDE.md) · [Türkçe](docs/GUIDE.tr.md)）——了解日常使用流程和需要手动输入的命令。还不确定它是否适合你？[docs/WHY.zh-CN.md](docs/WHY.zh-CN.md)（[English](docs/WHY.md) · [Türkçe](docs/WHY.tr.md)）一篇文章讲清楚。
 
+## 在现有代码仓库中使用
+
+钩子位于 vault 的 `.claude/settings.json` 中，所以只有当智能体打开 vault 文件夹时才会运行。若要在另一个仓库中工作时沿用同一份记忆，请把 vault 留在原处，让仓库指向它：把 [`adapters/claude-code.json`](adapters/claude-code.json) 中的 `hooks` 块复制到该仓库的 `.claude/settings.json`（或复制到 `~/.claude/settings.json`，对所有项目生效），并加上 vault 的路径：
+
+```json
+{ "env": { "KNOTLOG_VAULT": "/path/to/your/vault" } }
+```
+
+之后每个钩子都会读写这个 vault，你在仓库中编辑的文件会以完整路径出现在最近活动中。如果改为在仓库内运行 `knotlog init`，仓库本身就会连同文件夹一起变成一个 vault。
+
 ## 工作原理
 
 ```mermaid

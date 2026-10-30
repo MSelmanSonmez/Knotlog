@@ -15,7 +15,7 @@ Knotlog をインストールすると、ボールトが作成されます。こ
 curl -fsSL https://raw.githubusercontent.com/MSelmanSonmez/Knotlog/main/install.sh | sh
 ```
 
-検証済みのリリースを取得し、`knotlog install` に引き継ぎます。チェックアウトからのインストールや Windows については
+リリースを取得し、アーカイブに本物の `knotlog` が入っているかを確かめ (署名ではなくテキストの照合)、`knotlog install` に引き継ぎます。チェックアウトからのインストールや Windows については
 [README](../README.ja.md) にも書かれています。
 
 ## 1. Knotlog があなたのためにすること

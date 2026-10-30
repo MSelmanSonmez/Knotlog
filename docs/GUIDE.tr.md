@@ -12,7 +12,7 @@ Henüz kurmadıysan tek satırlık yol şu:
 curl -fsSL https://raw.githubusercontent.com/MSelmanSonmez/Knotlog/main/install.sh | sh
 ```
 
-Betik doğrulanmış sürümü indirir ve `knotlog install`'a devreder; klonlayarak
+Betik sürümü indirir, arşivde gerçek bir `knotlog` olduğunu denetler (imza değil, metin denetimi) ve `knotlog install`'a devreder; klonlayarak
 kurulumu ve Windows yolunu [README](../README.md) anlatıyor.
 Kurulum sihirbazında Üslup adımı (ton, süs, klasör adları) var; sonradan `knotlog tone` ve `knotlog flair` ile değişir. PATH'te daha önce gelen eski bir `knotlog` varsa kurulum özeti ve `knotlog doctor` uyarır, çünkü kancalar onu çalıştırır.
 

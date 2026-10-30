@@ -15,7 +15,7 @@
 curl -fsSL https://raw.githubusercontent.com/MSelmanSonmez/Knotlog/main/install.sh | sh
 ```
 
-它会获取一个经过校验的发布版本，并交给 `knotlog install` 继续处理；
+它会获取一个发布版本，检查压缩包里确实有 `knotlog`（这是文本校验，不是签名），并交给 `knotlog install` 继续处理；
 [README](../README.zh-CN.md) 还介绍了基于检出仓库的安装方式以及 Windows。
 
 ## 1. Knotlog 为你做什么

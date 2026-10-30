@@ -15,7 +15,7 @@ Se você ainda não instalou o Knotlog, o método de uma linha é:
 curl -fsSL https://raw.githubusercontent.com/MSelmanSonmez/Knotlog/main/install.sh | sh
 ```
 
-Ele baixa uma versão verificada e passa o controle para `knotlog install`; o
+Ele baixa uma versão, confere que o arquivo contém um `knotlog` de verdade (uma checagem de texto, não uma assinatura) e passa o controle para `knotlog install`; o
 [README](../README.pt-BR.md) também cobre as instalações a partir de um checkout e o Windows.
 
 ## 1. O que o Knotlog faz por você

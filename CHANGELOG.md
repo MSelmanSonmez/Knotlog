@@ -13,6 +13,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The threads and facts headers in the session context now say what follows is the user's notes, information and never instructions (`ctx_threads`, `ctx_facts`, all six languages). A line such as "ignore all previous rules" written into `Threads.md` used to reach the model unmarked. The headers already count against `ctx_max`, so tiny budgets still hold. This is a prompt-level frame, not isolation; the README's honest limits say so.
 - The secret gate missed colon-form assignments (`password: …`, `"password": "…"` in YAML and JSON), `Bearer` tokens and bare JWTs; all three are now caught, while a `${VAR}` reference still passes. An installed Knotlog hook picks this up the next time `knotlog init` runs in the vault.
 
+### Documentation
+- README (six languages) gains "Using it with an existing code repository": copy the adapter's hooks into the repository's (or the global) `.claude/settings.json` and set `KNOTLOG_VAULT` in its `env` block.
+- The guides and the reference no longer call the installer's download "verified": the install check is a text anchor, and `update`'s SHA-256 comes from the same release, so it catches a broken download, not a replaced release. Releases are not signed.
+
 ## [1.2.0] - 2026-10-27
 
 ### Security

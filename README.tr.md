@@ -78,6 +78,16 @@ Kurulum dört şey sorar — dil, kasanın yeri, adın ve istersen asistanının
 
 Ardından kullanım kılavuzunu oku — [docs/GUIDE.tr.md](docs/GUIDE.tr.md) ([English](docs/GUIDE.md) · [Español](docs/GUIDE.es.md) · [Português](docs/GUIDE.pt-BR.md) · [日本語](docs/GUIDE.ja.md) · [简体中文](docs/GUIDE.zh-CN.md)) — günlük döngüyü ve elle yazdığın komutları anlatır. Sana göre olup olmadığından emin değil misin? [docs/WHY.tr.md](docs/WHY.tr.md) ([English](docs/WHY.md) · [Español](docs/WHY.es.md) · [Português](docs/WHY.pt-BR.md) · [日本語](docs/WHY.ja.md) · [简体中文](docs/WHY.zh-CN.md)) tek okumada derdini anlatır.
 
+## Mevcut bir kod deposunda kullanım
+
+Hook'lar kasanın `.claude/settings.json` dosyasındadır; bu yüzden yalnız ajan kasa klasöründe açılınca çalışırlar. Başka bir depoda çalışırken aynı hafızayı korumak için kasayı yerinde bırak ve depoyu ona yönlendir: [`adapters/claude-code.json`](adapters/claude-code.json) içindeki `hooks` bloğunu deponun `.claude/settings.json` dosyasına (ya da her proje için `~/.claude/settings.json`'a) kopyala ve kasanın yolunu ekle:
+
+```json
+{ "env": { "KNOTLOG_VAULT": "/path/to/your/vault" } }
+```
+
+Bundan sonra her hook o kasayı okur ve yazar; depoda düzenlediğin dosyalar son etkinlikte tam yollarıyla görünür. Bunun yerine depo içinde `knotlog init` çalıştırırsan deponun kendisi klasörleriyle birlikte bir kasaya dönüşür.
+
 ## Nasıl çalışır
 
 ```mermaid

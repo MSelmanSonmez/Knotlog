@@ -12,7 +12,7 @@ If you haven't installed Knotlog yet, the one-line method is:
 curl -fsSL https://raw.githubusercontent.com/MSelmanSonmez/Knotlog/main/install.sh | sh
 ```
 
-It fetches a verified release and hands over to `knotlog install`; the
+It fetches a release, checks that the archive holds a real `knotlog` (a text check, not a signature) and hands over to `knotlog install`; the
 [README](../README.md) also covers checkout-based installs and Windows.
 The setup wizard has a Style step (tone, flair, folder names) you can change later with `knotlog tone` and `knotlog flair`. If an older `knotlog` sits earlier on your `PATH`, the install summary and `knotlog doctor` warn, because the hooks run that one.
 
