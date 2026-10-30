@@ -12960,6 +12960,135 @@ R103=$(QUIPU_VAULT="$TMP/s103" QUIPU_LANG=en sh "$ROOT/knotlog" init --plain --n
 t; assert_eq "T-1103: init --lang en/x exits 2 and writes no lang= line" '2 no' \
   "$R103 $(grep -q '^lang=' "$TMP/s103/.knotlog/config" && printf yes || printf no)"
 
+# ---- note --thread: write-time budget (T-1140..T-1152) ---------------------
+# B1: `note --thread` refuses a line that would push the threads file past the
+# context budget doctor measures (exit 3, err_budget_full, file untouched).
+# The budget is read back from doctor's own overflow row on a probe vault with
+# the same config, so these cases do not depend on today's date string.
+b1_x() { awk -v n="$1" 'BEGIN { s = ""; for (i = 0; i < n; i++) s = s "x"; printf "%s", s }'; }
+b1_mk() { # name size config-line [pin-pad] -> en vault whose Threads.md is exactly SIZE bytes
+  mkvault "$1"; printf '%s\n' "$3" > "$TMP/$1/.knotlog/config"
+  _b1_f="$TMP/$1/Threads.md"
+  printf '%s\n' '# Threads' > "$_b1_f"
+  if [ -n "${4:-}" ]; then
+    printf '%s\n' '<!-- knotlog:pin:start -->' '### Pinned' "- $(b1_x "$4")" '<!-- knotlog:pin:end -->' >> "$_b1_f"
+  fi
+  printf '%s\n' '<!-- knotlog:threads:start -->' '### Active threads' '- a' '### Closed threads' >> "$_b1_f"
+  _b1_n=$(($2 - $(wc -c < "$_b1_f") - $(printf '%s\n' '<!-- knotlog:threads:end -->' | wc -c) - 3))
+  printf '%s\n' "- $(b1_x "$_b1_n")" '<!-- knotlog:threads:end -->' >> "$_b1_f"
+}
+b1_note() { # name [env...] -- note --thread "b1 note" (a 16-byte line); stdout/stderr to name.out/.err
+  _b1_v=$1; shift
+  env QUIPU_LANG=en QUIPU_VAULT="$TMP/$_b1_v" "$@" sh "$ROOT/knotlog" note --thread "b1 note" \
+    </dev/null >"$TMP/$_b1_v.out" 2>"$TMP/$_b1_v.err"
+}
+b1_bud() { # name -> the budget doctor prints in its doc_threads_overflow row (en)
+  QUIPU_LANG=en QUIPU_VAULT="$TMP/$1" sh "$ROOT/knotlog" doctor </dev/null 2>&1 |
+    sed -n 's/.*context budget is \([0-9][0-9]*\) bytes.*/\1/p' | head -n 1
+}
+b1_ck() { cksum < "$1"; }
+B1_L=16
+
+b1_mk b1probe 3000 ctx_max=600
+B1_BUD=$(b1_bud b1probe)
+t; assert_eq "T-1140: the probe vault yields a doctor budget well above the fixture sizes" 'yes' \
+  "$([ -n "$B1_BUD" ] && [ "$B1_BUD" -gt 300 ] && printf yes || printf no)"
+: "${B1_BUD:=0}"
+
+# T-1141: a line that fits is written exactly as before.
+b1_mk b1fit $((B1_BUD - 200)) ctx_max=600
+b1_note b1fit; R1141=$?
+t; assert_eq "T-1141: a fitting note --thread exits 0, prints thread_ok and grows the file by its one line" "0 yes $((B1_BUD - 200 + B1_L))" \
+  "$R1141 $([ "$(cat "$TMP/b1fit.out")" = "$(memfmt en thread_ok Threads.md)" ] && [ ! -s "$TMP/b1fit.err" ] && printf yes || printf no) $(wc -c < "$TMP/b1fit/Threads.md" | tr -d ' ')"
+
+# T-1142: a line that pushes the file past the budget is refused, file untouched.
+b1_mk b1over $((B1_BUD - 5)) ctx_max=600
+C1142=$(b1_ck "$TMP/b1over/Threads.md")
+b1_note b1over; R1142=$?
+t; assert_eq "T-1142: note --thread past the budget exits 3 and leaves the file byte-identical" '3 yes' \
+  "$R1142 $([ "$(b1_ck "$TMP/b1over/Threads.md")" = "$C1142" ] && printf yes || printf no)"
+t; assert_eq "T-1142: the refusal names size, budget and bytes to free on stderr, nothing on stdout" 'yes' \
+  "$([ -s "$TMP/b1over.err" ] && [ "$(cat "$TMP/b1over.err")" = "$(memfmt en err_budget_full Threads.md $((B1_BUD + 11)) "$B1_BUD" 11)" ] && [ ! -s "$TMP/b1over.out" ] && printf yes || printf no)"
+t; assert_eq "T-1142: the refusal names compact --apply and archive --list" 'yes yes' \
+  "$(grep -qF 'knotlog compact --apply' "$TMP/b1over.err" && printf yes || printf no) $(grep -qF 'archive --list' "$TMP/b1over.err" && printf yes || printf no)"
+t; assert_eq "T-1143: a refusal leaves no lock, temp file or line file behind" '3 yes' \
+  "$R1142 $([ ! -e "$TMP/b1over/.knotlog/remember.lock" ] && [ ! -e "$TMP/b1over/.knotlog/thread.tmp" ] && [ ! -e "$TMP/b1over/.knotlog/thread.line" ] && printf yes || printf no)"
+
+# T-1144: exactly at the budget is accepted; one byte over is refused.
+b1_mk b1eq $((B1_BUD - B1_L)) ctx_max=600
+b1_note b1eq; R1144A=$?
+b1_mk b1eq1 $((B1_BUD - B1_L + 1)) ctx_max=600
+C1144=$(b1_ck "$TMP/b1eq1/Threads.md")
+b1_note b1eq1; R1144B=$?
+t; assert_eq "T-1144: a write landing exactly on the budget is accepted (file = budget bytes)" "0 $B1_BUD" \
+  "$R1144A $(wc -c < "$TMP/b1eq/Threads.md" | tr -d ' ')"
+t; assert_eq "T-1144: one byte past the budget is refused with 1 byte to free" '3 yes yes' \
+  "$R1144B $([ "$(b1_ck "$TMP/b1eq1/Threads.md")" = "$C1144" ] && printf yes || printf no) $([ -s "$TMP/b1eq1.err" ] && [ "$(cat "$TMP/b1eq1.err")" = "$(memfmt en err_budget_full Threads.md $((B1_BUD + 1)) "$B1_BUD" 1)" ] && printf yes || printf no)"
+
+# T-1145: a file that already overflows refuses any further line.
+b1_mk b1full 2000 ctx_max=600
+C1145=$(b1_ck "$TMP/b1full/Threads.md")
+b1_note b1full; R1145=$?
+t; assert_eq "T-1145: an already overflowing threads file refuses note --thread" '3 yes' \
+  "$R1145 $([ "$(b1_ck "$TMP/b1full/Threads.md")" = "$C1145" ] && printf yes || printf no)"
+
+# T-1146: pin bytes are charged once (against the budget), never again against the size.
+b1_mk b1pinprobe 3000 ctx_max=800 400
+B1_PBUD=$(b1_bud b1pinprobe); : "${B1_PBUD:=0}"
+b1_mk b1pin 600 ctx_max=800 400
+b1_note b1pin; R1146=$?
+t; assert_eq "T-1146: with a pin the whole file exceeds the budget but the croppable part fits: accepted" 'yes 0' \
+  "$([ "$B1_PBUD" -gt 200 ] && [ 600 -gt "$B1_PBUD" ] && printf yes || printf no) $R1146"
+
+# T-1147: Turkish vault, Konular.md, Turkish message.
+mkvault b1tr; printf '%s\n' lang=tr ctx_max=600 > "$TMP/b1tr/.knotlog/config"
+{
+  printf '%s\n' '# Konular' '<!-- knotlog:threads:start -->' '### Aktif konular' '- a' '### Kapanmış konular'
+  printf '%s\n' "- $(b1_x 2000)" '<!-- knotlog:threads:end -->'
+} > "$TMP/b1tr/Konular.md"
+C1147=$(b1_ck "$TMP/b1tr/Konular.md")
+QUIPU_LANG=tr QUIPU_VAULT="$TMP/b1tr" sh "$ROOT/knotlog" note --thread "b1 not" </dev/null >/dev/null 2>"$TMP/b1tr.err"; R1147=$?
+B1_TRFRAG=$(mi18n tr err_budget_full | awk -F'%[sd]' '{print $2}')
+t; assert_eq "T-1147: a Turkish vault refuses with exit 3, Konular.md untouched, Turkish message" '3 yes yes' \
+  "$R1147 $([ "$(b1_ck "$TMP/b1tr/Konular.md")" = "$C1147" ] && printf yes || printf no) $([ -n "$B1_TRFRAG" ] && grep -qF "$B1_TRFRAG" "$TMP/b1tr.err" && grep -qF 'Konular.md' "$TMP/b1tr.err" && printf yes || printf no)"
+
+# T-1148: a CRLF file is refused the same way and keeps its bytes.
+mkvault b1crlf; printf 'ctx_max=600\n' > "$TMP/b1crlf/.knotlog/config"
+printf '%s\r\n' '# Threads' '<!-- knotlog:threads:start -->' '### Active threads' '- a' '### Closed threads' \
+  "- $(b1_x 2000)" '<!-- knotlog:threads:end -->' > "$TMP/b1crlf/Threads.md"
+C1148=$(b1_ck "$TMP/b1crlf/Threads.md")
+b1_note b1crlf; R1148=$?
+t; assert_eq "T-1148: a CRLF threads file past the budget is refused and left byte-identical" '3 yes' \
+  "$R1148 $([ "$(b1_ck "$TMP/b1crlf/Threads.md")" = "$C1148" ] && printf yes || printf no)"
+
+# T-1149: KNOTLOG_CTX_MAX overrides ctx_max= in both directions.
+b1_mk b1envlo 1000 ctx_max=100000
+b1_note b1envlo KNOTLOG_CTX_MAX=600; R1149A=$?
+b1_mk b1envhi 2000 ctx_max=600
+b1_note b1envhi KNOTLOG_CTX_MAX=100000; R1149B=$?
+t; assert_eq "T-1149: KNOTLOG_CTX_MAX beats ctx_max= (small env refuses, large env accepts)" '3 0' "$R1149A $R1149B"
+
+# T-1150: doctor's warning and note's refusal sit on the same line.
+b1_mk b1doc $((B1_BUD + 1)) ctx_max=600
+B1_DBUD=$(b1_bud b1doc)
+b1_note b1doc; R1150=$?
+t; assert_eq "T-1150: one byte over, doctor warns and note refuses with doctor's own budget" "$B1_BUD 3 yes" \
+  "$B1_DBUD $R1150 $([ -n "$B1_DBUD" ] && [ -s "$TMP/b1doc.err" ] && [ "$(cat "$TMP/b1doc.err")" = "$(memfmt en err_budget_full Threads.md $((B1_BUD + 1 + B1_L)) "$B1_DBUD" $((1 + B1_L)))" ] && printf yes || printf no)"
+t; assert_eq "T-1150: at exactly the budget doctor is silent and note refuses any further line" ' 3' \
+  "$(b1_bud b1eq) $(b1_note b1eq; printf '%s' "$?")"
+
+# T-1151: plain note never enters context and is not budget-checked.
+b1_mk b1plain 2000 ctx_max=600; C1151=$(b1_ck "$TMP/b1plain/Threads.md")
+QUIPU_LANG=en QUIPU_VAULT="$TMP/b1plain" sh "$ROOT/knotlog" note "b1 plain" </dev/null >/dev/null 2>&1; R1151=$?
+t; assert_eq "T-1151: plain note on an overflowing vault exits 0 and leaves Threads.md alone" '0 yes yes' \
+  "$R1151 $([ "$(b1_ck "$TMP/b1plain/Threads.md")" = "$C1151" ] && printf yes || printf no) $(grep -rqF 'b1 plain' "$TMP/b1plain" && printf yes || printf no)"
+
+# T-1152: the MCP knotlog_note tool runs plain note, so the budget never refuses it.
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"knotlog_note","arguments":{"text":"b1 mcp"}}}' > "$TMP/b1mcp.req"
+QUIPU_LANG=en QUIPU_VAULT="$TMP/b1plain" sh "$ROOT/knotlog" mcp < "$TMP/b1mcp.req" > "$TMP/b1mcp.out" 2>/dev/null
+t; assert_eq "T-1152: MCP knotlog_note on an overflowing vault is not an error and writes the line" 'yes yes' \
+  "$(grep -qF '"isError":false' "$TMP/b1mcp.out" && printf yes || printf no) $(grep -rqF 'b1 mcp' "$TMP/b1plain" && printf yes || printf no)"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
