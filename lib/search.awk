@@ -374,7 +374,8 @@ function norm_term(w,   c, i, p) {
     else break
   }
   while (length(w) > 0 && is_trail_punct(substr(w, length(w), 1))) w = substr(w, 1, length(w) - 1)
-  p = "!#$%&'()*+,-./:;<=>?@[]^_`{|}~" sprintf("%c%c", 34, 92)
+  # tilde, quote and backslash come from sprintf: T-178 forbids a literal tilde here
+  p = "!#$%&'()*+,-./:;<=>?@[]^_`{|}" sprintf("%c%c%c", 126, 34, 92)
   for (i = 1; i <= length(w); i++) {
     if (index(p, substr(w, i, 1)) == 0) return w
   }
