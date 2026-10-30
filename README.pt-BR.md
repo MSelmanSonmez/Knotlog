@@ -25,13 +25,13 @@
   <img src="https://img.shields.io/badge/dependencies-zero-brightgreen" alt="Zero dependências">
   <img src="https://img.shields.io/badge/network-offline-lightgrey" alt="Funciona offline">
   <!-- badge counts are re-measured at the release commit: tests = `sh tests/run.sh` -> "# pass N"; scripts = `git ls-files | grep -E '^(knotlog|lib/.*\.awk|fold/.*\.sed)$' | wc -l`; LongMemEval-S = `tests/bench/longmemeval.sh` -->
-  <img src="https://img.shields.io/badge/tests-1866%20passing-brightgreen" alt="1866 testes passando">
+  <img src="https://img.shields.io/badge/tests-1869%20passing-brightgreen" alt="1869 testes passando">
   <img src="https://img.shields.io/badge/agents-8-blue" alt="8 agentes compatíveis">
   <img src="https://img.shields.io/badge/scripts-26-lightgrey" alt="26 scripts distribuídos">
   <img src="https://img.shields.io/badge/LongMemEval--S-recall__any%405%2060.4%25-blue" alt="LongMemEval-S recall_any@5 60,4%">
 </p>
 
-<p align="center"><sub>A contagem de scripts inclui o ponto de entrada `knotlog` distribuído mais os arquivos `lib/*.awk` e `fold/*.sed`.</sub></p>
+<p align="center"><sub>A contagem de scripts inclui o ponto de entrada <code>knotlog</code> distribuído mais os arquivos <code>lib/*.awk</code> e <code>fold/*.sed</code>.</sub></p>
 
 <p align="center">
   <a href="#início-rápido">Início rápido</a> ·
