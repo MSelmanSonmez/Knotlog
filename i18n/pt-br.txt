@@ -11,11 +11,13 @@ usage_install=  install   cria o cofre Knotlog de <user> e liga este checkout ao
 usage_uninstall=  uninstall remove o comando `knotlog` do PATH; nunca toca no seu cofre (--dry-run para simular)
 usage_context=  context   imprime o contexto de memória da sessão para o agente
 help_profile=            config: profile=normal|economical|manual reduz o contexto dos hooks (veja REFERENCE)
+help_write_approval=            config: write_approval=on deixa note / note --thread aguardando revisão (knotlog pending; ver REFERENCE)
 usage_remember=  remember  grava um resumo mecânico a partir do activity.log (somente acrescenta)
 usage_mcp=  mcp       executa o servidor MCP em stdin/stdout (JSON-RPC, uma mensagem por linha)
 usage_note=  note      acrescenta uma linha ao bloco de reflexão da sessão de hoje (note "texto")
 usage_digest=  digest    resume a atividade de uma data (--date YYYY-MM-DD) ou de um intervalo (--since YYYY-MM-DD [--until YYYY-MM-DD]); --dry-run, --limit N
 usage_note_thread=  note --thread  acrescenta uma linha à seção de threads ativas (note --thread "texto")
+usage_pending=  pending   lista as notas aguardando revisão (write_approval=on); --approve N grava uma, --reject N descarta
 usage_import=  import    converte uma exportação local de conversa em JSON em uma nota de sessão (FILE, --date YYYY-MM-DD)
 usage_plan=  plan      abre um plano de projeto em <Projects>/<Project>/<Plans>/ a partir do modelo com front matter (--proje <Project>)
 usage_tone=  tone      mostra/define o preset de tom ativo (--list para ver os disponíveis; um slug sozinho grava tone= na config)
@@ -33,6 +35,10 @@ err_thread_nofile=o arquivo de threads não existe: %s; execute knotlog init ou 
 err_thread_nosection=o bloco de threads não tem seção ativa (knotlog:threads:start/end com um título ativo); nada foi gravado
 err_thread_pinned=a seção ativa termina dentro do bloco fixado; nada foi gravado
 err_budget_full=%s ficaria com %d bytes e o orçamento de contexto deixa %d: libere antes %d bytes — `knotlog compact --apply` (threads fechadas antigas) ou `knotlog archive "<título>"` (`archive --list` mostra os títulos), ou aumente `ctx_max`; nada foi gravado
+err_pending_args=pending não aceita argumentos, ou então --approve N ou --reject N
+err_pending_closed=#%s não é uma proposta aberta (knotlog pending lista as abertas)
+err_pending_tab=uma nota aguardando revisão não pode conter tabulação; nada foi enfileirado
+err_pending_kind=#%s tem um tipo desconhecido %s; nada foi gravado
 err_help_args=help aceita nenhum argumento ou exatamente --<código> de um idioma incluído (ex.: --en, --tr)
 # doctor
 doc_head=knotlog doctor - verificação do ambiente
@@ -79,6 +85,8 @@ doc_ctx_max_bad=ctx_max=%s da config não é um inteiro positivo, ignorado (usan
 doc_ctx_max_profile=perfil: %s
 doc_profile=perfil
 doc_profile_bad=profile=%s da config não é normal, economical nem manual, usando normal
+doc_write_approval=write_approval
+doc_write_approval_bad=write_approval=%s da config não é on nem off, usando off
 doc_threads_overflow=%s tem %d bytes, o orçamento de contexto é de %d bytes — cerca de %d%% é descartado a cada sessão
 doc_pin_oversize=o bloco fixado (<!-- knotlog:pin:start/end -->) tem %d bytes, mas o ctx_max é de %d bytes — ele nunca cabe sem estourar o orçamento configurado; reduza o bloco fixado ou aumente o ctx_max
 doc_identity=identidade
@@ -284,6 +292,14 @@ remember_events=eventos
 note_busy=note ignorado: outro processo ainda detém o bloqueio após 5 segundos; nada foi gravado
 note_ok=gravado: %s
 thread_ok=gravado nas threads ativas: %s
+pending_none=nenhuma nota aguardando revisão
+pending_rejected=#%s rejeitada; nada foi gravado
+admit_secret=parece um segredo (chave, token ou senha); nada foi gravado — não guarde segredos na memória
+admit_instruction=parece uma instrução para o agente; nada foi gravado — reescreva como uma observação
+admit_relative=#%s aguarda revisão (knotlog pending) — reescreva com uma data absoluta (YYYY-MM-DD)
+admit_review=#%s (knotlog pending)
+admit_inject_marks=(^|[^A-Za-z])(ignore (todas )?as instruções (anteriores|prévias)|esqueça as instruções|a partir de agora|você deve|você precisa)([^A-Za-z]|$)
+admit_reltime_words=(^|[^A-Za-z])(hoje|amanhã|ontem|hoje à noite|semana que vem|próxima semana|semana passada|daqui a [0-9]+ dias|há [0-9]+ dias)([^A-Za-z]|$)
 digest_range=Intervalo: %s → %s (%d eventos)
 digest_tools=Ferramentas: %s
 digest_title=Resumo da atividade: %s

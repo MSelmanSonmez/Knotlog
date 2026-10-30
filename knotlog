@@ -289,6 +289,17 @@ _q_profile() {
   esac
 }
 
+_q_write_approval() {
+  # Global setter: $_q_wa = on|off (only the exact value on turns it on);
+  # $_q_wa_raw = the raw config value (doctor). $1 = vault path.
+  _q_wa_raw=
+  if [ -n "$1" ] && [ -f "$1/$_q_SD/config" ]; then
+    _q_wa_raw=$(awk -F= -v k=write_approval '$1==k{sub(/^[^=]*=/,"");print;exit}' "$1/$_q_SD/config" 2>/dev/null || true)
+  fi
+  _q_wa=off
+  [ "$_q_wa_raw" != on ] || _q_wa=on
+}
+
 _q_ctx_max() {
   # Global setter (mirrors _q_lang()/_q_fold_prof()'s config-awk read
   # pattern, but sets globals instead of printing -- doctor needs the
@@ -420,6 +431,8 @@ usage() {
   _q_msg usage_mcp
   _q_msg usage_note
   _q_msg usage_note_thread
+  _q_msg usage_pending
+  _q_msg help_write_approval
   _q_msg usage_digest
   _q_msg usage_import
   _q_msg usage_plan
@@ -1513,6 +1526,16 @@ _q_doctor() {
         _q_line ok "$(_q_msg doc_profile)" "$_q_prof"
       fi
     fi
+    # write_approval= row: same rule as profile= (only when the key is present).
+    _q_write_approval "$_q_v"
+    case "$_q_wa_raw" in
+      '') ;;
+      on|off) _q_line ok "$(_q_msg doc_write_approval)" "$_q_wa_raw" ;;
+      *)
+        # shellcheck disable=SC2059
+        _q_line warn "$(_q_msg doc_write_approval)" "$(printf "$(_q_msg doc_write_approval_bad)" "$_q_wa_raw")"
+        ;;
+    esac
     # B-K2: threads-file overflow -- the doc_threads_empty mirror. That row
     # warns when Konular.md/Threads.md is empty; nothing warned when the
     # file silently OVERFLOWS quipu context's own injection budget (the
@@ -6117,11 +6140,29 @@ _q_cmd_note() {
   if [ -z "$_q_v" ]; then
     _q_die err_no_vault
   fi
+  _q_admit "$_q_note_text"
+  case "$_q_ad_rc" in
+    4) _q_admit_say 4 ;;
+    5)
+      _q_note_kind=note
+      [ "$_q_note_thread" = 0 ] || _q_note_kind=thread
+      _q_pending_add "$_q_note_kind" "$_q_note_text"
+      ;;
+  esac
   if [ "$_q_note_thread" = 1 ]; then
     _q_note_thread_write "$_q_v" "$_q_note_text"
     return 0
   fi
+  _q_note_plain_write "$_q_v" "$_q_note_text"
+}
 
+_q_note_plain_write() {
+  # _q_note_plain_write VAULT TEXT -- plain `note`: one line into today's
+  # reflection block. Shared by `note` and `pending --approve`; the remember
+  # lock it takes is released by its EXIT trap, so a caller may still append
+  # under it after this returns.
+  _q_v=$1
+  _q_note_text=$2
   _q_tab=$(printf '\t')
   _q_layout=
   if [ -f "$_q_v/$_q_SD/config" ]; then
@@ -6189,6 +6230,166 @@ _q_cmd_note() {
 
   # shellcheck disable=SC2059
   printf "$(_q_msg note_ok)\n" "$_q_rel"
+}
+
+# ---- admission + write approval ---------------------------------------------
+
+_q_admit() {
+  # _q_admit TEXT -- the admission gate in front of every note. Leaves
+  # $_q_ad_rc (0 remembered, 4 refused, 5 pending_review) and $_q_ad_why
+  # (the reason code). The secret check always runs; the instruction and
+  # relative-time checks, and the review queue itself, only with
+  # write_approval=on. Vault: $_q_v.
+  _q_ad_rc=0
+  _q_ad_why=
+  # One source for the secret pattern: the pre-commit hook's own _pat= line.
+  # shortcut: a missing hooks/pre-commit skips the check (broken install), upgrade if installs ever drop hooks/.
+  _q_sp=
+  if [ -f "$_q_HOME/hooks/pre-commit" ]; then
+    eval "$(sed -n 's/^_pat=/_q_sp=/p' "$_q_HOME/hooks/pre-commit")"
+  fi
+  if [ -n "$_q_sp" ] && printf '%s\n' "$1" | LC_ALL=C grep -Eiq -- "$_q_sp"; then
+    _q_ad_rc=4
+    _q_ad_why=secret_pattern
+    return 0
+  fi
+  _q_write_approval "$_q_v"
+  [ "$_q_wa" = on ] || return 0
+  if _q_admit_hit admit_inject_marks "$1"; then
+    _q_ad_rc=4
+    _q_ad_why=instruction_shaped
+  elif _q_admit_hit admit_reltime_words "$1"; then
+    _q_ad_rc=5
+    _q_ad_why=relative_time
+  else
+    _q_ad_rc=5
+    _q_ad_why=policy_review_first
+  fi
+}
+
+_q_admit_hit() {
+  # _q_admit_hit KEY TEXT -- does TEXT match the ERE list KEY of the active
+  # language, or of English (agents often write English in any vault)?
+  _q_ah_p=$(_q_msg "$1")
+  if [ "$(_q_lang)" != en ]; then
+    _q_ah_p="($_q_ah_p)|($(_q_msg_lang=en; _q_msg "$1"))"
+  fi
+  printf '%s\n' "$2" | LC_ALL=C grep -Eiq -- "$_q_ah_p"
+}
+
+_q_admit_say() {
+  # _q_admit_say CODE [ID] -- one status<TAB>reason<TAB>detail line for the
+  # gate's result in $_q_ad_why, then exit CODE (refusals go to stderr). The
+  # text itself is never echoed: it may be the secret.
+  case "$_q_ad_why" in
+    secret_pattern) _q_as_k=admit_secret ;;
+    instruction_shaped) _q_as_k=admit_instruction ;;
+    relative_time) _q_as_k=admit_relative ;;
+    *) _q_as_k=admit_review ;;
+  esac
+  # shellcheck disable=SC2059
+  _q_as_d=$(printf "$(_q_msg "$_q_as_k")" "${2:-}")
+  if [ "$1" -eq 4 ]; then
+    printf '%s\t%s\t%s\n' refused "$_q_ad_why" "$_q_as_d" >&2
+  else
+    printf '%s\t%s\t%s\n' pending_review "$_q_ad_why" "$_q_as_d"
+  fi
+  [ "${QUIPU_HOOK:-0}" != 1 ] || exit 0
+  exit "$1"
+}
+
+_q_pending_lock() {
+  # The remember lock guards .knotlog/pending too (ids are max + 1).
+  _q_pl_lock="$_q_v/$_q_SD/remember.lock"
+  _q_remember_lock_acquire "$_q_pl_lock" note_busy || exit 1
+  printf '%s\n' "$$" > "$_q_pl_lock/pid"
+  trap 'rm -f "$_q_pl_lock/pid"; rmdir "$_q_pl_lock" 2>/dev/null || true' EXIT HUP INT TERM
+}
+
+_q_pending_add() {
+  # _q_pending_add KIND TEXT -- append one proposal to .knotlog/pending
+  # (P<TAB>id<TAB>YYYY-MM-DD HH:MM<TAB>kind<TAB>reason<TAB>text) and exit 5.
+  # The file is append-only: decisions are A/R lines, nothing is rewritten.
+  case "$2" in
+    *"$(printf '\t')"*) _q_die err_pending_tab 2 ;;
+  esac
+  _q_pa_f="$_q_v/$_q_SD/pending"
+  _q_pending_lock
+  _q_pa_id=1
+  if [ -f "$_q_pa_f" ]; then
+    _q_pa_id=$(awk -F"$(printf '\t')" '$2 + 0 > m { m = $2 + 0 } END { print m + 1 }' "$_q_pa_f")
+  fi
+  printf 'P\t%s\t%s\t%s\t%s\t%s\n' "$_q_pa_id" "$(date '+%Y-%m-%d %H:%M')" "$1" "$_q_ad_why" "$2" >> "$_q_pa_f" ||
+    _q_die err_note_write 1 "$_q_SD/pending"
+  _q_admit_say 5 "$_q_pa_id"
+}
+
+_q_pending_open() {
+  # _q_pending_open FILE -- the open proposals (P lines with no A/R line), oldest first.
+  [ -f "$1" ] || return 0
+  awk -F"$(printf '\t')" '
+    $1 == "P" { n++; id[n] = $2; ln[n] = $0 }
+    $1 == "A" || $1 == "R" { done[$2] = 1 }
+    END { for (i = 1; i <= n; i++) if (!(id[i] in done)) print ln[i] }' "$1"
+}
+
+_q_cmd_pending() {
+  # knotlog pending [--approve N | --reject N] -- the write-approval queue.
+  # A list row is the P line without its leading "P<TAB>".
+  case "$#:${1:-}" in
+    0:) _q_pd_op=list ;;
+    2:--approve | 2:--reject)
+      _q_pd_op=${1#--}
+      case "$2" in
+        '' | *[!0-9]* | 0*) _q_die err_pending_args 2 ;;
+      esac
+      _q_pd_id=$2
+      ;;
+    *) _q_die err_pending_args 2 ;;
+  esac
+  _q_v=$(_q_vault)
+  [ -n "$_q_v" ] || _q_die err_no_vault
+  _q_pd_f="$_q_v/$_q_SD/pending"
+  if [ "$_q_pd_op" = list ]; then
+    _q_pd_rows=$(_q_pending_open "$_q_pd_f")
+    if [ -z "$_q_pd_rows" ]; then
+      _q_msg pending_none
+    else
+      printf '%s\n' "$_q_pd_rows" | sed 's/^P.//'
+    fi
+    return 0
+  fi
+  _q_pd_rec() {
+    _q_pending_open "$_q_pd_f" | awk -F"$(printf '\t')" -v id="$_q_pd_id" '$2 == id { print; exit }'
+  }
+  _q_pd_ts=$(date '+%Y-%m-%d %H:%M')
+  if [ "$_q_pd_op" = reject ]; then
+    _q_pending_lock
+    [ -n "$(_q_pd_rec)" ] || _q_die err_pending_closed 2 "$_q_pd_id"
+    printf 'R\t%s\t%s\n' "$_q_pd_id" "$_q_pd_ts" >> "$_q_pd_f" || _q_die err_note_write 1 "$_q_SD/pending"
+    # shellcheck disable=SC2059
+    printf "$(_q_msg pending_rejected)\n" "$_q_pd_id"
+    return 0
+  fi
+  # shortcut: the open check runs before the write takes the remember lock, so two
+  # concurrent approvals of one id can both write; upgrade if approvals ever run in parallel.
+  _q_pd_line=$(_q_pd_rec)
+  [ -n "$_q_pd_line" ] || _q_die err_pending_closed 2 "$_q_pd_id"
+  _q_pd_kind=$(printf '%s\n' "$_q_pd_line" | awk -F"$(printf '\t')" '{ print $4 }')
+  _q_pd_text=$(printf '%s\n' "$_q_pd_line" | awk -F"$(printf '\t')" '{ print $6 }')
+  # The queue file is state, not trust: approval runs the refusing checks again.
+  _q_admit "$_q_pd_text"
+  [ "$_q_ad_rc" -ne 4 ] || _q_admit_say 4
+  case "$_q_pd_kind" in
+    note) _q_note_plain_write "$_q_v" "$_q_pd_text" ;;
+    thread) _q_note_thread_write "$_q_v" "$_q_pd_text" ;;
+    lesson) _q_note_plain_write "$_q_v" "[lesson] $_q_pd_text" ;;
+    fix) _q_note_plain_write "$_q_v" "[fix] $_q_pd_text" ;;
+    skill) _q_note_plain_write "$_q_v" "[skill candidate] $_q_pd_text" ;;
+    *) _q_die err_pending_kind 1 "$_q_pd_id" "$_q_pd_kind" ;;
+  esac
+  # Still under the writer's remember lock; a failed write exited above, so no A line.
+  printf 'A\t%s\t%s\n' "$_q_pd_id" "$_q_pd_ts" >> "$_q_pd_f" || _q_die err_note_write 1 "$_q_SD/pending"
 }
 
 # ---- compile ---------------------------------------------------------------
@@ -7869,6 +8070,7 @@ case "$_q_cmd" in
   remember) shift; _q_cmd_remember "$@" ;;
   mcp) shift; _q_cmd_mcp "$@" ;;
   note) shift; _q_cmd_note "$@" ;;
+  pending) shift; _q_cmd_pending "$@" ;;
   digest) shift; _q_cmd_digest "$@" ;;
   import) shift; _q_cmd_import "$@" ;;
   search) shift; _q_cmd_search "$@" ;;

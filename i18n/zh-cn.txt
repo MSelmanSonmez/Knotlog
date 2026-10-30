@@ -11,11 +11,13 @@ usage_install=  install   创建 <user> 的 Knotlog 知识库，并将此检出�
 usage_uninstall=  uninstall 从 PATH 中移除 `knotlog` 命令；绝不触碰你的知识库（--dry-run 仅预览）
 usage_context=  context   为智能体打印会话记忆上下文
 help_profile=            config：profile=normal|economical|manual 用于精简钩子上下文（见 REFERENCE）
+help_write_approval=            config：write_approval=on 让 note / note --thread 等待审核（knotlog pending；见 REFERENCE）
 usage_remember=  remember  根据 activity.log 写入机械摘要（仅追加）
 usage_mcp=  mcp       在 stdin/stdout 上运行 MCP 服务器（JSON-RPC，每行一条消息）
 usage_note=  note      向今天会话反思块添加一行（note "文本"）
 usage_digest=  digest    汇总某一天的活动（--date YYYY-MM-DD）或一个范围（--since YYYY-MM-DD [--until YYYY-MM-DD]）；--dry-run、--limit N
 usage_note_thread=  note --thread  向活跃线索部分添加一行（note --thread "文本"）
+usage_pending=  pending   列出等待审核的笔记（write_approval=on）；--approve N 写入一条，--reject N 丢弃
 usage_import=  import    将本地 JSON 对话导出转换为会话笔记（FILE、--date YYYY-MM-DD）
 usage_plan=  plan      根据 front-matter 模板在 <Projects>/<Project>/<Plans>/ 下创建项目计划（--proje <Project>）
 usage_tone=  tone      显示/设置当前语气预设（--list 浏览；直接给出 slug 会把 tone= 写入配置）
@@ -33,6 +35,10 @@ err_thread_nofile=缺少线索文件：%s；请先运行 knotlog init 或 knotlo
 err_thread_nosection=线索块中没有活跃部分（带活跃标题的 knotlog:threads:start/end）；未写入任何内容
 err_thread_pinned=活跃部分结束于固定块内部；未写入任何内容
 err_budget_full=%s 将达到 %d 字节，上下文预算只剩 %d 字节：请先腾出 %d 字节 — `knotlog compact --apply`（旧的已关闭线索）或 `knotlog archive "<标题>"`（`archive --list` 列出标题），或调高 `ctx_max`；未写入任何内容
+err_pending_args=pending 不带参数，或使用 --approve N 或 --reject N
+err_pending_closed=#%s 不是待决的提议（knotlog pending 会列出）
+err_pending_tab=等待审核的笔记不能包含制表符；未加入队列
+err_pending_kind=#%s 的类型 %s 未知；未写入任何内容
 err_help_args=help 不接受参数，只能是随附语言的 --<代码>（例如 --en、--tr）
 # doctor
 doc_head=knotlog doctor - 环境检查
@@ -79,6 +85,8 @@ doc_ctx_max_bad=配置中的 ctx_max=%s 不是正整数，已忽略（使用 %s�
 doc_ctx_max_profile=profile：%s
 doc_profile=profile
 doc_profile_bad=配置中的 profile=%s 不是 normal、economical 或 manual，改用 normal
+doc_write_approval=write_approval
+doc_write_approval_bad=配置中的 write_approval=%s 不是 on 或 off，按 off 处理
 doc_threads_overflow=%s 为 %d 字节，上下文预算为 %d 字节 — 每次会话大约有 %d%% 被丢弃
 doc_pin_oversize=固定块（<!-- knotlog:pin:start/end -->）为 %d 字节，但 ctx_max 为 %d 字节 — 它在不超出所配置预算的情况下永远放不下；请缩小固定块或调高 ctx_max
 doc_identity=身份
@@ -284,6 +292,14 @@ remember_events=事件
 note_busy=note 已跳过：5 秒后另一个进程仍持有锁；未写入任何内容
 note_ok=已写入：%s
 thread_ok=已写入活跃线索：%s
+pending_none=没有等待审核的笔记
+pending_rejected=已拒绝 #%s；未写入任何内容
+admit_secret=看起来像机密（密钥、令牌或密码）；未写入任何内容 — 不要把机密放进记忆
+admit_instruction=读起来像是给代理的指令；未写入任何内容 — 请改写为一条观察
+admit_relative=#%s 等待审核（knotlog pending）— 请改用绝对日期（YYYY-MM-DD）
+admit_review=#%s（knotlog pending）
+admit_inject_marks=忽略(之前|以前|上面)的(所有)?(指令|指示)|从现在开始|从今以后|你必须|你应该
+admit_reltime_words=今天|明天|昨天|今晚|下周|上周|本周|下个月|上个月|[0-9]+天后|[0-9]+天前
 digest_range=范围：%s → %s（%d 个事件）
 digest_tools=工具：%s
 digest_title=活动摘要：%s
