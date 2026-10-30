@@ -1530,30 +1530,7 @@ _q_doctor() {
     # filled file.
     _q_thr_p=$(_q_threads_path "$_q_v")
     if [ -f "$_q_thr_p" ]; then
-      _q_limit=10
-      _q_ctx_text
-      # B-K5: pin bytes are charged against $_q_fixed (and so already
-      # subtracted out of $_q_budget above, in _q_ctx_text) -- comparing the
-      # WHOLE file's size against that pin-adjusted budget double-counts the
-      # pin's bytes (once against the budget, once against the size) and
-      # overstates how much of the file is actually being dropped. Pull the
-      # pin's footprint out of the file size the SAME way it was pulled out
-      # of the budget: reuse $_q_pin (set by _q_ctx_text's own
-      # _q_pin_extract call just above) with the identical "%s\n" framing
-      # _q_pin_fx uses when it joins $_q_fixed -- not a new pin parser, the
-      # same one, so the two subtractions cancel exactly. A pin-less vault
-      # has $_q_pin empty, so $_q_pin_size is 0 and this is byte-identical
-      # to the pre-B-K5 formula (T-474/475/476).
-      _q_pin_size=0
-      if [ -n "$_q_pin" ]; then
-        _q_pin_size=$(printf '%s\n' "$_q_pin" | LC_ALL=C wc -c | tr -d ' ')
-      fi
-      _q_thr_size=$(wc -c < "$_q_thr_p" | tr -d ' ')
-      _q_thr_crop=$((_q_thr_size - _q_pin_size))
-      _q_thr_bud=$_q_budget
-      if [ "$_q_thr_bud" -lt 0 ]; then
-        _q_thr_bud=0
-      fi
+      _q_thr_fit "$_q_v" "$_q_thr_p"
       if [ "$_q_thr_crop" -gt "$_q_thr_bud" ]; then
         _q_thr_drop=$((_q_thr_crop - _q_thr_bud))
         _q_thr_pct=$((_q_thr_drop * 100 / _q_thr_crop))
@@ -5977,6 +5954,43 @@ _q_cmd_remember() {
 }
 
 # ---- note -------------------------------------------------------------------
+
+_q_thr_fit() {
+  # _q_thr_fit VAULT FILE -- the one threads-budget formula, shared by
+  # doctor (doc_threads_overflow) and `note --thread` (err_budget_full), so
+  # "doctor warns" and "note refuses" sit on the same byte. It calls
+  # _q_ctx_text, the function context itself runs, and leaves
+  # $_q_thr_crop (FILE's size minus the pin block) and $_q_thr_bud (the
+  # threads budget, clamped at 0). FILE may be a candidate copy of the
+  # vault's threads file: pin and fixed parts are read from the real file,
+  # and a candidate never changes the pin. Also leaves $_q_pin_size and
+  # every global _q_ctx_text sets ($_q_max, $_q_pin, ...).
+  _q_v=$1
+  _q_limit=10
+  _q_ctx_text
+  # B-K5: pin bytes are charged against $_q_fixed (and so already
+  # subtracted out of $_q_budget above, in _q_ctx_text) -- comparing the
+  # WHOLE file's size against that pin-adjusted budget double-counts the
+  # pin's bytes (once against the budget, once against the size) and
+  # overstates how much of the file is actually being dropped. Pull the
+  # pin's footprint out of the file size the SAME way it was pulled out
+  # of the budget: reuse $_q_pin (set by _q_ctx_text's own
+  # _q_pin_extract call just above) with the identical "%s\n" framing
+  # _q_pin_fx uses when it joins $_q_fixed -- not a new pin parser, the
+  # same one, so the two subtractions cancel exactly. A pin-less vault
+  # has $_q_pin empty, so $_q_pin_size is 0 and this is byte-identical
+  # to the pre-B-K5 formula (T-474/475/476).
+  _q_pin_size=0
+  if [ -n "$_q_pin" ]; then
+    _q_pin_size=$(printf '%s\n' "$_q_pin" | LC_ALL=C wc -c | tr -d ' ')
+  fi
+  _q_thr_size=$(wc -c < "$2" | tr -d ' ')
+  _q_thr_crop=$((_q_thr_size - _q_pin_size))
+  _q_thr_bud=$_q_budget
+  if [ "$_q_thr_bud" -lt 0 ]; then
+    _q_thr_bud=0
+  fi
+}
 
 _q_note_thread_write() {
   # _q_note_thread_write VAULT TEXT — `note --thread`: one list line appended
