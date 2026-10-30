@@ -281,6 +281,14 @@ istersen `.knotlog/config`'e `write_approval=on` yaz: notlar `knotlog pending
 bekler; ajana verilmiş bir emir gibi okunan satır ("bundan sonra … yapmalısın")
 reddedilir, "yarın" geçen satır tarih verebilesin diye bekletilir.
 
+Yoğun bir çalışmadan sonra (40'tan fazla kayıtlı etkinlik) Knotlog ajana bir
+kez, tur sonunda ya da sonraki oturum açılışında, bu işten bir ders, skill
+olmaya değer bir iş akışı ya da düzeltilmiş bir yanlış çıkıp çıkmadığını sorar.
+Ajan `knotlog propose --kind lesson|skill|fix "<metin>"` ile cevap verir; bulgu
+`knotlog pending`'de senin `--approve N` onayını bekler, kendiliğinden hiç
+yazılmaz (skill dosyası da yazılmaz). `.knotlog/config`'e `review=off` yazmak
+isteği kapatır.
+
 ### Kurallar dosyası
 
 `init`, kasanın köküne **`Kurallar.md`** (İngilizce kasada `Rules.md`)

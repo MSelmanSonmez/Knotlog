@@ -272,6 +272,13 @@ lands, set `write_approval=on` in `.knotlog/config`: notes then wait in
 `--reject N`); a line that reads as an order to the agent ("from now on you
 must …") is refused, and one with "tomorrow" waits so you can give it a date.
 
+After a busy stretch (more than 40 logged events), Knotlog asks the agent once,
+at the end of a turn or at the next session start, whether the work left a
+lesson, a workflow worth a skill, or a corrected mistake. The agent answers
+with `knotlog propose --kind lesson|skill|fix "<text>"`; the finding waits in
+`knotlog pending` for your `--approve N` and is never written on its own (no
+skill file either). `review=off` in `.knotlog/config` turns the ask off.
+
 ### The rules file
 
 `init` seeds **`Rules.md`** (`Kurallar.md` in a Turkish vault) at the vault
