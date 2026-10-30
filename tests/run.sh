@@ -316,6 +316,18 @@ assert_eq "capture: rotation creates activity.log.1" 'yes' "$([ -f "$TMP/vcaprot
 t; assert_eq "capture: rotated log keeps one line" '1' "$(awk 'END{print NR}' "$TMP/vcaprot/.knotlog/activity.log")"
 t; assert_eq "capture: rotated log has latest entry" 'PostToolUse | Edit | two.md' "$(log_line "$TMP/vcaprot")"
 
+# Parallel captures across one rotation keep every row (no truncate after mv).
+mkvault vcaprace
+: > "$TMP/vcaprace/.knotlog/activity.log"
+_i=0
+while [ "$_i" -lt 100 ]; do
+  QUIPU_VAULT="$TMP/vcaprace" QUIPU_LOG_MAX=3500 sh "$ROOT/knotlog" capture --event PostToolUse --tool Edit --path "race$_i.md" &
+  _i=$((_i + 1))
+done
+wait
+t; assert_eq "capture: 100 parallel captures over a rotation keep all 100 rows" '100' \
+  "$(cat "$TMP/vcaprace/.knotlog/activity.log" "$TMP/vcaprace/.knotlog/activity.log.1" 2>/dev/null | grep -c 'race[0-9]*\.md')"
+
 # ---- capture: multi-schema apply_patch (FAZ 4) ----
 
 mkvault vcodex

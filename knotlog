@@ -2285,17 +2285,36 @@ _q_norm_path() {
   _q_p=$(printf '%s\n' "$_q_p" | tr -d "$_q_tab$(printf '\r\n')")
 }
 
-# Rotate activity.log once: mv to .1 and open a fresh file when over limit.
+# Rotate activity.log once: mv to .1 when over limit (one rotator at a time).
 # Caller sets $_q_v first; this sets $_q_log.
 _q_rotate_log() {
   _q_log="$_q_v/$_q_SD/activity.log"
-  if [ -f "$_q_log" ]; then
-    _q_size=$(wc -c < "$_q_log")
-    if [ "$_q_size" -gt "${QUIPU_LOG_MAX:-262144}" ]; then
-      mv -f "$_q_log" "$_q_log.1"
-      : > "$_q_log"
+  # Another capture may move the file between any two lines here: a failed
+  # read means "not ours to rotate", never an abort that drops this row.
+  _q_size=$(wc -c 2>/dev/null < "$_q_log") || return 0
+  [ "$_q_size" -gt "${QUIPU_LOG_MAX:-262144}" ] || return 0
+  # Parallel captures: one rotates, the rest skip (the next capture retries).
+  # No truncate after mv: the appender's >> creates the fresh file, so a row
+  # written between mv and here is never wiped.
+  _q_rl_lock="$_q_v/$_q_SD/rotate.lock"
+  if ! mkdir "$_q_rl_lock" 2>/dev/null; then
+    # A lock whose owner died would stop rotation for good: clear it.
+    # shortcut: clearing can race a brand-new owner and allow one extra mv (older .1 rows lost), upgrade if that is ever seen.
+    _q_rl_pid=$(cat "$_q_rl_lock/pid" 2>/dev/null || true)
+    if [ -n "$_q_rl_pid" ] && ! kill -0 "$_q_rl_pid" 2>/dev/null; then
+      rm -f "$_q_rl_lock/pid"
+      rmdir "$_q_rl_lock" 2>/dev/null || true
     fi
+    return 0
   fi
+  printf '%s\n' "$$" > "$_q_rl_lock/pid"
+  # Re-check under the lock: an earlier owner may have rotated already.
+  _q_size=$(wc -c 2>/dev/null < "$_q_log") || _q_size=0
+  if [ "$_q_size" -gt "${QUIPU_LOG_MAX:-262144}" ]; then
+    mv -f "$_q_log" "$_q_log.1"
+  fi
+  rm -f "$_q_rl_lock/pid"
+  rmdir "$_q_rl_lock" 2>/dev/null || true
 }
 
 # B-K4 (b): true when $1 is a scratch/temp path that will be meaningless
