@@ -1,0 +1,27 @@
+[
+    {
+        "question_id": "mini0001",
+        "question_type": "single-session-user",
+        "question": "Which telescope did I buy for stargazing",
+        "question_date": "2023/05/30 (Tue) 23:40",
+        "answer": "A Dobsonian",
+        "answer_session_ids": ["answer_tel1"],
+        "haystack_dates": ["2023/05/20 (Sat) 02:21", "2023/05/21 (Sun) 09:00", "2023/05/22 (Mon) 10:00", "2023/05/23 (Tue) 11:00"],
+        "haystack_session_ids": ["noise_a", "answer_tel1", "noise_b", "noise_a"],
+        "haystack_sessions": [
+            [{"role": "user", "content": "Recipe ideas for a café lunch?"}, {"role": "assistant", "content": "Try a \"quiche\".\nOr soup."}],
+            [{"role": "user", "content": "I finally bought a Dobsonian telescope for stargazing!", "has_answer": true}, {"content": "Great choice for deep sky.", "role": "assistant"}],
+            [{"role": "user", "content": "How do I fix a flat bike tire"}],
+            [{"role": "user", "content": "Recipe ideas for a café lunch?"}, {"role": "assistant", "content": "Try a \"quiche\".\nOr soup."}]
+        ]
+    },
+    {"question_id": "mini0002", "question_type": "multi-session", "question": "How many marathons did I run", "question_date": "2023/06/01 (Thu) 08:00", "answer": 2,
+     "answer_session_ids": ["answer_run1", "answer_run2"],
+     "haystack_dates": ["2023/05/01 (Mon) 07:00", "2023/05/02 (Tue) 07:00", "2023/05/03 (Wed) 07:00"],
+     "haystack_session_ids": ["answer_run1", "noise_c", "answer_run2"],
+     "haystack_sessions": [[{"role": "user", "content": "I run marathons; Boston was my first marathons race."}], [{"role": "user", "content": "Best pizza dough hydration"}], [{"role": "user", "content": "Finished Chicago in 3:41, legs sore 😀"}]]},
+    {"question_id": "mini0003_abs", "question_type": "single-session-user", "question": "What is the name of my telescope", "question_date": "2023/06/02 (Fri) 08:00", "answer": "unanswerable",
+     "answer_session_ids": ["answer_x"],
+     "haystack_dates": ["2023/05/05 (Fri) 07:00"], "haystack_session_ids": ["answer_x"],
+     "haystack_sessions": [[{"role": "user", "content": "My telescope has no name"}]]}
+]
