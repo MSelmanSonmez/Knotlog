@@ -3,6 +3,11 @@
 All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- Write-time budget: `knotlog note --thread` refuses a line that would push the threads file past the context budget, so `context` never has to crop it. It exits 3, writes nothing, and says how many bytes to free and how (`knotlog compact --apply`, `knotlog archive`, or a larger `ctx_max`). The check uses the same formula as `doctor`'s threads-overflow warning, so the warning and the refusal start at the same byte. Plain `note` (and MCP `knotlog_note`) writes the session note, which never enters context, and is not checked.
+
 ## [1.2.0] - 2026-10-27
 
 ### Security
