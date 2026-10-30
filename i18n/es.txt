@@ -32,6 +32,7 @@ err_note_write=no se pudo escribir %s; el archivo no cambió
 err_thread_nofile=falta el archivo de hilos: %s; ejecuta knotlog init o knotlog remember primero; no se escribió nada
 err_thread_nosection=el bloque de hilos no tiene sección activa (knotlog:threads:start/end con un encabezado activo); no se escribió nada
 err_thread_pinned=la sección activa termina dentro del bloque fijado; no se escribió nada
+err_budget_full=%s ocuparía %d bytes y el presupuesto de contexto deja %d: libera antes %d bytes — `knotlog compact --apply` (hilos cerrados antiguos) o `knotlog archive "<encabezado>"` (`archive --list` muestra los encabezados), o sube `ctx_max`; no se escribió nada
 err_help_args=help no admite argumentos, salvo --<código> de un idioma incluido (p. ej. --en, --tr)
 # doctor
 doc_head=knotlog doctor - revisión del entorno

@@ -32,6 +32,7 @@ err_note_write=não foi possível gravar %s; o arquivo não foi alterado
 err_thread_nofile=o arquivo de threads não existe: %s; execute knotlog init ou knotlog remember primeiro; nada foi gravado
 err_thread_nosection=o bloco de threads não tem seção ativa (knotlog:threads:start/end com um título ativo); nada foi gravado
 err_thread_pinned=a seção ativa termina dentro do bloco fixado; nada foi gravado
+err_budget_full=%s ficaria com %d bytes e o orçamento de contexto deixa %d: libere antes %d bytes — `knotlog compact --apply` (threads fechadas antigas) ou `knotlog archive "<título>"` (`archive --list` mostra os títulos), ou aumente `ctx_max`; nada foi gravado
 err_help_args=help aceita nenhum argumento ou exatamente --<código> de um idioma incluído (ex.: --en, --tr)
 # doctor
 doc_head=knotlog doctor - verificação do ambiente

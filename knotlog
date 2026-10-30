@@ -6068,9 +6068,17 @@ _q_note_thread_write() {
     head -n "$((_q_nt_anchor - 1))" "$_q_nt_tp"
     cat "$_q_nt_line"
     tail -n "+$_q_nt_anchor" "$_q_nt_tp"
-  } > "$_q_nt_tmp" || ! mv -f "$_q_nt_tmp" "$_q_nt_tp"; then
+  } > "$_q_nt_tmp"; then
     _q_die err_note_write 1 "${_q_nt_tp#"$_q_nt_v"/}"
   fi
+  # Write-time budget: a line that would make context crop the threads
+  # section is refused (exit 3) by the same formula doctor warns with; the
+  # trap removes the temp file and the lock, the threads file is untouched.
+  _q_thr_fit "$_q_nt_v" "$_q_nt_tmp"
+  if [ "$_q_thr_crop" -gt "$_q_thr_bud" ]; then
+    _q_die err_budget_full 3 "${_q_nt_tp#"$_q_nt_v"/}" "$_q_thr_crop" "$_q_thr_bud" "$((_q_thr_crop - _q_thr_bud))"
+  fi
+  mv -f "$_q_nt_tmp" "$_q_nt_tp" || _q_die err_note_write 1 "${_q_nt_tp#"$_q_nt_v"/}"
 
   # shellcheck disable=SC2059
   printf "$(_q_msg thread_ok)\n" "${_q_nt_tp#"$_q_nt_v"/}"

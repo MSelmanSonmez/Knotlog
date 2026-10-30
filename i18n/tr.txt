@@ -32,6 +32,7 @@ err_note_write=%s yazılamadı; dosya değiştirilmedi
 err_thread_nofile=konu dosyası yok: %s; önce knotlog init veya knotlog remember çalıştır; hiçbir şey yazılmadı
 err_thread_nosection=konu bloğunda aktif konular bölümü yok (knotlog:threads:start/end ve aktif başlık); hiçbir şey yazılmadı
 err_thread_pinned=aktif bölümün sonu pin bloğunun içine düşüyor; hiçbir şey yazılmadı
+err_budget_full=%s dosyası %d bayt olacaktı, context bütçesi %d bayt bırakıyor: önce %d bayt yer aç — `knotlog compact --apply` (eski kapanmış konular) ya da `knotlog archive "<başlık>"` (`archive --list` başlıkları gösterir) ya da `ctx_max` değerini yükselt; hiçbir şey yazılmadı
 err_help_args=help argüman kabul etmez; yalnızca gönderilen bir dilin --<kod> bayrağı kullanılabilir (örn. --en, --tr)
 # doctor
 doc_head=knotlog doctor - ortam denetimi

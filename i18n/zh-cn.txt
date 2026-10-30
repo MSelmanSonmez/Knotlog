@@ -32,6 +32,7 @@ err_note_write=无法写入 %s；文件未被更改
 err_thread_nofile=缺少线索文件：%s；请先运行 knotlog init 或 knotlog remember；未写入任何内容
 err_thread_nosection=线索块中没有活跃部分（带活跃标题的 knotlog:threads:start/end）；未写入任何内容
 err_thread_pinned=活跃部分结束于固定块内部；未写入任何内容
+err_budget_full=%s 将达到 %d 字节，上下文预算只剩 %d 字节：请先腾出 %d 字节 — `knotlog compact --apply`（旧的已关闭线索）或 `knotlog archive "<标题>"`（`archive --list` 列出标题），或调高 `ctx_max`；未写入任何内容
 err_help_args=help 不接受参数，只能是随附语言的 --<代码>（例如 --en、--tr）
 # doctor
 doc_head=knotlog doctor - 环境检查
