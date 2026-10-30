@@ -516,8 +516,8 @@ kurulum çökmez. Kasa depo olduğu
 sürece Knotlog `.githooks/pre-commit` kurar ve `core.hooksPath`'i ona çeker. Her
 commit'te staged *eklenen* satırlar bilinen sır kalıplarına karşı taranır —
 AWS `AKIA…`, OpenAI `sk-…`, GitHub `ghp_…`/`github_pat_…`, Slack `xox…`,
-Google `AIza…`, `PRIVATE KEY` blokları ve jenerik `api_key=`/`secret=`/
-`token=` atamaları — ve şüpheli dosyanın adı söylenerek commit reddedilir.
+Google `AIza…`, `PRIVATE KEY` blokları, `Bearer` belirteçleri, JWT'ler ve
+jenerik `api_key=`/`secret=`/`token=`/`password:` atamaları (`=` ya da `:`) — ve şüpheli dosyanın adı söylenerek commit reddedilir.
 PATH'inizde harici bir `sir-tara` varsa taramanın tamamı ona devredilir.
 Elle düzenlenmiş bir hook (knotlog imzası taşımayan) asla ezilmez. Yine de
 commit etmek için: `git commit --no-verify` bütün hook'ları atlar;

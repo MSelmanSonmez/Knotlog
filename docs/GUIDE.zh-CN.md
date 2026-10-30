@@ -482,8 +482,8 @@ companion.md 的 Tone 部分——与预设出现之前知识库的行为相同�
 Knotlog 就会安装 `.githooks/pre-commit` 并把 `core.hooksPath` 指向它。此后每次
 提交都会扫描*新增*的暂存行中常见的机密形态——AWS
 `AKIA…`、OpenAI `sk-…`、GitHub `ghp_…`/`github_pat_…`、Slack `xox…`、Google
-`AIza…`、`PRIVATE KEY` 块，以及通用的 `api_key=`/`secret=`/`token=`
-赋值——并拒绝该提交，同时指出它发现问题的文件。如果 `PATH` 中有
+`AIza…`、`PRIVATE KEY` 块、`Bearer` 令牌、JWT，以及通用的
+`api_key=`/`secret=`/`token=`/`password:` 赋值（`=` 或 `:` 均可）——并拒绝该提交，同时指出它发现问题的文件。如果 `PATH` 中有
 外部的 `sir-tara` 扫描器，整个扫描就委托给它。手工编辑过的钩子
 （没有 Knotlog 标记的那种）绝不会被覆盖。要强行提交：
 `git commit --no-verify` 会跳过所有钩子，而

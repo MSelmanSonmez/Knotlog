@@ -27,12 +27,13 @@ if command -v sir-tara >/dev/null 2>&1; then
 fi
 
 # Desen kümesi (ERE, büyük/küçük harf duyarsız): AWS AKIA, OpenAI sk-,
-# GitHub ghp_/github_pat_, Slack xox, Google AIza, PRIVATE KEY blokları ve
-# jenerik "api_key, secret, token, password" atamaları. Token benzeri
+# GitHub ghp_/github_pat_, Slack xox, Google AIza, PRIVATE KEY blokları,
+# Bearer başlıkları, JWT'ler ve jenerik "api_key, secret, token, password"
+# atamaları (= ya da :, JSON/YAML'daki gibi). Token benzeri
 # desenler kelime sınırına bağlanır (risk-..., task-... yakalanmasın);
 # jenerik atamada değer 8+ karakter olmalı ve $ başlı kabuk göndermelerini
 # kapsamamalı (token="${TOKEN}" gürültü olmasın).
-_pat='(^|[^A-Za-z0-9])(AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,}|xox[bposar]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|-----BEGIN [A-Z ]*PRIVATE KEY|(api_?key|secret|token|password)[[:space:]]*=[[:space:]]*['\''"A-Za-z0-9_-]{8,})'
+_pat='(^|[^A-Za-z0-9])(AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,}|xox[bposar]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|-----BEGIN [A-Z ]*PRIVATE KEY|Bearer[[:space:]]+[A-Za-z0-9._~+/-]{20,}|eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.|(api_?key|secret|token|password)['\''"]?[[:space:]]*[:=][[:space:]]*['\''"A-Za-z0-9_!@#%&*+/.~-]{8,})'
 
 # Hızlı geçiş: hiçbir eklenen satır tutmuyorsa iş yok. '+++' diff
 # başlıkları hariç tutulur — bir yol adına denk gelen desen sır değildir.

@@ -522,8 +522,8 @@ relatada, não fatal. Sempre que o cofre é um repositório, o Knotlog instala
 `.githooks/pre-commit` e aponta `core.hooksPath` para ele. A cada commit, ele
 então examina as linhas *adicionadas* no stage em busca de formatos conhecidos de
 segredo — AWS `AKIA…`, OpenAI `sk-…`, GitHub `ghp_…`/`github_pat_…`, Slack
-`xox…`, Google `AIza…`, blocos `PRIVATE KEY` e atribuições genéricas como
-`api_key=`/`secret=`/`token=` — e rejeita o commit, apontando o arquivo em que
+`xox…`, Google `AIza…`, blocos `PRIVATE KEY`, tokens `Bearer`, JWTs e
+atribuições genéricas como `api_key=`/`secret=`/`token=`/`password:` (com `=` ou `:`) — e rejeita o commit, apontando o arquivo em que
 encontrou. Se um scanner externo `sir-tara` estiver no seu `PATH`, a varredura
 inteira é delegada a ele. Um hook editado à mão (sem o marcador do Knotlog) nunca
 é sobrescrito. Para fazer o commit mesmo assim: `git commit --no-verify` pula

@@ -505,8 +505,8 @@ not fatal. Whenever the vault is a repository,
 Knotlog installs `.githooks/pre-commit` and points `core.hooksPath` at it. Every
 commit then scans the *added* staged lines for well-known secret shapes — AWS
 `AKIA…`, OpenAI `sk-…`, GitHub `ghp_…`/`github_pat_…`, Slack `xox…`, Google
-`AIza…`, `PRIVATE KEY` blocks, and generic `api_key=`/`secret=`/`token=`
-assignments — and rejects the commit, naming the file it found. If an external
+`AIza…`, `PRIVATE KEY` blocks, `Bearer` tokens, JWTs, and generic
+`api_key=`/`secret=`/`token=`/`password:` assignments (`=` or `:`) — and rejects the commit, naming the file it found. If an external
 `sir-tara` scanner is on your `PATH`, the whole scan is delegated to it. A
 hand-edited hook (one without Knotlog's marker) is never overwritten. To commit
 anyway: `git commit --no-verify` skips all hooks, and

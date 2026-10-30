@@ -6646,6 +6646,20 @@ t; assert_eq "B1 T-366: rejection documents the --no-verify escape" 'yes' \
 t; (cd "$TMP/v366" && git reset -q && printf 'ikinci temiz not\n' > Temiz2.md \
   && git add Temiz2.md && git commit -qm clean) >/dev/null 2>&1; RC366C=$?
 assert_eq "B1 T-366: clean diff passes after the rejection" '0' "$RC366C"
+# The colon form (YAML/JSON), Bearer headers and bare JWTs are caught too;
+# a shell reference in the same colon form is not.
+RC366S=
+for _s in 'password: hunter2!secret' '"password": "s3cretValue9"' \
+          'Authorization: Bearer abcdefghijklmnopqrstuvwxyz0123' \
+          'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTYifQ.sig'; do
+  printf '%s\n' "$_s" > "$TMP/v366/Shape.md"
+  (cd "$TMP/v366" && git add Shape.md && git commit -qm shape) >/dev/null 2>&1
+  RC366S="$RC366S$?"
+  (cd "$TMP/v366" && git reset -q)
+done
+printf 'password: ${DB_PASS}\n' > "$TMP/v366/Shape.md"
+(cd "$TMP/v366" && git add Shape.md && git commit -qm ref) >/dev/null 2>&1; RC366S="$RC366S$?"
+t; assert_eq "B1 T-366: colon, Bearer and JWT shapes are rejected; a \${VAR} reference passes" '11110' "$RC366S"
 
 # T-367: the single-commit escape hatch.
 t; (cd "$TMP/v366" && git add Notlar.md && QUIPU_SKIP_SECRET_SCAN=1 git commit -qm esc) \

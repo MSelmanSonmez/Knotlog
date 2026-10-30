@@ -379,7 +379,7 @@ config の `ctx_max=` が正の整数でなければ警告します (無視さ�
 `init --git` は必要に応じて同じことを行います。既存の履歴にコミットが追加されることはなく、リポジトリでない既存のボールトが既定で変換されることもありません (求めるには `--git` を渡します)。
 git のアイデンティティがない場合は、致命的ではなく報告されます。ボールトがリポジトリであるときは常に、
 Knotlog は `.githooks/pre-commit` をインストールし、`core.hooksPath` をそこに向けます。以後すべてのコミットで、ステージされた*追加*行が、よく知られたシークレットの形
-(AWS の `AKIA…`、OpenAI の `sk-…`、GitHub の `ghp_…`/`github_pat_…`、Slack の `xox…`、Google の `AIza…`、`PRIVATE KEY` ブロック、一般的な `api_key=`/`secret=`/`token=` の代入)
+(AWS の `AKIA…`、OpenAI の `sk-…`、GitHub の `ghp_…`/`github_pat_…`、Slack の `xox…`、Google の `AIza…`、`PRIVATE KEY` ブロック、`Bearer` トークン、JWT、一般的な `api_key=`/`secret=`/`token=`/`password:` の代入 (`=` でも `:` でも))
 についてスキャンされ、見つかったファイルの名前を示してコミットが拒否されます。外部の `sir-tara` スキャナが `PATH` 上にあれば、スキャン全体がそちらに委ねられます。
 手で編集されたフック (Knotlog のマーカーがないもの) が上書きされることはありません。それでもコミットするには、
 `git commit --no-verify` がすべてのフックをスキップし、`KNOTLOG_SKIP_SECRET_SCAN=1 git commit …` はその 1 回のコミットについてだけ、このゲートをスキップします。

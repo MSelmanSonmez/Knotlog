@@ -530,8 +530,9 @@ informa, no es fatal. Siempre que la bóveda sea un repositorio, Knotlog instala
 `.githooks/pre-commit` y apunta `core.hooksPath` a él. Cada commit escanea
 entonces las líneas *añadidas* en el área de preparación en busca de formas
 conocidas de secretos — AWS `AKIA…`, OpenAI `sk-…`, GitHub
-`ghp_…`/`github_pat_…`, Slack `xox…`, Google `AIza…`, bloques `PRIVATE KEY` y
-asignaciones genéricas `api_key=`/`secret=`/`token=` — y rechaza el commit,
+`ghp_…`/`github_pat_…`, Slack `xox…`, Google `AIza…`, bloques `PRIVATE KEY`,
+tokens `Bearer`, JWT y asignaciones genéricas
+`api_key=`/`secret=`/`token=`/`password:` (con `=` o `:`) — y rechaza el commit,
 nombrando el archivo donde lo encontró. Si hay un escáner externo `sir-tara` en
 tu `PATH`, el escaneo completo se delega en él. Un hook editado a mano (uno sin
 el marcador de Knotlog) nunca se sobrescribe. Para hacer commit de todos modos:
