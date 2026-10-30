@@ -12960,6 +12960,25 @@ R103=$(QUIPU_VAULT="$TMP/s103" QUIPU_LANG=en sh "$ROOT/knotlog" init --plain --n
 t; assert_eq "T-1103: init --lang en/x exits 2 and writes no lang= line" '2 no' \
   "$R103 $(grep -q '^lang=' "$TMP/s103/.knotlog/config" && printf yes || printf no)"
 
+# ---- README badges: the same measured counts in all six READMEs (T-1320..T-1322) ----
+# badge_of FILE NAME -> the shields.io badge token for NAME (e.g. tests-1866%20passing-brightgreen).
+badge_of() { grep -o "img.shields.io/badge/$2-[^\"]*" "$ROOT/$1" | head -n1; }
+BADGE_READMES="README.md README.tr.md README.es.md README.pt-BR.md README.ja.md README.zh-CN.md"
+badge_all() { for _b in $BADGE_READMES; do badge_of "$_b" "$1"; done | sort -u; }
+
+t; assert_eq "T-1320: the tests badge count is the same in all six READMEs" '1' \
+  "$(badge_all tests | grep -c '^img.shields.io/badge/tests-[0-9][0-9]*%20passing-')"
+t; assert_eq "T-1321: agents, scripts and LongMemEval badges agree in all six READMEs" '1 1 1' \
+  "$(for _n in agents scripts LongMemEval--S; do badge_all "$_n" | grep -c .; done | tr '\n' ' ' | sed 's/ $//')"
+t
+if command -v git >/dev/null 2>&1 && git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+  assert_eq "T-1322: the scripts badge equals the git ls-files count" \
+    "$(git -C "$ROOT" ls-files | grep -E '^(knotlog|lib/.*\.awk|fold/.*\.sed)$' | wc -l | tr -d ' ')" \
+    "$(badge_of README.md scripts | sed 's/^img.shields.io\/badge\/scripts-\([0-9]*\)-.*/\1/')"
+else
+  skip "T-1322: the scripts badge equals the git ls-files count" "not a git checkout"
+fi
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
