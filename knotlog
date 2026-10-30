@@ -6387,7 +6387,7 @@ _q_cmd_propose() {
   # knotlog propose --kind lesson|skill|fix "<text>" -- the agent's answer to
   # the review ask. Always queued in .knotlog/pending (setting on or off) after
   # the admission gate; a human approves it with `knotlog pending`.
-  [ "$#" -eq 3 ] && [ "$1" = --kind ] || _q_die err_propose_args 2
+  if [ "$#" -ne 3 ] || [ "$1" != --kind ]; then _q_die err_propose_args 2; fi
   case "$2" in lesson | skill | fix) ;; *) _q_die err_propose_kind 2 "$2" ;; esac
   [ -n "$3" ] || _q_die err_propose_args 2
   _q_lf=$(printf '\nx')
