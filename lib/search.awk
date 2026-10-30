@@ -138,7 +138,16 @@ BEGIN {
   k1 = 1.2
   b  = 0.75
   n = 0
-  qc = split(terms, qw, " ")
+  # Query terms, normalized like a document word (see norm_term) and
+  # deduplicated so df counts each term once per note, not once per repeat.
+  nraw = split(terms, rawq, " ")
+  qc = 0
+  for (t = 1; t <= nraw; t++) {
+    term = norm_term(rawq[t])
+    if (term == "" || (term in qseen)) continue
+    qseen[term] = 1
+    qw[++qc] = term
+  }
   fallback = 0
   avgdl = 1
   if (snip + 0 <= 0) snip = 120
@@ -347,6 +356,29 @@ function count_occ(s, needle,   pos, cnt, len, rest) {
 # the punctuation the index side never strips.
 function is_trail_punct(c) {
   return (c == "." || c == "," || c == ";" || c == ":" || c == "!" || c == "?" || c == ")" || c == "'" || c == sprintf("%c", 34))
+}
+
+# Query-side word normalization, the mirror of the document-side boundary
+# rule: trailing is_trail_punct() characters are dropped (count_occ_bounded
+# tolerates them in the text, so "spotify?" must look for "spotify"), and so
+# are leading ( ' " (the opening forms of ) ' "). Inner punctuation stays
+# (node.js, 2026-10-30), and so do leading # and - and trailing + (#tag,
+# --flag, c++), which a note's own word keeps too. A term left with no
+# character outside ASCII punctuation ("?", "--") is dropped as noise.
+# Non-ASCII characters (unfolded letters under fold=default) count as word
+# characters. substr()/index() only, no regex (PLAN 4.11).
+function norm_term(w,   c, i, p) {
+  while (length(w) > 0) {
+    c = substr(w, 1, 1)
+    if (c == "(" || c == "'" || c == sprintf("%c", 34)) w = substr(w, 2)
+    else break
+  }
+  while (length(w) > 0 && is_trail_punct(substr(w, length(w), 1))) w = substr(w, 1, length(w) - 1)
+  p = "!#$%&'()*+,-./:;<=>?@[]^_`{|}~" sprintf("%c%c", 34, 92)
+  for (i = 1; i <= length(w); i++) {
+    if (index(p, substr(w, i, 1)) == 0) return w
+  }
+  return ""
 }
 
 # FAZ 17 (AG-2): word-boundary match count for `term` inside `padded` (a
