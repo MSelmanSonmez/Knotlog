@@ -188,7 +188,8 @@ function mc_call(id, s, r,   p, name, args, qtok, ltok, query, lim, a, ttok, tex
     if (substr(text, 1, 1) == "-") { mc_tool_result(id, r, "text must not start with a dash", 1); return }
     mc_run("note " mc_sq(text))
   } else { mc_err(id, -32602, "Unknown tool: " name); return }
-  if (mc_rc == 0) mc_tool_result(id, r, mc_out, 0)
+  # 5 (pending_review) and 6 (already_remembered) are outcomes, not failures.
+  if (mc_rc == 0 || mc_rc == 5 || mc_rc == 6) mc_tool_result(id, r, mc_out, 0)
   else mc_tool_result(id, r, (mc_msg != "" ? mc_msg : "knotlog exited with status " mc_rc), 1)
 }
 
