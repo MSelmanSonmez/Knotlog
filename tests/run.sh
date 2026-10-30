@@ -13382,6 +13382,9 @@ b2_tree() { # name -> one checksum over every file outside .knotlog/ (names and 
     while IFS= read -r _b2_f; do printf '%s ' "$_b2_f"; cksum < "$_b2_f"; done) | cksum
 }
 b2_yn() { if "$@"; then printf yes; else printf no; fi; }
+# case stays in a function body: bash 3.2 (macOS /bin/sh) reads a pattern's `)` inside $( ) as its end.
+b2_starts() { case "$1" in "$2"*"${3:-}") printf yes ;; *) printf no ;; esac; } # haystack prefix [suffix]
+b2_contains() { case "$1" in *"$2"*) printf yes ;; *) printf no ;; esac; }
 b2_ask() { _b2_a=$(memfmt "$@"); printf '%s' "${_b2_a:-<ctx_review_ask missing>}"; } # never empty: an absent key must not match an empty reason
 B2_ASK=$(b2_ask en ctx_review_ask 41 'a.md, b.md, c.md')
 
@@ -13446,14 +13449,14 @@ b2_41 b2cp
 B2C1=$(b2_reason "$(b2_stop b2cp '{}' QUIPU_LANG=en)")
 B2C2=$(b2_reason "$(b2_stop b2cp '{}' QUIPU_LANG=en)")
 t; assert_eq "T-1217: checkpoint due and review due -> first Stop is the checkpoint, the second the review ask" 'yes yes' \
-  "$(case "$B2C1" in 'Checkpoint: '*) printf yes ;; *) printf no ;; esac) $([ "$B2C2" = "$B2_ASK" ] && printf yes || printf no)"
+  "$(b2_starts "$B2C1" 'Checkpoint: ') $([ "$B2C2" = "$B2_ASK" ] && printf yes || printf no)"
 
 # T-1218: Antigravity: fullyIdle false is allow (ask kept), then the ask is a "continue", then "allow".
 b2_mk b2ag; b2_41 b2ag
 b2_ag() { printf '%s' "$1" | QUIPU_LANG=en QUIPU_VAULT="$TMP/b2ag" sh "$ROOT/knotlog" context --json Stop --antigravity 2>/dev/null; }
 B2A0=$(b2_ag '{"fullyIdle":false}'); B2A1=$(b2_ag '{"fullyIdle":true}'); B2A2=$(b2_ag '{"fullyIdle":true}')
 t; assert_eq "T-1218: Antigravity Stop -> allow while not idle, continue with the ask, then allow" '{"decision":"allow"} yes {"decision":"allow"}' \
-  "$B2A0 $(case "$B2A1" in '{"decision":"continue","reason":"'*'"}') [ "$(b2_reason "$B2A1")" = "$B2_ASK" ] && printf yes || printf no ;; *) printf no ;; esac) $B2A2"
+  "$B2A0 $([ "$(b2_starts "$B2A1" '{"decision":"continue","reason":"' '"}')" = yes ] && [ "$(b2_reason "$B2A1")" = "$B2_ASK" ] && printf yes || printf no) $B2A2"
 
 # T-1219: the ask speaks the vault's language.
 b2_mk b2tr; printf '%s\n' lang=tr layout=plain > "$TMP/b2tr/.knotlog/config"; b2_41 b2tr
@@ -13471,15 +13474,15 @@ t; assert_eq "T-1221: remember past the threshold writes .knotlog/needs_review a
   "$(b2_yn test -s "$TMP/b2fb/.knotlog/needs_review") $(b2_yn test -s "$TMP/b2fb/.knotlog/reviewed")"
 B2S1=$(b2_ss b2fb)
 t; assert_eq "T-1221: the next SessionStart starts with the ask and deletes the flag" 'yes no' \
-  "$(case "$B2S1" in "$B2_ASK"*) printf yes ;; *) printf no ;; esac) $(b2_yn test -e "$TMP/b2fb/.knotlog/needs_review")"
+  "$(b2_starts "$B2S1" "$B2_ASK") $(b2_yn test -e "$TMP/b2fb/.knotlog/needs_review")"
 t; assert_eq "T-1221: a second SessionStart does not repeat it" 'no' \
-  "$(case "$(b2_ss b2fb)" in *"$B2_ASK"*) printf yes ;; *) printf no ;; esac)"
+  "$(b2_contains "$(b2_ss b2fb)" "$B2_ASK")"
 t; assert_eq "T-1221: the following Stop does not ask again (the watermark moved with the flag)" '' "$(b2_stop b2fb '{}')"
 
 # T-1222: the SessionStart after a compaction (source compact) shows the flag too.
 b2_mk b2cmp; b2_41 b2cmp; b2_rem b2cmp
 t; assert_eq "T-1222: SessionStart with source compact shows the flag once" 'yes no' \
-  "$(case "$(b2_ss b2cmp '{"source":"compact"}')" in "$B2_ASK"*) printf yes ;; *) printf no ;; esac) $(b2_yn test -e "$TMP/b2cmp/.knotlog/needs_review")"
+  "$(b2_starts "$(b2_ss b2cmp '{"source":"compact"}')" "$B2_ASK") $(b2_yn test -e "$TMP/b2cmp/.knotlog/needs_review")"
 
 # T-1223: remember below the threshold, with review=off or profile=manual, or after the Stop ask: no flag.
 b2_mk b2fb40; b2_log b2fb40 40 a.md; b2_rem b2fb40
