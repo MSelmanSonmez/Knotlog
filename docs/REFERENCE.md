@@ -492,6 +492,37 @@ Resolution goes through three stages, stopping at the first match: literal vault
 
 **Honest limit — `--tag` compares folded against raw.** The tags column in `index.tsv` stores frontmatter verbatim; `--tag`'s argument is folded. A tag written `#İstanbul` will not be found by `--tag istanbul`. `--status` has the same gap, rarely bitten because status values are conventionally short ASCII words. Not fixed in this release.
 
+### Retrieval benchmark (LongMemEval-S)
+
+`tests/bench/longmemeval.sh` measures how often `knotlog search` puts the right session in the top results on LongMemEval-S. It is a retrieval check only: no model answers the questions. `run.sh` does not call it; only the fixture tests T-1290..T-1293 exercise its helpers.
+
+**Data.** `longmemeval_s_cleaned.json` from Hugging Face `xiaowu0162/longmemeval-cleaned`, revision `98d7416` (277 383 467 bytes). It is not in the repository (`.gitignore` lists `longmemeval_s*.json`); download it yourself.
+
+**Method** (the same as agentmemory's `eval/runner`):
+
+- k = 5. Each question gets a fresh vault, indexed once, searched once.
+- Every haystack session becomes one note: the session date first, then the turns as `[role] content`.
+- The query is the question text alone.
+- 30 of the 500 questions are abstention questions (`_abs`); they are not scored, leaving 470.
+- `recall_any@5`: at least one gold session is in the top 5. `recall_all@5`: every gold session is in the top 5.
+
+**Results** (laptop, Ryzen 5 7640HS, Linux, 30 October 2026; one full run takes about 145 s):
+
+| Build | recall_any@5 | recall_all@5 |
+|---|---|---|
+| knotlog 1.2.0 `search` | 284/470 = 60.4% | 185/470 = 39.4% |
+| with the query-term fix (strip punctuation, keep one copy of a repeated term; branch `fix/search-query`, not released) | 424/470 = 90.2% | 329/470 = 70.0% |
+
+**Comparison.** agentmemory's BM25 on the same set at @5 reports any-hit 452/470 = 96.2% and strict recall-all 398/470 = 84.7% (`github.com/rohitg00/agentmemory`, `docs/benchmarks/2026-10-28-retrieval-evaluation.md`, commit `3f8784d`). Knotlog is still behind. agentmemory also uses stemming, synonyms and prefix expansion, which Knotlog does not; part of the gap may come from that, but this was not measured.
+
+**Reproduce:**
+
+```
+KNOTLOG=./knotlog sh tests/bench/longmemeval.sh /path/to/longmemeval_s_cleaned.json /tmp/lme-run
+```
+
+`KNOTLOG` picks the knotlog script to measure (default: this checkout's). `WORKDIR` must be new or empty. The summary is in the `#` lines at the end of `WORKDIR/results.tsv`; an optional third argument limits the run to the first N questions.
+
 ## Large vaults
 
 The index is meant to be *read* by the agent, and an agent has a context budget. Once the vault outgrows a single read, the supported pattern is two-stage: **narrow with `--brief`, judge from the snippets, then read only the notes you picked.**
