@@ -24,7 +24,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/dependencies-zero-brightgreen" alt="Zero dependencies">
   <img src="https://img.shields.io/badge/network-offline-lightgrey" alt="Works offline">
-  <!-- badge counts are re-measured at the release commit: tests = `sh tests/run.sh` -> "# pass N"; scripts = `git ls-files | grep -E '^(knotlog|lib/.*\.awk|fold/.*\.sed)$' | wc -l`; LongMemEval-S = `tests/bench/longmemeval.sh` -->
+  <!-- badge counts are re-measured at the release commit: tests = `sh tests/run.sh` -> "# pass N"; scripts = `git ls-files | grep -cE '^(knotlog|lib/.*\.awk|fold/.*\.sed)$'`; LongMemEval-S = `tests/bench/longmemeval.sh` -->
   <img src="https://img.shields.io/badge/tests-1869%20passing-brightgreen" alt="1869 件のテストが成功">
   <img src="https://img.shields.io/badge/agents-8-blue" alt="対応エージェント 8 種">
   <img src="https://img.shields.io/badge/scripts-26-lightgrey" alt="配布スクリプト 26 本">
