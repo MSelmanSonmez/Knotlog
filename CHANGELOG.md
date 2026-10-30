@@ -3,6 +3,11 @@
 All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- `tests/bench/longmemeval.sh`: a LongMemEval-S retrieval bench for `knotlog search` (k = 5, one note per haystack session, same method as agentmemory's `eval/runner`). It is not part of `tests/run.sh`; method, results and the reproduce command are in `docs/REFERENCE.md` under Search.
+
 ## [1.2.0] - 2026-10-27
 
 ### Security
