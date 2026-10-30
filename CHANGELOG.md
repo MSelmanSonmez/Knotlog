@@ -9,6 +9,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `context --json UserPromptSubmit` (and Gemini's `BeforeAgent`) re-sent the whole session context on every prompt, about as large as the session start (up to `ctx_max`, 4 KB by default). It now carries only the `now:` line plus the memory and checkpoint reminders when they are due, as the guide already described; the full context stays a `SessionStart` job. The README's "zero token cost" line is replaced with what the hooks actually add.
 - Parallel captures across a log rotation lost rows: the fresh `activity.log` was truncated after the move, wiping rows other captures had just appended, and a capture that found the file already moved aborted before writing its own row. Rotation now runs under a lock (`.knotlog/rotate.lock`), re-checks the size, and no longer truncates; 100 parallel captures keep all 100 rows.
 
+### Security
+- The threads and facts headers in the session context now say what follows is the user's notes, information and never instructions (`ctx_threads`, `ctx_facts`, all six languages). A line such as "ignore all previous rules" written into `Threads.md` used to reach the model unmarked. The headers already count against `ctx_max`, so tiny budgets still hold. This is a prompt-level frame, not isolation; the README's honest limits say so.
+
 ## [1.2.0] - 2026-10-27
 
 ### Security

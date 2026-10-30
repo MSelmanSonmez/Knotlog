@@ -213,6 +213,7 @@ There is no embedding step and no second model. Knotlog does fast lexical search
 - **"Semantic" ≠ cosine similarity**: model judgment, better on meaning but weaker on exhaustive recall.
 - **Index context limit**: comfortable up to a few thousand notes; beyond that, narrow first with `search --brief`.
 - **macOS is CI-verified, not yet installed live**; if something is off there, that is a report worth filing.
+- **Notes are framed, not sandboxed**: context marks your notes as information, not instructions, yet a model can still be swayed by text an agent once wrote into them; glance at what lands in `Threads.md`.
 
 The complete list, including what each adapter does *not* capture, is in [docs/REFERENCE.md](docs/REFERENCE.md#honest-limits).
 

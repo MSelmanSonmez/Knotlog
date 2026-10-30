@@ -216,6 +216,7 @@ No hay paso de embeddings ni un segundo modelo. Knotlog hace búsqueda léxica r
 - **"Semántico" ≠ similitud del coseno**: es el criterio del modelo, mejor para el significado pero más débil en recuperación exhaustiva.
 - **Límite de contexto del índice**: cómodo hasta unos pocos miles de notas; más allá, acota primero con `search --brief`.
 - **macOS está verificado por CI, aún no instalado en vivo**; si algo falla allí, es un reporte que vale la pena enviar.
+- **Las notas se enmarcan, no se aíslan**: el contexto marca tus notas como información, no como instrucciones, pero un texto que un agente escribió en ellas aún puede influir en el modelo; revisa de vez en cuando lo que entra en `Threads.md`.
 
 La lista completa, incluido lo que cada adaptador *no* captura, está en [docs/REFERENCE.md](docs/REFERENCE.md#honest-limits).
 

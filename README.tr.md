@@ -207,6 +207,7 @@ Gömme (embedding) adımı ve ikinci bir model yok. Knotlog hızlı sözcüksel 
 - **"Anlamsal" ≠ kosinüs benzerliği**: model yargısıdır; anlamda daha iyi, eksiksiz bulmada daha zayıf.
 - **Dizin bağlam sınırı**: birkaç bin nota kadar rahat; ötesinde önce `search --brief` ile daralt.
 - **macOS CI'da doğrulandı, henüz canlı kurulmadı**; orada bir şey ters giderse bildirmeye değer.
+- **Notlar çerçevelenir, yalıtılmaz**: bağlam notlarını talimat değil bilgi diye işaretler, ama bir ajanın bir zamanlar içlerine yazdığı metin modeli yine etkileyebilir; `Threads.md`'ye ne girdiğine arada bir bak.
 
 Her adaptörün neyi *yakalamadığı* dahil tam liste [docs/REFERENCE.md](docs/REFERENCE.md#honest-limits)'de (İngilizce).
 
