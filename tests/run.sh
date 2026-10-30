@@ -13340,6 +13340,215 @@ t; assert_eq "T-1197: usage_pending exists in every i18n file and help prints it
 t; assert_eq "T-1198: admit_inject_marks and admit_reltime_words are set in every i18n file" '' \
   "$(for _f in "$ROOT"/i18n/*.txt; do grep -q '^admit_inject_marks=..' "$_f" && grep -q '^admit_reltime_words=..' "$_f" || printf '%s ' "${_f##*/}"; done)"
 
+# ---- review loop (T-1210..T-1249) -------------------------------------------
+# B2: Knotlog never calls a model; it asks the host agent to review. Once
+# more than KNOTLOG_REVIEW_AFTER (default 40) activity events have piled up
+# since .knotlog/reviewed, `context --json Stop` returns one review ask (block
+# envelope; Antigravity "continue") and moves the watermark. A due checkpoint
+# goes first. stop_hook_active, profile=manual|economical and review=off keep
+# it silent. `remember` writes .knotlog/needs_review instead when the ask is
+# due, and the next `context --json SessionStart` shows it once. The agent's
+# answer is `knotlog propose --kind lesson|skill|fix "<text>"`: one P line in
+# .knotlog/pending, setting on or off, never a vault file.
+b2_mk() { # name [config line...] -> git-less en vault, plain layout
+  mkvault "$1"; _b2_v=$1; shift
+  printf '%s\n' lang=en layout=plain "$@" > "$TMP/$_b2_v/.knotlog/config"
+  mkdir -p "$TMP/$_b2_v/700-Sessions"
+}
+b2_log() { # name count path -> append count activity events on path
+  awk -v n="$2" -v p="$3" 'BEGIN { for (i = 1; i <= n; i++) printf "2026-10-31T10:%02d | PostToolUse | Edit | %s\n", i % 60, p }' \
+    >> "$TMP/$1/.knotlog/activity.log"
+}
+b2_41() { b2_log "$1" 20 a.md; b2_log "$1" 15 b.md; b2_log "$1" 6 c.md; } # 41 events, a > b > c
+b2_stop() { # name stdin [env...] -> Stop output
+  _b2_v=$1; _b2_in=$2; shift 2
+  printf '%s' "$_b2_in" | env QUIPU_VAULT="$TMP/$_b2_v" "$@" sh "$ROOT/knotlog" context --json Stop 2>/dev/null
+}
+b2_reason() { printf '%s' "$1" | awk -f "$LIB/jsonfield.awk" -f "$DRV/hookreason.awk" -; }
+b2_ss() { # name [stdin] -> additionalContext of SessionStart
+  printf '%s' "${2:-}" | QUIPU_VAULT="$TMP/$1" sh "$ROOT/knotlog" context --json SessionStart 2>/dev/null |
+    awk -f "$LIB/jsonfield.awk" -f "$DRV/hookctx.awk" -
+}
+b2_rem() { # name -> remember in hook mode, the way every adapter runs it
+  QUIPU_HOOK=1 QUIPU_VAULT="$TMP/$1" sh "$ROOT/knotlog" remember </dev/null >/dev/null 2>&1
+}
+b2_run() { # name args... -> $B2RC; stdout/stderr in name.out / name.err
+  _b2_v=$1; shift
+  QUIPU_LANG=en QUIPU_VAULT="$TMP/$_b2_v" sh "$ROOT/knotlog" "$@" </dev/null >"$TMP/$_b2_v.out" 2>"$TMP/$_b2_v.err"
+  B2RC=$?
+}
+b2_tree() { # name -> one checksum over every file outside .knotlog/ (names and bytes)
+  (cd "$TMP/$1" && find . -path ./.knotlog -prune -o -type f -print | LC_ALL=C sort |
+    while IFS= read -r _b2_f; do printf '%s ' "$_b2_f"; cksum < "$_b2_f"; done) | cksum
+}
+b2_yn() { if "$@"; then printf yes; else printf no; fi; }
+b2_ask() { _b2_a=$(memfmt "$@"); printf '%s' "${_b2_a:-<ctx_review_ask missing>}"; } # never empty: an absent key must not match an empty reason
+B2_ASK=$(b2_ask en ctx_review_ask 41 'a.md, b.md, c.md')
+
+# T-1210: no false positive. 40 events (the default threshold) and an empty log both stay silent.
+b2_mk b2at40; b2_log b2at40 40 a.md
+b2_mk b2empty
+t; assert_eq "T-1210: 40 events and an empty log -> Stop prints nothing and spends no watermark" '|no|no' \
+  "$(b2_stop b2at40 '{}')|$(b2_stop b2empty '{}')$(b2_yn test -e "$TMP/b2at40/.knotlog/reviewed")|$(b2_yn test -e "$TMP/b2empty/.knotlog/reviewed")"
+
+# T-1211: 41 events -> one block whose reason is ctx_review_ask with the count and the most touched files.
+b2_mk b2ask; b2_41 b2ask; T1211=$(b2_tree b2ask)
+B2O=$(b2_stop b2ask '{}' QUIPU_LANG=en)
+t; assert_eq "T-1211: past the threshold Stop blocks with the review ask on one line" 'block 1' \
+  "$(printf '%s' "$B2O" | awk -f "$LIB/jsonfield.awk" -f "$DRV/hookdecision.awk" -) $(printf '%s\n' "$B2O" | wc -l | tr -d ' ')"
+t; assert_eq "T-1211: the reason is ctx_review_ask (41 events; a.md, b.md, c.md)" "$B2_ASK" "$(b2_reason "$B2O")"
+t; assert_eq "T-1211: the ask writes .knotlog/reviewed (last log line) and no vault file" 'yes yes' \
+  "$([ "$(cat "$TMP/b2ask/.knotlog/reviewed" 2>/dev/null)" = "$(tail -n 1 "$TMP/b2ask/.knotlog/activity.log")" ] && printf yes || printf no) $([ "$(b2_tree b2ask)" = "$T1211" ] && printf yes || printf no)"
+
+# T-1212: one ask per batch: the next Stop is silent, 41 new events ask again.
+t; assert_eq "T-1212: an immediate second Stop is silent" '' "$(b2_stop b2ask '{}' QUIPU_LANG=en)"
+b2_log b2ask 40 d.md
+t; assert_eq "T-1212: 40 new events after the ask stay silent" '' "$(b2_stop b2ask '{}' QUIPU_LANG=en)"
+b2_log b2ask 1 d.md
+t; assert_eq "T-1212: the 41st new event asks again, counting only the new events" "$(b2_ask en ctx_review_ask 41 d.md)" \
+  "$(b2_reason "$(b2_stop b2ask '{}' QUIPU_LANG=en)")"
+
+# T-1213: stop_hook_active (both spellings) is silent and does not spend the ask.
+b2_mk b2act; b2_41 b2act
+t; assert_eq "T-1213: stop_hook_active true -> silent, no watermark" '||no' \
+  "$(b2_stop b2act '{"stop_hook_active": true}')|$(b2_stop b2act '{"stop_hook_active":true}')|$(b2_yn test -e "$TMP/b2act/.knotlog/reviewed")"
+t; assert_eq "T-1213: ...and the next plain Stop still asks" 'block' \
+  "$(b2_stop b2act '{}' | awk -f "$LIB/jsonfield.awk" -f "$DRV/hookdecision.awk" -)"
+
+# T-1214: profile=manual and profile=economical silence the ask.
+b2_mk b2man profile=manual; b2_41 b2man
+b2_mk b2eco profile=economical; b2_41 b2eco
+t; assert_eq "T-1214: profile manual and economical -> Stop silent, no watermark" '||no|no' \
+  "$(b2_stop b2man '{}')|$(b2_stop b2eco '{}')|$(b2_yn test -e "$TMP/b2man/.knotlog/reviewed")|$(b2_yn test -e "$TMP/b2eco/.knotlog/reviewed")"
+
+# T-1215: review=off silences the ask; review=on (or any other value) keeps it.
+b2_mk b2off review=off; b2_41 b2off
+b2_mk b2on review=on; b2_41 b2on
+t; assert_eq "T-1215: review=off -> silent; review=on -> asks" '|block' \
+  "$(b2_stop b2off '{}')|$(b2_stop b2on '{}' | awk -f "$LIB/jsonfield.awk" -f "$DRV/hookdecision.awk" -)"
+
+# T-1216: KNOTLOG_REVIEW_AFTER moves the threshold (QUIPU_ name too); a bad value falls back to 40.
+b2_mk b2env; b2_log b2env 6 a.md
+t; assert_eq "T-1216: KNOTLOG_REVIEW_AFTER=5 asks at 6 events, =6 does not, QUIPU_REVIEW_AFTER=5 asks, =abc does not" 'no yes yes no' \
+  "$(b2_yn [ -n "$(b2_stop b2env '{}' KNOTLOG_REVIEW_AFTER=6)" ]) $(b2_yn [ -n "$(b2_stop b2env '{}' KNOTLOG_REVIEW_AFTER=5)" ]) $(rm -f "$TMP/b2env/.knotlog/reviewed"; b2_yn [ -n "$(b2_stop b2env '{}' QUIPU_REVIEW_AFTER=5)" ]) $(rm -f "$TMP/b2env/.knotlog/reviewed"; b2_yn [ -n "$(b2_stop b2env '{}' KNOTLOG_REVIEW_AFTER=abc)" ])"
+
+# T-1217: a due checkpoint goes first; the review ask comes on the next Stop.
+B2_NOW=$(date +%s)
+mkdir -p "$TMP/b2cp/.knotlog" "$TMP/b2cp/700-Sessions"
+printf 'layout=plain\nlang=en\n' > "$TMP/b2cp/.knotlog/config"
+(cd "$TMP/b2cp" && git init --quiet && git config user.name t && git config user.email t@t && git config core.quotepath false)
+printf 'session\n' > "$TMP/b2cp/700-Sessions/$(date +%Y-%m-%d).md"
+(cd "$TMP/b2cp" && git add -A && GIT_COMMITTER_DATE="@$((B2_NOW - 10800))" GIT_AUTHOR_DATE="@$((B2_NOW - 10800))" git commit -qm init)
+touch_at "$((B2_NOW - 7200))" "$TMP/b2cp/700-Sessions/$(date +%Y-%m-%d).md"
+printf 'work\n' > "$TMP/b2cp/work.md"
+(cd "$TMP/b2cp" && git add work.md && git commit -qm work)
+b2_41 b2cp
+B2C1=$(b2_reason "$(b2_stop b2cp '{}' QUIPU_LANG=en)")
+B2C2=$(b2_reason "$(b2_stop b2cp '{}' QUIPU_LANG=en)")
+t; assert_eq "T-1217: checkpoint due and review due -> first Stop is the checkpoint, the second the review ask" 'yes yes' \
+  "$(case "$B2C1" in 'Checkpoint: '*) printf yes ;; *) printf no ;; esac) $([ "$B2C2" = "$B2_ASK" ] && printf yes || printf no)"
+
+# T-1218: Antigravity: fullyIdle false is allow (ask kept), then the ask is a "continue", then "allow".
+b2_mk b2ag; b2_41 b2ag
+b2_ag() { printf '%s' "$1" | QUIPU_LANG=en QUIPU_VAULT="$TMP/b2ag" sh "$ROOT/knotlog" context --json Stop --antigravity 2>/dev/null; }
+B2A0=$(b2_ag '{"fullyIdle":false}'); B2A1=$(b2_ag '{"fullyIdle":true}'); B2A2=$(b2_ag '{"fullyIdle":true}')
+t; assert_eq "T-1218: Antigravity Stop -> allow while not idle, continue with the ask, then allow" '{"decision":"allow"} yes {"decision":"allow"}' \
+  "$B2A0 $(case "$B2A1" in '{"decision":"continue","reason":"'*'"}') [ "$(b2_reason "$B2A1")" = "$B2_ASK" ] && printf yes || printf no ;; *) printf no ;; esac) $B2A2"
+
+# T-1219: the ask speaks the vault's language.
+b2_mk b2tr; printf '%s\n' lang=tr layout=plain > "$TMP/b2tr/.knotlog/config"; b2_41 b2tr
+t; assert_eq "T-1219: a Turkish vault gets the Turkish ask" "$(b2_ask tr ctx_review_ask 41 'a.md, b.md, c.md')" \
+  "$(b2_reason "$(b2_stop b2tr '{}')")"
+
+# T-1220: every language ships a short ask that names the propose command.
+t; assert_eq "T-1220: ctx_review_ask is set, at most 600 bytes and names knotlog propose --kind, in every i18n file" '' \
+  "$(for _f in "$ROOT"/i18n/*.txt; do _v=$(awk -F= '$1=="ctx_review_ask"{sub(/^[^=]*=/,"");print;exit}' "$_f"); [ -n "$_v" ] && [ "$(printf '%s' "$_v" | wc -c | tr -d ' ')" -le 600 ] && printf '%s' "$_v" | grep -qF 'knotlog propose --kind lesson|skill|fix' || printf '%s ' "${_f##*/}"; done)"
+
+# T-1221: fallback for agents without a Stop channel: remember flags, SessionStart shows it once.
+b2_mk b2fb; b2_41 b2fb
+b2_rem b2fb
+t; assert_eq "T-1221: remember past the threshold writes .knotlog/needs_review and the reviewed watermark" 'yes yes' \
+  "$(b2_yn test -s "$TMP/b2fb/.knotlog/needs_review") $(b2_yn test -s "$TMP/b2fb/.knotlog/reviewed")"
+B2S1=$(b2_ss b2fb)
+t; assert_eq "T-1221: the next SessionStart starts with the ask and deletes the flag" 'yes no' \
+  "$(case "$B2S1" in "$B2_ASK"*) printf yes ;; *) printf no ;; esac) $(b2_yn test -e "$TMP/b2fb/.knotlog/needs_review")"
+t; assert_eq "T-1221: a second SessionStart does not repeat it" 'no' \
+  "$(case "$(b2_ss b2fb)" in *"$B2_ASK"*) printf yes ;; *) printf no ;; esac)"
+t; assert_eq "T-1221: the following Stop does not ask again (the watermark moved with the flag)" '' "$(b2_stop b2fb '{}')"
+
+# T-1222: the SessionStart after a compaction (source compact) shows the flag too.
+b2_mk b2cmp; b2_41 b2cmp; b2_rem b2cmp
+t; assert_eq "T-1222: SessionStart with source compact shows the flag once" 'yes no' \
+  "$(case "$(b2_ss b2cmp '{"source":"compact"}')" in "$B2_ASK"*) printf yes ;; *) printf no ;; esac) $(b2_yn test -e "$TMP/b2cmp/.knotlog/needs_review")"
+
+# T-1223: remember below the threshold, with review=off or profile=manual, or after the Stop ask: no flag.
+b2_mk b2fb40; b2_log b2fb40 40 a.md; b2_rem b2fb40
+b2_mk b2fboff review=off; b2_41 b2fboff; b2_rem b2fboff
+b2_mk b2fbman profile=manual; b2_41 b2fbman; b2_rem b2fbman
+b2_mk b2fbeco profile=economical; b2_41 b2fbeco; b2_rem b2fbeco
+b2_mk b2fbdone; b2_41 b2fbdone; b2_stop b2fbdone '{}' >/dev/null; b2_log b2fbdone 3 e.md; b2_rem b2fbdone
+t; assert_eq "T-1223: no needs_review at 40 events, review=off, manual, economical, or once Stop asked" 'no no no no no' \
+  "$(for _v in b2fb40 b2fboff b2fbman b2fbeco b2fbdone; do b2_yn test -e "$TMP/$_v/.knotlog/needs_review"; printf ' '; done | sed 's/ $//')"
+t; assert_eq "T-1223: remember still writes the session note (the fallback is an addition)" 'yes' \
+  "$(b2_yn test -s "$TMP/b2fb40/700-Sessions/$(date +%Y-%m-%d).md")"
+
+# T-1224: propose queues one P line per kind, with the setting off; no vault file changes.
+b2_mk b2p; T1224=$(b2_tree b2p)
+b2_run b2p propose --kind lesson "the hook payload carries stop_hook_active"; R1224A=$B2RC; O1224A=$(cat "$TMP/b2p.out")
+b2_run b2p propose --kind skill "Run the full suite once at the end"; R1224B=$B2RC
+b2_run b2p propose --kind fix "the threads budget counted the pin twice"; R1224C=$B2RC
+t; assert_eq "T-1224: propose exits 5 with pending_review<TAB>policy_review_first<TAB>#1 (knotlog pending)" "5 5 5 yes" \
+  "$R1224A $R1224B $R1224C $([ "$O1224A" = "pending_review${TAB}policy_review_first${TAB}$(memfmt en admit_review 1)" ] && printf yes || printf no)"
+t; assert_eq "T-1224: .knotlog/pending holds three P lines, ids 1..3, kinds lesson skill fix" 'P1lesson P2skill P3fix' \
+  "$(awk -F"$TAB" '{ printf "%s%s%s%s", (NR > 1 ? " " : ""), $1, $2, $4 }' "$TMP/b2p/.knotlog/pending")"
+t; assert_eq "T-1224: the vault tree outside .knotlog/ is unchanged and pending lists the three" 'yes 3' \
+  "$([ "$(b2_tree b2p)" = "$T1224" ] && printf yes || printf no) $(QUIPU_LANG=en QUIPU_VAULT="$TMP/b2p" sh "$ROOT/knotlog" pending </dev/null 2>/dev/null | wc -l | tr -d ' ')"
+
+# T-1225: argument shape: a bad kind, a missing kind or text, extra args, a newline -> exit 2, nothing queued.
+b2_mk b2bad
+_r=; for _a in "--kind note x" "--kind lessons x" "--kind lesson" "x" "--kind" "--kind lesson a b"; do
+  # shellcheck disable=SC2086
+  b2_run b2bad propose $_a; _r="$_r$B2RC "
+done
+b2_run b2bad propose --kind lesson "two
+lines"; _r="$_r$B2RC"
+t; assert_eq "T-1225: invalid --kind and bad argument shapes exit 2" '2 2 2 2 2 2 2' "$_r"
+t; assert_eq "T-1225: nothing was queued" 'no' "$(b2_yn test -e "$TMP/b2bad/.knotlog/pending")"
+b2_run b2bad propose --kind lessons x
+t; assert_eq "T-1225: the error names the bad kind" 'yes' "$(b2_yn grep -qF lessons "$TMP/b2bad.err")"
+
+# T-1226: a secret is refused (exit 4), nothing queued, not echoed.
+b2_mk b2sec
+b2_run b2sec propose --kind lesson "the key is AKIA""ABCDEFGHIJKLMNOP"
+t; assert_eq "T-1226: propose with a secret -> exit 4 refused<TAB>secret_pattern, no pending file, no echo" '4 yes no no' \
+  "$B2RC $(head -n 1 "$TMP/b2sec.err" | grep -q "^refused${TAB}secret_pattern${TAB}" && printf yes || printf no) $(b2_yn test -e "$TMP/b2sec/.knotlog/pending") $(b2_yn grep -qF AKIA "$TMP/b2sec.err" "$TMP/b2sec.out")"
+
+# T-1227: write_approval=on: an instruction-shaped lesson is refused, the same text as a skill is queued.
+b2_mk b2wa write_approval=on
+b2_run b2wa propose --kind lesson "you must run the suite once at the end"; R1227A=$B2RC
+b2_run b2wa propose --kind skill "you must run the suite once at the end"; R1227B=$B2RC; O1227B=$(head -n 1 "$TMP/b2wa.out" | cut -f 1-2)
+b2_run b2wa propose --kind fix "the build broke yesterday"; R1227C=$B2RC; O1227C=$(head -n 1 "$TMP/b2wa.out" | cut -f 1-2)
+t; assert_eq "T-1227: lesson 'you must' -> 4, skill 'you must' -> 5 queued, fix 'yesterday' -> 5 relative_time" \
+  "4 5 pending_review${TAB}policy_review_first 5 pending_review${TAB}relative_time" "$R1227A $R1227B $O1227B $R1227C $O1227C"
+
+# T-1228: approving the skill writes one [skill candidate] note line (the exemption holds) and no skill file.
+b2_run b2wa pending --approve 1
+t; assert_eq "T-1228: approve of the skill proposal exits 0 and writes [skill candidate] into today's note" '0 yes' \
+  "$B2RC $(b2_yn grep -qF -- '[skill candidate] you must run the suite once at the end' "$TMP/b2wa/700-Sessions/$(date +%Y-%m-%d).md")"
+t; assert_eq "T-1228: no file or folder named like a skill exists in the vault" '' \
+  "$(cd "$TMP/b2wa" && find . -path ./.knotlog -prune -o -iname '*skill*' -print)"
+
+# T-1229: Turkish text and the \ % & $ bytes survive into the queue byte for byte.
+b2_mk b2trp; printf '%s\n' lang=tr layout=plain > "$TMP/b2trp/.knotlog/config"
+B2_TXT='ders: yol C:\Users\%s & $HOME çalıştı, ğüşöç'
+QUIPU_VAULT="$TMP/b2trp" sh "$ROOT/knotlog" propose --kind lesson "$B2_TXT" </dev/null >"$TMP/b2trp.out" 2>&1; R1229=$?
+t; assert_eq "T-1229: Turkish vault: exit 5, the text is the 6th field byte for byte, the detail is Turkish" "5 yes yes" \
+  "$R1229 $([ "$(awk -F"$TAB" '{ print $6 }' "$TMP/b2trp/.knotlog/pending")" = "$B2_TXT" ] && printf yes || printf no) $([ "$(cut -f 3 "$TMP/b2trp.out")" = "$(memfmt tr admit_review 1)" ] && printf yes || printf no)"
+
+# T-1230: help names propose and the review setting, in every language.
+t; assert_eq "T-1230: usage_propose and help_review exist in every i18n file and help prints them" ' yes yes' \
+  "$(for _f in "$ROOT"/i18n/*.txt; do grep -q '^usage_propose=.*--kind' "$_f" && grep -q '^help_review=.*review=off' "$_f" || printf '%s ' "${_f##*/}"; done) $(sh "$ROOT/knotlog" help 2>&1 | grep -qxF "$(mi18n en usage_propose)" && printf yes || printf no) $(sh "$ROOT/knotlog" help 2>&1 | grep -qxF "$(mi18n en help_review)" && printf yes || printf no)"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
