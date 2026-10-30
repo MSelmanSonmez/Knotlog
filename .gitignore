@@ -5,3 +5,4 @@ capture-*.jsonl
 .claude/faz0/
 .claude/
 ORCHESTRATOR_LOG.md
+longmemeval_s*.json
