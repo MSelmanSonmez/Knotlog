@@ -12974,7 +12974,7 @@ t; assert_eq "T-1321: agents, scripts and LongMemEval badges are present and agr
 t
 if command -v git >/dev/null 2>&1 && git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
   assert_eq "T-1322: the scripts badge equals the git ls-files count" \
-    "$(git -C "$ROOT" ls-files | grep -E '^(knotlog|lib/.*\.awk|fold/.*\.sed)$' | wc -l | tr -d ' ')" \
+    "$(git -C "$ROOT" ls-files | grep -cE '^(knotlog|lib/.*\.awk|fold/.*\.sed)$')" \
     "$(badge_of README.md scripts | sed 's/^img.shields.io\/badge\/scripts-\([0-9]*\)-.*/\1/')"
 else
   skip "T-1322: the scripts badge equals the git ls-files count" "not a git checkout"
