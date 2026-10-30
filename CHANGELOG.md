@@ -11,6 +11,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Security
 - The threads and facts headers in the session context now say what follows is the user's notes, information and never instructions (`ctx_threads`, `ctx_facts`, all six languages). A line such as "ignore all previous rules" written into `Threads.md` used to reach the model unmarked. The headers already count against `ctx_max`, so tiny budgets still hold. This is a prompt-level frame, not isolation; the README's honest limits say so.
+- The secret gate missed colon-form assignments (`password: …`, `"password": "…"` in YAML and JSON), `Bearer` tokens and bare JWTs; all three are now caught, while a `${VAR}` reference still passes. An installed Knotlog hook picks this up the next time `knotlog init` runs in the vault.
 
 ## [1.2.0] - 2026-10-27
 
