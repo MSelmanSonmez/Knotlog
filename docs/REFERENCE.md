@@ -200,9 +200,10 @@ left it says so and changes nothing.
 | `knotlog links` | print a note's outgoing/incoming `[[wikilinks]]` |
 | `knotlog context` | recent-session context; `--json EVENT` emits the hook envelope; `--cursor` (with `--json`) emits Cursor's `additional_context` shape instead; `--antigravity` (with `--json SessionStart` or `Stop`) emits Antigravity's shapes; `--bridge` writes it to AGENTS.md |
 | `knotlog remember` | mechanical digest: `activity.log` → `<sessions>/YYYY-MM-DD.md` + a pointer block in the session file doctor reads (`Last-Session.md`, `Son-Oturum.md` in a Turkish vault) (`--dry-run`/`--git`/`--limit`) |
-| `knotlog note "<text>"` | appends one line (`- HH:MM <text>`) to today's session reflection block, after the existing lines of the first heading; never rewrites other lines; shares `remember`'s lock; the session note never enters context, so no budget check applies |
+| `knotlog note "<text>"` | appends one line (`- HH:MM <text>`) to today's session reflection block, after the existing lines of the first heading; never rewrites other lines; shares `remember`'s lock; the session note never enters context, so no budget check applies; a secret-shaped text is refused (exit 4) and, with `write_approval=on`, the line is queued instead (see Admission, Write approval) |
 | `knotlog digest` | write/refresh a deterministic date-scoped digest under the layout's dump folder (`--date YYYY-MM-DD`, `--dry-run`, `--limit`; or `--since YYYY-MM-DD [--until YYYY-MM-DD]` to print a range to stdout) |
-| `knotlog note --thread "<text>"` | appends one line (`- HH:MM <text>`) to the end of the active threads section (`Threads.md` / `Konular.md`) inside the threads block; never inside the pin block; exits 1 and writes nothing when the file or the active section is missing; exits 3 and writes nothing when the new line would push the file past the context budget (see Large vaults); shares `remember`'s lock |
+| `knotlog note --thread "<text>"` | appends one line (`- HH:MM <text>`) to the end of the active threads section (`Threads.md` / `Konular.md`) inside the threads block; never inside the pin block; exits 1 and writes nothing when the file or the active section is missing; exits 3 and writes nothing when the new line would push the file past the context budget (see Large vaults); shares `remember`'s lock; admission and write approval as for `note` |
+| `knotlog pending [--approve N\|--reject N]` | list the notes waiting for review (`write_approval=on`), write one through the normal note path, or drop one; see Write approval |
 | `knotlog import FILE` | convert a local JSON export with role/content messages (Claude transcript, ChatGPT export, or JSONL) into a session note (`--date YYYY-MM-DD`) |
 | `knotlog plan <name> --proje <Project>` | open a plan note under `<projects>/<Project>/<Plans>/` from the localized front-matter template; a missing project folder is an error, never auto-created |
 | `knotlog tone [--list\|<slug>]` | show which tone is active and why (preset or companion.md); `--list` browses the nine shipped presets; `<slug>` writes `tone=` to `.knotlog/config` (never touches companion.md) |
@@ -323,7 +324,7 @@ Methods: `initialize`, `ping`, `server/discover`, `tools/list`, `tools/call`. No
 | `knotlog_context` | none | the output of `knotlog context` |
 | `knotlog_note` | `text` (string, required; not empty, not starting with `-`) | runs `knotlog note <text>`: one line appended to today's session reflection block; the only tool that writes, and it writes nothing else |
 
-A wrong argument shape or an unknown tool is a protocol error (`-32602`). A tool that ran and failed is a normal result with `isError: true` and the command's message as text.
+A wrong argument shape or an unknown tool is a protocol error (`-32602`). A tool that ran and failed is a normal result with `isError: true` and the command's message as text. A note that was queued for review (`knotlog note` exit 5, see Write approval) is not a failure: `isError: false`, with the `pending_review` line as text. A refused one (exit 4) and a budget refusal (exit 3) are errors.
 
 **The vault.** Tool calls run `knotlog` itself, so the vault is found the usual way: the nearest ancestor of the server's working directory holding `.knotlog/config`, or `KNOTLOG_VAULT`. Register the server from inside the vault, or set `KNOTLOG_VAULT`. With no vault, tools return the "vault not found" message as an error result.
 
@@ -519,7 +520,44 @@ Fifty snippets cost a fraction of fifty files, and choosing between them is exac
 
 **Write-time budget.** Every line in a persistent block costs context on every turn; what happened in a past session is not written to memory, it is found with `knotlog search`. So `knotlog note --thread` refuses a line that would make `context` crop the threads section: before the file is replaced it measures the new file the same way `doctor`'s threads-overflow warning does (the threads budget left after the fixed parts, with the pin block counted once, in the fixed part), at the moment of writing. If the file would no longer fit, nothing is written, the exit code is 3 and the message names the new size, the budget, the bytes to free and the commands that free them: `knotlog compact --apply` (old closed threads), `knotlog archive "<heading>"` (`archive --list` shows headings), or a larger `ctx_max`. A file exactly at the budget is accepted. A plain `knotlog note` (and the MCP `knotlog_note` tool, which runs it) writes the session note, which never enters context, so it is not checked.
 
-**Exit codes** of `knotlog note`: 0 written, 1 error, 2 usage, 3 no space (`--thread` only: the write-time budget above).
+**Exit codes** of `knotlog note`: see [Write approval](#write-approval).
+
+## Admission
+
+Every `knotlog note` and `knotlog note --thread` text is a candidate, checked before anything is written. The first check that matches decides; the result is one line, `status<TAB>reason<TAB>detail`, and the text itself is never echoed.
+
+| Check | Runs | Result | Exit |
+|---|---|---|---|
+| Secret pattern: the `_pat=` line of `hooks/pre-commit` (AWS `AKIA…`, `sk-…`, `ghp_…`, `github_pat_…`, `xox?-…`, `AIza…`, `PRIVATE KEY` blocks, `api_key/secret/token/password = …`), case-insensitive | always | `refused` `secret_pattern` (stderr) | 4 |
+| Instruction to the agent: `admit_inject_marks` in `i18n/<lang>.txt` ("ignore previous instructions", "you must", "you should", "from now on", a line starting `system:`/`assistant:`; Turkish "bundan sonra … yapmalısın", …). A plain imperative such as "run the tests before the release" does not match; a quoted one ("the user said: you must …") does, restate it as an observation | `write_approval=on` | `refused` `instruction_shaped` (stderr) | 4 |
+| Relative time: `admit_reltime_words` ("today", "tomorrow", "next week", "in 3 days"; Turkish "yarın", "geçen hafta", …) | `write_approval=on` | `pending_review` `relative_time`: queued, restate it with an absolute date | 5 |
+
+Both word lists are extended regular expressions; the active language's list is checked together with the English one. The secret pattern has one source: `knotlog` reads the pattern from the pre-commit hook it ships, so the commit gate and the note gate cannot drift apart. With the setting off (the default) a text without a secret is written exactly as before, byte for byte; a text with one, which earlier versions wrote, is refused.
+
+## Write approval
+
+`write_approval=on` in `.knotlog/config` turns on review before writing. A note that passes the checks above is not written to the vault: it is appended to `.knotlog/pending` and `note` prints `pending_review<TAB>policy_review_first<TAB>#N (knotlog pending)` with exit 5. Only `note` and `note --thread` (and so the MCP `knotlog_note` tool) are queued; `remember`, `capture`, `index`, `archive` and `compact` are not. Any other value, or no key, means off; `doctor` shows the row only when the key is present and warns on a value that is neither `on` nor `off`.
+
+```
+knotlog pending              # list open proposals: id, stamp, kind, reason, text (TAB-separated)
+knotlog pending --approve 3  # write #3 through the normal note path, then mark it approved
+knotlog pending --reject 3   # mark #3 rejected; no vault file is touched
+```
+
+`.knotlog/pending` is append-only, one TAB-separated line per event, never rewritten: `P<TAB>id<TAB>YYYY-MM-DD HH:MM<TAB>kind<TAB>reason<TAB>text` for a proposal, `A<TAB>id<TAB>YYYY-MM-DD HH:MM` for an approval, `R<TAB>id<TAB>YYYY-MM-DD HH:MM` for a rejection. A proposal is open while it has no `A` or `R` line; ids are the largest id so far plus one, taken under `remember`'s lock. A queued text may not contain a tab (exit 2). Kinds are `note` and `thread`; `lesson`, `fix` and `skill` are accepted too and are approved as a plain note line prefixed `[lesson] `, `[fix] ` or `[skill candidate] ` (no skill file is ever written). The file lives in the state folder: it never enters `context` and costs no budget.
+
+`--approve` checks the text for a secret again (and for an instruction, when the setting is on), writes it, and only then appends `A`. If the write fails, for example because `note --thread` would push the threads file past the context budget (exit 3), no `A` line is written and the proposal stays open. Deciding an id that is not open, or that does not exist, exits 2.
+
+**Exit codes** of `knotlog note` and `knotlog pending`:
+
+| Code | Status | Meaning |
+|---|---|---|
+| 0 | `remembered` | written (or listed, rejected) |
+| 1 | `error` | could not write; the file is unchanged |
+| 2 | | usage: bad arguments, a tab in a queued text, an id that is not open |
+| 3 | `no_space` | `--thread` (or approving one) would push the threads file past the context budget (see Large vaults) |
+| 4 | `refused` | `secret_pattern` or `instruction_shaped`; nothing written |
+| 5 | `pending_review` | queued in `.knotlog/pending` (`policy_review_first` or `relative_time`) |
 
 ## Session reflection
 

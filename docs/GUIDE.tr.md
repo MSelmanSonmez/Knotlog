@@ -274,6 +274,13 @@ gerektiğini ve nasıl açılacağını söyler (`knotlog compact --apply`, `kno
 archive` ya da daha büyük bir `ctx_max`). Geçmiş bir oturumda olan şey buraya
 girmez; oturum notlarında kalır, `knotlog search` onu bulur.
 
+`note`'un iki biçimi de sır gibi görünen metni (API anahtarı, token, özel
+anahtar) çıkış kodu 4 ile reddeder. Her satırı yazılmadan önce görmek
+istersen `.knotlog/config`'e `write_approval=on` yaz: notlar `knotlog pending
+--approve N` (ya da `--reject N`) çalıştırana kadar `.knotlog/pending`'de
+bekler; ajana verilmiş bir emir gibi okunan satır ("bundan sonra … yapmalısın")
+reddedilir, "yarın" geçen satır tarih verebilesin diye bekletilir.
+
 ### Kurallar dosyası
 
 `init`, kasanın köküne **`Kurallar.md`** (İngilizce kasada `Rules.md`)

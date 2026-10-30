@@ -265,6 +265,13 @@ many bytes to free and how (`knotlog compact --apply`, `knotlog archive`, or a
 larger `ctx_max`). What happened in a past session does not belong here; it
 stays in the session notes, where `knotlog search` finds it.
 
+Both forms of `note` refuse a text that looks like a secret (an API key, a
+token, a private key) with exit 4. If you want to see every line before it
+lands, set `write_approval=on` in `.knotlog/config`: notes then wait in
+`.knotlog/pending` until you run `knotlog pending --approve N` (or
+`--reject N`); a line that reads as an order to the agent ("from now on you
+must …") is refused, and one with "tomorrow" waits so you can give it a date.
+
 ### The rules file
 
 `init` seeds **`Rules.md`** (`Kurallar.md` in a Turkish vault) at the vault

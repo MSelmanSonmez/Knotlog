@@ -127,6 +127,7 @@ The ones you will actually type; the full table is in [docs/REFERENCE.md](docs/R
 | `knotlog doctor` | check the setup: tools, agents, broken links, uncommitted memory |
 | `knotlog search <terms>` | find notes (BM25, accent-folded; `--tag`/`--status` filters) |
 | `knotlog note "<text>"` | add one line to today's session reflection |
+| `knotlog pending` | review notes before they are written (`write_approval=on`; `--approve N`, `--reject N`) |
 | `knotlog context` | print what the agent sees at session start |
 | `knotlog tui` | browse the newest session notes in the terminal |
 | `knotlog plan <name> --proje <Project>` | open a plan note inside a project |
