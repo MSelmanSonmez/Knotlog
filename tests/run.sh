@@ -3503,8 +3503,12 @@ spaced.md" "$T270"
 
 # T-271 (regression): the ALREADY-working literal punctuated query
 # ("ortakterim.") still finds dotted.md -- the fix must not break this path.
-T271=$(QUIPU_VAULT="$TMP/vt270" sh "$ROOT/knotlog" search "ortakterim." --paths)
-t; assert_eq "T-271: literal punctuated query still finds the dotted note" 'dotted.md' "$T271"
+# S1 (2026-10-30): the query's trailing "." is now stripped, so it matches all three notes like T-270.
+T271=$(QUIPU_VAULT="$TMP/vt270" sh "$ROOT/knotlog" search "ortakterim." --paths | sort)
+t; assert_eq "T-271: punctuated query matches the same notes as the bare term" \
+  "comma.md
+dotted.md
+spaced.md" "$T271"
 
 # T-272 (word-boundary discipline preserved): "term" must never match inside
 # "terminal", even now that trailing punctuation is tolerated. Vault has a
