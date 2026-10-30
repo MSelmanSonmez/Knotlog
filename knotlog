@@ -5052,6 +5052,13 @@ _q_ctx_text() {
   # shellcheck disable=SC2059
   _q_now="$(printf "$_q_nowfmt" "$_q_now_date" "$_q_now_time" "$_q_now_day")
 "
+  # Per-prompt events carry only the clock; the full context is a
+  # SessionStart job (Claude Code re-fires it after compaction), so it is
+  # not re-sent, and re-billed, on every prompt.
+  if [ -n "${_q_now_only:-}" ]; then
+    _q_text=$_q_now
+    return 0
+  fi
 
   # Fixed part 0 (identity): companion=/user= from config, prepended ahead
   # of everything else so the model sees who it and the user are on first
@@ -5554,6 +5561,10 @@ _q_cmd_context() {
     exit 0
   fi
 
+  case "$_q_ev" in
+    UserPromptSubmit|BeforeAgent) _q_now_only=1 ;;
+    *) _q_now_only= ;;
+  esac
   _q_ctx_text
 
   # Nudge (C-19/C-20): only --json UserPromptSubmit or BeforeAgent (Gemini), once more than

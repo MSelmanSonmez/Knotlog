@@ -110,7 +110,7 @@ Claude Code lee `CLAUDE.md`, la mayoría de los demás agentes leen `AGENTS.md`;
 ## Por qué Knotlog
 
 - **Cero dependencias**: solo POSIX sh + sed + awk + grep + tr + git (sin Python, Node ni jq).
-- **100 % sin conexión**, **gratis**: nada sale de tu equipo, sin claves de API, coste cero en tokens.
+- **100 % sin conexión**, **gratis**: nada sale de tu equipo, sin claves de API. El contexto entra una vez por sesión (tope de 4 KB por defecto); cada prompt solo añade una línea con la hora.
 - **Multiplataforma**: Windows, macOS, Linux — verificado por CI en los tres.
 - **Multilingüe**: la interfaz se distribuye en seis idiomas (English, Türkçe, Español, Português (Brasil), 日本語, 简体中文). Elige uno con `--lang <código>` (`en`, `tr`, `es`, `pt-br`, `ja`, `zh-cn`), `lang=` en la configuración o el asistente de instalación. El inglés y el turco se mantienen a mano; las demás traducciones están asistidas por máquina y las correcciones son bienvenidas.
 - **Estilo de respuesta**: elige un preajuste de tono (`--tone`) y un adorno opcional, `none`, `kaomoji` o `emoji` (`--flair`), en el asistente de instalación o después con `knotlog tone` y `knotlog flair`.

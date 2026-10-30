@@ -108,7 +108,7 @@ Claude Code `CLAUDE.md`'yi, diğer ajanların çoğu `AGENTS.md`'yi okur; Knotlo
 ## Neden Knotlog
 
 - **Sıfır bağımlılık**: yalnız POSIX sh + sed + awk + grep + tr + git (Python, Node, jq yok).
-- **%100 çevrimdışı**, **ücretsiz**: makinenden hiçbir şey çıkmaz, API anahtarı yok, token maliyeti sıfır.
+- **%100 çevrimdışı**, **ücretsiz**: makinenden hiçbir şey çıkmaz, API anahtarı yok. Bağlam oturum başında bir kez girer (varsayılan tavan 4 KB); her istem yalnız tek satırlık saat ekler.
 - **Çok platformlu**: Windows, macOS, Linux — üçü de CI'da doğrulanıyor.
 - **Çok dilli**: arayüz altı dilde gelir (English, Türkçe, Español, Português (Brasil), 日本語, 简体中文). `--lang <kod>` (`en`, `tr`, `es`, `pt-br`, `ja`, `zh-cn`), yapılandırmadaki `lang=` ya da kurulum sihirbazıyla seçilir. İngilizce ve Türkçe elle bakılır; diğer çeviriler makine destekli, düzeltmelere açığız.
 - **Yanıt üslubu**: bir üslup ön ayarı (`--tone`) ve isteğe bağlı bir süs seç, `none`, `kaomoji` ya da `emoji` (`--flair`); kurulum sihirbazında ya da sonradan `knotlog tone` ve `knotlog flair` ile.

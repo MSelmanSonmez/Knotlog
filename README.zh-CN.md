@@ -111,7 +111,7 @@ Claude Code 读取 `CLAUDE.md`，其他大多数智能体读取 `AGENTS.md`；Kn
 ## 为什么选择 Knotlog
 
 - **零依赖**：仅需 POSIX sh + sed + awk + grep + tr + git（无需 Python、Node、jq）。
-- **100% 离线**、**免费**：没有任何内容离开你的机器，无需 API 密钥，零 token 成本。
+- **100% 离线**、**免费**：没有任何内容离开你的机器，无需 API 密钥。上下文只在会话开始时注入一次（默认上限 4 KB），每条提示只附加一行时间。
 - **跨平台**：Windows、macOS、Linux——三者均经 CI 验证。
 - **多语言**：界面提供六种语言（English、Türkçe、Español、Português (Brasil)、日本語、简体中文）。可用 `--lang <代码>`（`en`、`tr`、`es`、`pt-br`、`ja`、`zh-cn`）、配置中的 `lang=` 或安装向导选择。英语和土耳其语由人工维护，其余翻译为机器辅助，欢迎提出修正。
 - **回复风格**：可选语气预设（`--tone`）和可选点缀 `none`、`kaomoji` 或 `emoji`（`--flair`），在安装向导中选择，或之后用 `knotlog tone` 和 `knotlog flair` 修改。

@@ -1409,6 +1409,10 @@ t; NJ9=$(QUIPU_NUDGE_AFTER=999 QUIPU_VAULT="$TMP/vnudge9" sh "$ROOT/knotlog" con
 ND9=$(printf '%s' "$NJ9" | awk -f "$LIB/jsonfield.awk" -f "$DRV/hookctx.awk" -)
 assert_eq "nudge: threshold never reached -> no ctx_precompact" 'no' "$(printf '%s\n' "$ND9" | grep -F -q "$CPREC_EXPECT" && printf yes || printf no)"
 t; assert_eq "nudge: .knotlog/nudged not created" 'no' "$([ -f "$TMP/vnudge9/.knotlog/nudged" ] && printf yes || printf no)"
+# The full context is a SessionStart job; a prompt carries only the clock line.
+SJ9=$(QUIPU_VAULT="$TMP/vnudge9" sh "$ROOT/knotlog" context --json SessionStart | awk -f "$LIB/jsonfield.awk" -f "$DRV/hookctx.awk" -)
+t; assert_eq "UserPromptSubmit carries only the now line, SessionStart the full context" '1 yes' \
+  "$(printf '%s\n' "$ND9" | grep -c .) $([ "$(printf '%s\n' "$SJ9" | grep -c .)" -gt 1 ] && printf yes || printf no)"
 
 # ---- remember (FAZ 3) ----
 
@@ -12833,7 +12837,7 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
   # T-1090: the hook's context never reads a linked Threads/Rules/Facts/companion file.
   sec_init s90
   printf '# Threads\n\nSEC90 OWN THREADS\n' > "$TMP/s90/Threads.md"
-  O90A=$(KNOTLOG_HOOK=1 QUIPU_VAULT="$TMP/s90" sh "$ROOT/knotlog" context --json UserPromptSubmit 2>&1)
+  O90A=$(KNOTLOG_HOOK=1 QUIPU_VAULT="$TMP/s90" sh "$ROOT/knotlog" context --json SessionStart 2>&1)
   printf '# Threads\n\nSEC90 THREADS\n' > "$SO/t90-thr"
   printf '# SEC90 RULES\n' > "$SO/t90-rul"
   printf -- '- Fact: SEC90 FACTS\n' > "$SO/t90-fts"
@@ -12841,7 +12845,7 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
   rm -f "$TMP/s90/Threads.md" "$TMP/s90/Rules.md" "$TMP/s90/Facts.md" "$TMP/s90/$SEC_COMP/companion.md"
   sec_slink "$SO/t90-thr" "$TMP/s90/Threads.md"; sec_slink "$SO/t90-rul" "$TMP/s90/Rules.md"
   sec_slink "$SO/t90-fts" "$TMP/s90/Facts.md"; sec_slink "$SO/t90-cmp" "$TMP/s90/$SEC_COMP/companion.md"
-  O90=$(KNOTLOG_HOOK=1 QUIPU_VAULT="$TMP/s90" sh "$ROOT/knotlog" context --json UserPromptSubmit 2>&1); R90=$?
+  O90=$(KNOTLOG_HOOK=1 QUIPU_VAULT="$TMP/s90" sh "$ROOT/knotlog" context --json SessionStart 2>&1); R90=$?
   t; assert_eq "T-1090: a real Threads.md reaches context; linked Threads/Rules/Facts/companion.md never do (hook exit 0)" 'yes 0 no no no no' \
     "$(sec_has "$O90A" 'SEC90 OWN THREADS') $R90 $(sec_has "$O90" 'SEC90 THREADS') $(sec_has "$O90" 'SEC90 RULES') $(sec_has "$O90" 'SEC90 FACTS') $(sec_has "$O90" 'SEC90 TONE')"
 
