@@ -37,6 +37,7 @@ err_thread_nofile=threads file is missing: %s; run knotlog init or knotlog remem
 err_thread_nosection=the threads block has no active section (knotlog:threads:start/end with an active heading); nothing was written
 err_thread_pinned=the active section ends inside the pin block; nothing was written
 err_budget_full=%s would be %d bytes, context budget leaves %d: free %d bytes first — `knotlog compact --apply` (old closed threads) or `knotlog archive "<heading>"` (`archive --list` shows headings), or raise `ctx_max`; nothing was written
+err_facts_budget=the facts section of %s would be %d bytes in context, the budget leaves %d: free %d bytes first (move old lines out of it) or raise `ctx_max`; nothing was written
 err_pending_args=pending takes no argument, --approve N or --reject N
 err_pending_closed=#%s is not an open proposal (knotlog pending lists them)
 err_pending_tab=a note waiting for review must not contain a tab; nothing was queued

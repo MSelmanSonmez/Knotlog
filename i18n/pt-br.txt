@@ -37,6 +37,7 @@ err_thread_nofile=o arquivo de threads não existe: %s; execute knotlog init ou 
 err_thread_nosection=o bloco de threads não tem seção ativa (knotlog:threads:start/end com um título ativo); nada foi gravado
 err_thread_pinned=a seção ativa termina dentro do bloco fixado; nada foi gravado
 err_budget_full=%s ficaria com %d bytes e o orçamento de contexto deixa %d: libere antes %d bytes — `knotlog compact --apply` (threads fechadas antigas) ou `knotlog archive "<título>"` (`archive --list` mostra os títulos), ou aumente `ctx_max`; nada foi gravado
+err_facts_budget=a seção de fatos de %s ficaria com %d bytes no contexto e o orçamento deixa %d: libere antes %d bytes (tire linhas antigas dela) ou aumente `ctx_max`; nada foi gravado
 err_pending_args=pending não aceita argumentos, ou então --approve N ou --reject N
 err_pending_closed=#%s não é uma proposta aberta (knotlog pending lista as abertas)
 err_pending_tab=uma nota aguardando revisão não pode conter tabulação; nada foi enfileirado

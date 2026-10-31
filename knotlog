@@ -5530,16 +5530,9 @@ $_q_thr"
         _q_fts="$(_q_msg ctx_facts)
 $_q_fts_h
 "
-        _q_thr_len=0
-        if [ -n "$_q_thr" ]; then
-          _q_thr_len=$(printf '%s\n' "$_q_thr" | LC_ALL=C wc -c | tr -d ' ')
-        fi
-        _q_rul_len=0
-        if [ -n "$_q_rul" ]; then
-          _q_rul_len=$(printf '%s\n' "$_q_rul" | LC_ALL=C wc -c | tr -d ' ')
-        fi
+        _q_fts_room
         _q_fts_len=$(printf '%s\n' "$_q_fts" | LC_ALL=C wc -c | tr -d ' ')
-        if [ "$_q_fts_len" -gt $((_q_max - _q_fixed - _q_thr_len - _q_rul_len)) ]; then
+        if [ "$_q_fts_len" -gt "$_q_fts_bud" ]; then
           _q_fts=
         fi
       fi
@@ -6192,6 +6185,35 @@ _q_thr_fit() {
   fi
 }
 
+_q_fts_room() {
+  # The one facts-budget formula: what is left for the facts section after
+  # the fixed parts, threads and rules. Reads _q_ctx_text's globals, leaves
+  # $_q_fts_bud. Shared by context (which drops the section past it) and
+  # `distill --apply` (which refuses to grow the file past it).
+  _q_thr_len=0
+  if [ -n "$_q_thr" ]; then
+    _q_thr_len=$(printf '%s\n' "$_q_thr" | LC_ALL=C wc -c | tr -d ' ')
+  fi
+  _q_rul_len=0
+  if [ -n "$_q_rul" ]; then
+    _q_rul_len=$(printf '%s\n' "$_q_rul" | LC_ALL=C wc -c | tr -d ' ')
+  fi
+  _q_fts_bud=$((_q_max - _q_fixed - _q_thr_len - _q_rul_len))
+}
+
+_q_fts_fit() {
+  # _q_fts_fit VAULT FILE -- would FILE, as the vault's facts file, still
+  # fit in context? Runs _q_ctx_text (so it sets its globals: call it in a
+  # subshell) and prints "<section bytes> <budget>", framed the way
+  # _q_ctx_text frames the section.
+  _q_v=$1
+  _q_limit=10
+  _q_ctx_text
+  _q_fts_room
+  _q_fts_len=$(printf '%s\n%s\n\n' "$(_q_msg ctx_facts)" "$(awk '/^- / { print }' "$2")" | LC_ALL=C wc -c | tr -d ' ')
+  printf '%s %s\n' "$_q_fts_len" "$_q_fts_bud"
+}
+
 _q_note_thread_write() {
   # _q_note_thread_write VAULT TEXT — `note --thread`: one list line appended
   # at the END of the active section of the threads block
@@ -6466,6 +6488,40 @@ _q_ds_show() {
 
 _q_ds_nl() { wc -l < "$1" | tr -d ' '; }
 
+_q_ds_append() {
+  # _q_ds_append FILE -- append the layer-1 lines (a1). An empty file gets no
+  # leading blank line; a file without a final newline gets one; a CRLF file
+  # gets CRLF on the new lines.
+  _q_ds_crlf=0
+  if [ -s "$1" ]; then
+    case $(tail -c 2 "$1" | od -An -tx1 | tr -d ' \n') in
+      *0d0a) _q_ds_crlf=1 ;;
+      *0a) ;;
+      *) printf '\n' >> "$1" ;;
+    esac
+  fi
+  if [ "$_q_ds_crlf" = 1 ]; then
+    awk '{ printf "%s%c\n", $0, 13 }' "$_q_ds_t/a1" >> "$1"
+  else
+    cat "$_q_ds_t/a1" >> "$1"
+  fi
+}
+
+_q_ds_fits() {
+  # 0 when the facts file with the layer-1 lines added still fits the
+  # context budget (the formula context uses); otherwise 1, with the
+  # err_facts_budget numbers (size, budget, bytes to free) in $_q_ds_over.
+  [ "$_q_ds_n1" -gt 0 ] || return 0
+  cp "$_q_ds_facts" "$_q_ds_t/fcand" || return 0
+  _q_ds_append "$_q_ds_t/fcand" || return 0
+  # shellcheck disable=SC2046
+  set -- $( (_q_fts_fit "$_q_v" "$_q_ds_t/fcand") 2>/dev/null | tail -n 1)
+  if [ "$#" -ne 2 ] || [ "$1" -le "$2" ]; then return 0; fi
+  if [ "$2" -lt 0 ]; then set -- "$1" 0; fi
+  _q_ds_over="$1 $2 $(($1 - $2))"
+  return 1
+}
+
 _q_cmd_distill() {
   _q_ds_apply=0
   while [ "$#" -gt 0 ]; do
@@ -6535,6 +6591,10 @@ _q_cmd_distill() {
   _q_ds_plans
   _q_ds_n1=$(_q_ds_nl "$_q_ds_t/a1")
   _q_ds_n2=$(_q_ds_nl "$_q_ds_t/a2")
+  if [ "$_q_ds_apply" = 0 ] && ! _q_ds_fits; then
+    # shellcheck disable=SC2059,SC2086
+    printf "$(_q_msg err_facts_budget)\n" "${_q_ds_facts#"$_q_v"/}" $_q_ds_over >&2
+  fi
   if [ "$_q_ds_apply" = 1 ] && [ $((_q_ds_n1 + _q_ds_n2)) -gt 0 ]; then
     _q_lock="$_q_v/$_q_SD/remember.lock"
     _q_remember_lock_acquire "$_q_lock" distill_busy || { _q_lock=; exit 1; }
@@ -6543,23 +6603,10 @@ _q_cmd_distill() {
     _q_ds_plans
     _q_ds_n1=$(_q_ds_nl "$_q_ds_t/a1")
     _q_ds_n2=$(_q_ds_nl "$_q_ds_t/a2")
+    # shellcheck disable=SC2086 # $_q_ds_over is three numbers, split on purpose
+    _q_ds_fits || _q_die err_facts_budget 3 "${_q_ds_facts#"$_q_v"/}" $_q_ds_over
     if [ "$_q_ds_n1" -gt 0 ]; then
-      # An empty file gets no leading blank line; a file without a final
-      # newline gets one; a CRLF file gets CRLF on the new lines.
-      _q_ds_crlf=0
-      if [ -s "$_q_ds_facts" ]; then
-        _q_ds_tail=$(tail -c 2 "$_q_ds_facts" | od -An -tx1 | tr -d ' \n')
-        case "$_q_ds_tail" in
-          *0d0a) _q_ds_crlf=1 ;;
-          *0a) ;;
-          *) printf '\n' >> "$_q_ds_facts" ;;
-        esac
-      fi
-      if [ "$_q_ds_crlf" = 1 ]; then
-        awk '{ printf "%s%c\n", $0, 13 }' "$_q_ds_t/a1" >> "$_q_ds_facts"
-      else
-        cat "$_q_ds_t/a1" >> "$_q_ds_facts"
-      fi || _q_die err_note_write 1 "${_q_ds_facts#"$_q_v"/}"
+      _q_ds_append "$_q_ds_facts" || _q_die err_note_write 1 "${_q_ds_facts#"$_q_v"/}"
     fi
     if [ "$_q_ds_n2" -gt 0 ]; then
       # Write beside the file, then rename: an interruption leaves the old

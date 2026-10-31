@@ -37,6 +37,7 @@ err_thread_nofile=falta el archivo de hilos: %s; ejecuta knotlog init o knotlog 
 err_thread_nosection=el bloque de hilos no tiene sección activa (knotlog:threads:start/end con un encabezado activo); no se escribió nada
 err_thread_pinned=la sección activa termina dentro del bloque fijado; no se escribió nada
 err_budget_full=%s ocuparía %d bytes y el presupuesto de contexto deja %d: libera antes %d bytes — `knotlog compact --apply` (hilos cerrados antiguos) o `knotlog archive "<encabezado>"` (`archive --list` muestra los encabezados), o sube `ctx_max`; no se escribió nada
+err_facts_budget=la sección de hechos de %s ocuparía %d bytes en el contexto y el presupuesto deja %d: libera antes %d bytes (saca líneas antiguas) o sube `ctx_max`; no se escribió nada
 err_pending_args=pending no admite argumentos, o bien --approve N o --reject N
 err_pending_closed=#%s no es una propuesta abierta (knotlog pending las lista)
 err_pending_tab=una nota en espera de revisión no puede contener un tabulador; no se encoló nada

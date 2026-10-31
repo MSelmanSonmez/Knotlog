@@ -37,6 +37,7 @@ err_thread_nofile=スレッドファイルがありません: %s; 先に knotlog
 err_thread_nosection=スレッドブロックに進行中のセクションがありません (進行中の見出しを持つ knotlog:threads:start/end); 何も書き込みませんでした
 err_thread_pinned=進行中のセクションがピンブロックの内側で終わっています; 何も書き込みませんでした
 err_budget_full=%s は %d バイトになりますが、コンテキスト予算の残りは %d バイトです: 先に %d バイト空けてください — `knotlog compact --apply`（古い完了スレッド）または `knotlog archive "<見出し>"`（`archive --list` で見出しを表示）、または `ctx_max` を上げてください; 何も書き込みませんでした
+err_facts_budget=%s のファクト部分はコンテキスト内で %d バイトになりますが、予算の残りは %d バイトです: 先に %d バイト空けてください（古い行を移動）、または `ctx_max` を上げてください; 何も書き込みませんでした
 err_pending_args=pending は引数なし、または --approve N か --reject N を取ります
 err_pending_closed=#%s は未決の提案ではありません (knotlog pending で一覧)
 err_pending_tab=レビュー待ちのノートにタブは使えません。キューには何も追加していません

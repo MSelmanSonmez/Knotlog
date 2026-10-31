@@ -37,6 +37,7 @@ err_thread_nofile=konu dosyası yok: %s; önce knotlog init veya knotlog remembe
 err_thread_nosection=konu bloğunda aktif konular bölümü yok (knotlog:threads:start/end ve aktif başlık); hiçbir şey yazılmadı
 err_thread_pinned=aktif bölümün sonu pin bloğunun içine düşüyor; hiçbir şey yazılmadı
 err_budget_full=%s dosyası %d bayt olacaktı, context bütçesi %d bayt bırakıyor: önce %d bayt yer aç — `knotlog compact --apply` (eski kapanmış konular) ya da `knotlog archive "<başlık>"` (`archive --list` başlıkları gösterir) ya da `ctx_max` değerini yükselt; hiçbir şey yazılmadı
+err_facts_budget=%s dosyasının gerçekler bölümü context içinde %d bayt olacaktı, bütçe %d bayt bırakıyor: önce %d bayt yer aç (eski satırları dosyadan çıkar) ya da `ctx_max` değerini yükselt; hiçbir şey yazılmadı
 err_pending_args=pending argümansız, --approve N ya da --reject N ile çalışır
 err_pending_closed=#%s açık bir öneri değil (knotlog pending listeler)
 err_pending_tab=onaya bekleyen not sekme içeremez; kuyruğa bir şey eklenmedi
