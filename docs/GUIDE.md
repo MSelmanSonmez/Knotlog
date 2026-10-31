@@ -265,6 +265,11 @@ many bytes to free and how (`knotlog compact --apply`, `knotlog archive`, or a
 larger `ctx_max`). What happened in a past session does not belong here; it
 stays in the session notes, where `knotlog search` finds it.
 
+The new line starts with today's date and time (`- YYYY-MM-DD HH:MM`), so
+`doctor` can tell how old it is: when active lines carry no date newer than
+`stale_days=` days (`.knotlog/config`, default 30), it prints one warning with
+the count and the oldest line. Undated lines are not counted.
+
 Both forms of `note` refuse a text that looks like a secret (an API key, a
 token, a private key) with exit 4. If you want to see every line before it
 lands, set `write_approval=on` in `.knotlog/config`: notes then wait in

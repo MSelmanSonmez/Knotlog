@@ -274,6 +274,11 @@ gerektiğini ve nasıl açılacağını söyler (`knotlog compact --apply`, `kno
 archive` ya da daha büyük bir `ctx_max`). Geçmiş bir oturumda olan şey buraya
 girmez; oturum notlarında kalır, `knotlog search` onu bulur.
 
+Yeni satır bugünün tarihi ve saatiyle başlar (`- YYYY-MM-DD HH:MM`), böylece
+`doctor` satırın yaşını görür: aktif satırlar `stale_days=` günden (`.knotlog/config`,
+varsayılan 30) yeni bir tarih taşımıyorsa sayıyı ve en eski satırı adlandıran
+tek bir uyarı basar. Tarihsiz satırlar sayılmaz.
+
 `note`'un iki biçimi de sır gibi görünen metni (API anahtarı, token, özel
 anahtar) çıkış kodu 4 ile reddeder. Her satırı yazılmadan önce görmek
 istersen `.knotlog/config`'e `write_approval=on` yaz: notlar `knotlog pending
