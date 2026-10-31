@@ -3,7 +3,7 @@
 All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.4.0] - 2026-10-31
 
 ### Changed
 - `knotlog note --thread` writes the line as `- YYYY-MM-DD HH:MM <text>` (was `- HH:MM <text>`), so `doctor` can age it. Existing lines are not touched.
