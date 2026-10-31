@@ -349,7 +349,7 @@ A session note is the place for news; a line that will still be true in months b
 - Decision: the vault stays plain Markdown. [fact]
 ```
 
-Run `knotlog distill` to see what would move (it writes nothing), then `knotlog distill --apply`. Marked lines in session notes go to the facts file, each with `(source: <note>)`; lines in the facts file marked `[core]` go to the core block. Lines that do not open with a Preference, Decision or Convention tag are listed but never added, and a line already there is skipped, so running it twice is safe. The marked lines themselves are never edited. A Turkish vault uses `[olgu]` and `[çekirdek]`.
+Run `knotlog distill` to see what would move (it writes nothing), then `knotlog distill --apply`. Marked lines in session notes go to the facts file, each with `(source: <note>)`; lines in the facts file marked `[core]` go to the core block. Lines that do not open with a Preference, Decision or Convention tag are listed but never added, and a line already there is skipped, so running it twice is safe. The marked lines themselves are never edited.  If the new facts would push the facts section past the context budget, `--apply` writes nothing and says how many bytes to free (exit 3). A Turkish vault uses `[olgu]` and `[çekirdek]`.
 
 ## 7. When something looks wrong
 

@@ -357,7 +357,7 @@ Oturum notu haberin yeridir; aylar sonra da doğru kalacak satır olgu dosyasın
 - Karar: kasa düz Markdown kalır. [olgu]
 ```
 
-Neyin taşınacağını görmek için `knotlog distill` çalıştır (hiçbir şey yazmaz), sonra `knotlog distill --apply`. Oturum notlarındaki işaretli satırlar `(kaynak: <not>)` ekiyle olgu dosyasına gider; olgu dosyasında `[çekirdek]` işaretli satırlar çekirdek bloğuna çıkar. Tercih, Karar ya da Konvansiyon etiketiyle açılmayan satırlar listelenir ama eklenmez; zaten var olan satır atlanır, yani iki kez çalıştırmak güvenlidir. İşaretli satırlara dokunulmaz. İngilizce bir kasa `[fact]` ve `[core]` kullanır.
+Neyin taşınacağını görmek için `knotlog distill` çalıştır (hiçbir şey yazmaz), sonra `knotlog distill --apply`. Oturum notlarındaki işaretli satırlar `(kaynak: <not>)` ekiyle olgu dosyasına gider; olgu dosyasında `[çekirdek]` işaretli satırlar çekirdek bloğuna çıkar. Tercih, Karar ya da Konvansiyon etiketiyle açılmayan satırlar listelenir ama eklenmez; zaten var olan satır atlanır, yani iki kez çalıştırmak güvenlidir. İşaretli satırlara dokunulmaz.  Yeni olgular gerçekler bölümünü context bütçesinin dışına taşıyacaksa `--apply` hiçbir şey yazmaz ve kaç bayt yer açılması gerektiğini söyler (çıkış 3). İngilizce bir kasa `[fact]` ve `[core]` kullanır.
 
 ## 7. Bir şey ters gidince
 
