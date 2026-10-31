@@ -3,7 +3,7 @@
 All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.3.0] - 2026-10-29
+## [1.3.0] - 2026-10-31
 
 ### Added
 - `knotlog search --max-bytes N` caps the output at N bytes (works with `--paths` and `--brief`; the omitted count goes to stderr). The MCP `knotlog_search` tool always applies the `ctx_max` budget.

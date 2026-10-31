@@ -13209,6 +13209,7 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
 else
   t; skip "T-1130: linked facts file, dry run" "no native symlinks on this host"
 fi
+
 # ---- note --thread: write-time budget (T-1140..T-1152) ---------------------
 # B1: `note --thread` refuses a line that would push the threads file past the
 # context budget doctor measures (exit 3, err_budget_full, file untouched).
