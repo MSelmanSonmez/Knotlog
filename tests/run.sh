@@ -14115,6 +14115,35 @@ t; assert_eq "T-1348: a missing transcripts folder names it and exits 2" 'yes 2'
 O1349=$(ic ic1 --bogus 2>&1); R1349=$?
 t; assert_eq "T-1349: import claude --bogus names the flag and exits 2" "$(i18n err_unknown_flag | sed 's/%s/--bogus/') 2" "$O1349 $R1349"
 
+# ---- GitHub Copilot CLI adapter (T-1360..T-1366) ----
+# PascalCase event keys select Copilot's Claude-compatible payloads (snake_case), so capture and the
+# Stop path read them as they read Claude Code's; sessionStart output is a top-level additionalContext.
+mkvault vcp
+t; assert_eq "T-1360: setup copilot --dry-run writes nothing, then writes .github/hooks/knotlog.json byte-identical, then is up to date" 'yes yes yes' \
+  "$(ow_run "$TMP/vcp" setup copilot --dry-run | grep -qF 'written to' && [ ! -e "$TMP/vcp/.github" ] && printf yes) $(ow_run "$TMP/vcp" setup copilot >/dev/null; cmp -s "$ROOT/adapters/copilot/hooks.json" "$TMP/vcp/.github/hooks/knotlog.json" && printf yes) $(ow_run "$TMP/vcp" setup copilot | grep -qF 'already up to date' && printf yes)"
+mkvault vcp2; mkdir -p "$TMP/vcp2/.github/hooks"; printf '{"mine":true}\n' > "$TMP/vcp2/.github/hooks/knotlog.json"; printf '{"other":1}\n' > "$TMP/vcp2/.github/hooks/team.json"
+t; assert_eq "T-1361: a differing knotlog.json is preserved and a team hook file beside it is untouched" 'yes yes' \
+  "$(ow_run "$TMP/vcp2" setup copilot | grep -qF 'preserved' && [ "$(cat "$TMP/vcp2/.github/hooks/knotlog.json")" = '{"mine":true}' ] && printf yes) $([ "$(cat "$TMP/vcp2/.github/hooks/team.json")" = '{"other":1}' ] && printf yes)"
+OCP="$ROOT/adapters/copilot/hooks.json"
+t; assert_eq "T-1362: the adapter is version 1, balanced, binds the four PascalCase events, each with bash and powershell" 'yes' \
+  "$(o=$(tr -cd '{' < "$OCP" | wc -c); c=$(tr -cd '}' < "$OCP" | wc -c); [ "$o" -eq "$c" ] && grep -qF '"version": 1' "$OCP" \
+     && grep -qF '"SessionStart": [' "$OCP" && grep -qF '"PostToolUse": [' "$OCP" && grep -qF '"Stop": [' "$OCP" && grep -qF '"SessionEnd": [' "$OCP" \
+     && [ "$(grep -c '"bash": "KNOTLOG_HOOK=1 knotlog ' "$OCP")" = 4 ] && [ "$(grep -c '"powershell": "$env:KNOTLOG_HOOK=' "$OCP")" = 4 ] \
+     && grep -qF 'context --json SessionStart --copilot' "$OCP" && grep -qF 'knotlog capture' "$OCP" && grep -qF 'context --json Stop' "$OCP" \
+     && grep -qF 'knotlog remember && KNOTLOG_HOOK=1 knotlog index' "$OCP" && printf yes || printf no)"
+mkvault vcp3; printf '# n\n' > "$TMP/vcp3/n.md"
+O1363=$(cd "$TMP/vcp3" && KNOTLOG_HOOK=1 QUIPU_LANG=en QUIPU_VAULT="$TMP/vcp3" sh "$ROOT/knotlog" context --json SessionStart --copilot </dev/null 2>/dev/null)
+t; assert_eq "T-1363: context --json SessionStart --copilot is one object with a top-level additionalContext" 'yes no' \
+  "$(printf '%s' "$O1363" | grep -q '^{"additionalContext":"' && printf yes || printf no) $(printf '%s' "$O1363" | grep -qF 'hookSpecificOutput' && printf yes || printf no)"
+mkvault vcp4
+t; printf '%s\n' '{"hook_event_name":"PostToolUse","session_id":"s1","tool_name":"Edit","tool_input":{"path":"notes/b.md","old_str":"x","new_str":"y"},"tool_result":{"result_type":"success"}}' | KNOTLOG_HOOK=1 QUIPU_VAULT="$TMP/vcp4" sh "$ROOT/knotlog" capture
+assert_eq "T-1364: capture records a Copilot edit whose tool_input names the file as path" 'PostToolUse | Edit | notes/b.md' "$(log_line "$TMP/vcp4")"
+mkvault vcp5
+t; printf '%s\n' '{"hook_event_name":"PostToolUse","session_id":"s1","tool_name":"Bash","tool_input":{"path":"notes/c.md","command":"ls"}}' | KNOTLOG_HOOK=1 QUIPU_VAULT="$TMP/vcp5" sh "$ROOT/knotlog" capture
+assert_eq "T-1365: a path argument of a non-edit tool is not recorded" '' "$(log_line "$TMP/vcp5")"
+t; assert_eq "T-1366: setup's usage and unknown-agent messages name copilot" 'yes yes' \
+  "$(i18n err_setup_usage | grep -qF '|copilot>' && printf yes || printf no) $(i18n err_setup_agent | grep -qF ', copilot' && printf yes || printf no)"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
