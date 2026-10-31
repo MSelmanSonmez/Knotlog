@@ -129,7 +129,7 @@ Claude Code は `CLAUDE.md` を、他の多くのエージェントは `AGENTS.m
 | `knotlog doctor` | セットアップを点検: ツール、エージェント、壊れたリンク、未コミットのメモリ |
 | `knotlog search <terms>` | ノートを検索(BM25、アクセント除去。`--tag`/`--status` フィルタ) |
 | `knotlog note "<text>"` | 今日のセッション振り返りに一行追加 |
-| `knotlog pending` | 書き込み前にノートをレビュー (`write_approval=on`、`--approve N`、`--reject N`) |
+| `knotlog pending` | 書き込み前にキュー内のノートと提案をレビュー (ノートは `write_approval=on` でキューに入り、`propose` は常にキューに入る、`--approve N`、`--reject N`) |
 | `knotlog context` | セッション開始時にエージェントに見えるものを出力 |
 | `knotlog tui` | 最新のセッションノートをターミナルで閲覧 |
 | `knotlog plan <name> --proje <Project>` | プロジェクト内にプランノートを作成 |

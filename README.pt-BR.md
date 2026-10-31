@@ -129,7 +129,7 @@ Os que você realmente vai digitar; a tabela completa está em [docs/REFERENCE.m
 | `knotlog doctor` | verifica a configuração: ferramentas, agentes, links quebrados, memória sem commit |
 | `knotlog search <terms>` | encontra notas (BM25, sem distinção de acentos; filtros `--tag`/`--status`) |
 | `knotlog note "<text>"` | adiciona uma linha à reflexão da sessão de hoje |
-| `knotlog pending` | revisa as notas antes de gravá-las (`write_approval=on`; `--approve N`, `--reject N`) |
+| `knotlog pending` | revisa as notas e propostas na fila antes de gravá-las (as notas entram na fila com `write_approval=on`; `propose` sempre enfileira; `--approve N`, `--reject N`) |
 | `knotlog context` | exibe o que o agente vê no início da sessão |
 | `knotlog tui` | navega pelas notas de sessão mais recentes no terminal |
 | `knotlog plan <name> --proje <Project>` | abre uma nota de plano dentro de um projeto |
