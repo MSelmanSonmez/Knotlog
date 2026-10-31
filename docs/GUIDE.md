@@ -478,7 +478,7 @@ outside the vault, set `KNOTLOG_VAULT` to the vault folder. Details:
 ## 9. Knobs
 
 Vault settings live in `.knotlog/config` as plain `key=value` lines: `layout`,
-`lang`, `fold`, `user`, `companion`, `purpose`, `tone`, `flair`, `ctx_max`. Changing
+`lang`, `fold`, `user`, `companion`, `purpose`, `tone`, `flair`, `ctx_max`, `stale_days`. Changing
 `fold` requires `knotlog index --full` afterwards; the others take effect on
 the next command. `ctx_max` is never written by `init` — it already has a
 working default (4096), so add the line by hand only if you want to override

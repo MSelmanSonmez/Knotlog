@@ -490,7 +490,7 @@ claude mcp add knotlog -- knotlog mcp
 
 Kasa ayarları `.knotlog/config` içinde düz `anahtar=değer` satırları hâlinde
 durur: `layout`, `lang`, `fold`, `user`, `companion`, `purpose`, `tone`, `flair`,
-`ctx_max`. `fold` değişince ardından `knotlog index --full` gerekir; diğerleri
+`ctx_max`, `stale_days`. `fold` değişince ardından `knotlog index --full` gerekir; diğerleri
 bir sonraki komutta etkili olur. `ctx_max`'ı `init` kendiliğinden yazmaz —
 zaten çalışan bir varsayılanı var (4096), satırı yalnız değiştirmek istersen
 elle eklersin; `doctor` kullandığı değerin nereden geldiğini (ortam/config/
