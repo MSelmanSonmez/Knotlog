@@ -206,7 +206,7 @@ fi
 # ---- cli skeleton ----
 
 t; VERSION=$(sh "$ROOT/knotlog" --version)
-t; assert_eq "knotlog --version prints knotlog 1.4.0" 'knotlog 1.4.0' "$VERSION"
+t; assert_eq "knotlog --version prints knotlog 1.5.0" 'knotlog 1.5.0' "$VERSION"
 
 mkdir -p "$TMP/empty"
 t; (cd "$TMP/empty" && "$ROOT/knotlog" doctor) >"$TMP/empty.out" 2>&1; RC=$?
@@ -3982,7 +3982,7 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
     "$([ -L "$IBIN/knotlog" ] && [ -f "$IBIN/knotlog" ] \
        && [ -x "$IBIN/knotlog" ] && [ ! -e "$ILATER/knotlog" ] && printf yes || printf no)"
   t; IVERSION=$(PATH="$IBIN:$INSTALL_TOOLS" "$IBIN/knotlog" --version)
-  assert_eq "install: installed symlink executes the real knotlog script" 'knotlog 1.4.0' "$IVERSION"
+  assert_eq "install: installed symlink executes the real knotlog script" 'knotlog 1.5.0' "$IVERSION"
 
   # Existing matching vault/link is idempotent and preserves user-authored text.
   touch -t 200001010101 "$ITARGET/.claude/settings.json"
@@ -6894,10 +6894,10 @@ t; assert_eq "B7 T-378: the default URL is the pinned GitHub release archive" 'y
 t; assert_eq "B7 T-378: README leads Install with the one-line command" 'yes' \
   "$(grep -qF 'curl -fsSL https://raw.githubusercontent.com/MSelmanSonmez/Knotlog/main/install.sh | sh' \
      "$ROOT/README.md" && printf yes || printf no)"
-t; assert_eq "release 1.4.0: update defaults point at MSelmanSonmez/Knotlog" 'yes' \
+t; assert_eq "release 1.5.0: update defaults point at MSelmanSonmez/Knotlog" 'yes' \
   "$(grep -qF 'https://api.github.com/repos/MSelmanSonmez/Knotlog/releases/latest' "$ROOT/knotlog" \
      && grep -qF 'https://github.com/MSelmanSonmez/Knotlog/releases/download/v$_q_up_latest/knotlog-$_q_up_latest.tar.gz' "$ROOT/knotlog" \
-     && grep -qF 'archive/refs/tags/v1.4.0.tar.gz' "$INST" && printf yes || printf no)"
+     && grep -qF 'archive/refs/tags/v1.5.0.tar.gz' "$INST" && printf yes || printf no)"
 t; assert_eq "release 1.1.1: no shipped file mentions SelmanBuilds" '' \
   "$(cd "$ROOT" && grep -rIil selmanbuilds . --exclude-dir=.git --exclude-dir=tests \
      --exclude=ORCHESTRATOR_LOG.md --exclude='CHANGELOG*' 2>/dev/null)"
@@ -8955,7 +8955,7 @@ t; UPD509=$(QUIPU_LANG=en QUIPU_RELEASE_API_URL="$FIXURL/release-current.json" \
   sh "$ROOT/knotlog" update --check); RC509=$?
 t; assert_eq "T-509: already up to date exits 0" '0' "$RC509"
 t; assert_eq "T-509: up-to-date names the current version" 'yes' \
-  "$(printf '%s\n' "$UPD509" | grep -qF '1.4.0' && printf yes || printf no)"
+  "$(printf '%s\n' "$UPD509" | grep -qF '1.5.0' && printf yes || printf no)"
 t; assert_eq "T-509: up-to-date identifies this checkout as git" 'yes' \
   "$(printf '%s\n' "$UPD509" | grep -qF 'git' && printf yes || printf no)"
 
@@ -8982,7 +8982,7 @@ t; UPD510=$(QUIPU_LANG=en QUIPU_RELEASE_API_URL="$FIXURL/release-newer.json" \
   sh "$ROOT/knotlog" update --check); RC510=$?
 t; assert_eq "T-510: newer release exits 0" '0' "$RC510"
 t; assert_eq "T-510: newer release names the current version" 'yes' \
-  "$(printf '%s\n' "$UPD510" | grep -qF '1.4.0' && printf yes || printf no)"
+  "$(printf '%s\n' "$UPD510" | grep -qF '1.5.0' && printf yes || printf no)"
 t; assert_eq "T-510: newer release names the new version" 'yes' \
   "$(printf '%s\n' "$UPD510" | grep -qF '2.8.0' && printf yes || printf no)"
 
@@ -12374,7 +12374,7 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
     --no-prompt --user L20 --force >"$TMP/l20-a.out" 2>"$TMP/l20-a.err"; IRC=$?
   assert_install_rc "T-1020: --force replaces a foreign symlink (exit 0)" '0' "$IRC" "$TMP/l20-a.err"
   t; assert_eq "T-1020: the link now runs this knotlog; its old target is untouched" 'yes' \
-    "$([ -L "$L20_BIN/knotlog" ] && [ "$(PATH="$L20_BIN:$INSTALL_TOOLS" "$L20_BIN/knotlog" --version)" = 'knotlog 1.4.0' ] \
+    "$([ -L "$L20_BIN/knotlog" ] && [ "$(PATH="$L20_BIN:$INSTALL_TOOLS" "$L20_BIN/knotlog" --version)" = 'knotlog 1.5.0' ] \
        && [ "$(cat "$L20_TGT")" = 'dev checkout' ] && printf yes || printf no)"
 
   _l20_setup b
@@ -12662,7 +12662,7 @@ printf '#!/bin/sh\necho "knotlog 1.1.1"\n' > "$SH72_OLD/knotlog"; chmod +x "$SH7
 mkvault vsh72; QUIPU_VAULT="$TMP/vsh72" sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang en >/dev/null 2>&1
 SH72_DOC=$(PATH="$SH72_OLD:$INSTALL_TOOLS" QUIPU_VAULT="$TMP/vsh72" QUIPU_LANG=en sh "$ROOT/knotlog" doctor 2>&1); SH72_RC=$?
 t; assert_eq "T-1072: doctor warns (exit 0) when an older knotlog is first on PATH, naming its path and both versions" 'yes 0' \
-  "$(printf '%s\n' "$SH72_DOC" | grep -qF "warn	knotlog	hooks will run $SH72_OLD/knotlog (knotlog 1.1.1), but this is knotlog 1.4.0" && printf yes || printf no) $SH72_RC"
+  "$(printf '%s\n' "$SH72_DOC" | grep -qF "warn	knotlog	hooks will run $SH72_OLD/knotlog (knotlog 1.1.1), but this is knotlog 1.5.0" && printf yes || printf no) $SH72_RC"
 SH72_NOKL=$(printf '%s\n' "$INSTALL_TOOLS" | tr ':' '\n' | while IFS= read -r _d; do [ -e "$_d/knotlog" ] || printf '%s:' "$_d"; done)
 SH72_DOC=$(PATH="${SH72_NOKL%:}" QUIPU_VAULT="$TMP/vsh72" QUIPU_LANG=en sh "$ROOT/knotlog" doctor 2>&1)
 t; assert_eq "T-1072: doctor warns when knotlog is not on PATH at all" 'yes' \
