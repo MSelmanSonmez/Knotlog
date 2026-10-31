@@ -13386,6 +13386,35 @@ printf '# Other\n\nnothing here.\n' > "$TMP/qn3/o.md"
 QUIPU_VAULT="$TMP/qn3" sh "$ROOT/knotlog" index >/dev/null 2>&1
 t; assert_eq "T-1312: unfolded Turkish letters match (fold=default)" 'tr.md' "$(qnp qn3 'ğüşıöç')"
 t; assert_eq "T-1313: trailing punctuation drops off an unfolded Turkish term (fold=default)" 'tr.md' "$(qnp qn3 'ğüşıöç?')"
+# T-1290..T-1293: LongMemEval bench helpers (tests/bench/longmemeval.awk): split
+# of a hand-written 3-question fixture, path -> session id scoring, summary.
+# No dataset and no knotlog run; tests/bench/longmemeval.sh itself is not called.
+BAWK="$ROOT/tests/bench/longmemeval.awk"
+mkdir -p "$TMP/lme"
+LC_ALL=C awk -v mode=split -v out="$TMP/lme" -f "$LIB/jsonfield.awk" -f "$BAWK" "$FIX/longmemeval-mini.json"
+L1290=$(awk -F"$TAB" '$2 == "noise_a" { print $1 }' "$TMP/lme/q0001/map.tsv")
+E1290=$(printf '[Additional source session date: 2023/05/23 (Tue) 11:00]\n[Source session date: 2023/05/20 (Sat) 02:21]\n[user] Recipe ideas for a caf\303\251 lunch?\n\n[assistant] Try a "quiche".\nOr soup.')
+t; assert_eq "T-1290: split merges a repeated session into one note (dates, roles, escapes)" "3|$E1290" \
+  "$(wc -l < "$TMP/lme/q0001/map.tsv" | tr -d ' ')|$(cat "$TMP/lme/q0001/vault/$L1290")"
+t; assert_eq "T-1291: split writes question id, _abs flag and unique gold ids" 'mini0001 0 answer_tel1|mini0002 0 answer_run1,answer_run2|mini0003_abs 1 answer_x' \
+  "$(for q in q0001 q0002 q0003; do printf '%s %s|' "$(cut -f1,2 "$TMP/lme/$q/meta.tsv" | tr "$TAB" ' ')" "$(paste -sd, "$TMP/lme/$q/gold.txt")"; done | sed 's/|$//')"
+printf 'a.md\tg1\nb.md\tg2\nc.md\tx\n' > "$TMP/lme/map.tsv"
+printf 'g1\ng2\n' > "$TMP/lme/gold.txt"
+s1292() { # hits (printf format) -> "hits gold any all rcN"
+  printf "$1" > "$TMP/lme/hits.txt"
+  awk -v mode=score -v mapf="$TMP/lme/map.tsv" -v goldf="$TMP/lme/gold.txt" -v qid=q -v abs=0 \
+    -f "$BAWK" "$TMP/lme/hits.txt" > "$TMP/lme/score.txt" 2>/dev/null
+  _s_rc=$?
+  cut -f3- "$TMP/lme/score.txt" | tr "$TAB" ' ' | tr -d '\n'
+  printf ' rc%s' "$_s_rc"
+}
+t; assert_eq "T-1292: score maps paths to sessions: all, partial, repeated path, none, unknown path" \
+  '2 2 1 1 rc0|1 2 1 0 rc0|1 2 1 0 rc0|0 2 0 0 rc0| rc2' \
+  "$(s1292 'c.md\nb.md\na.md\n')|$(s1292 'c.md\na.md\n')|$(s1292 'a.md\na.md\n')|$(s1292 'c.md\n')|$(s1292 'zz.md\n')"
+printf '# header\nq1\t0\t1\t1\t1\t1\nq2\t0\t1\t2\t1\t0\nq3\t0\t0\t1\t0\t0\nq4_abs\t1\t1\t1\t1\t1\n' > "$TMP/lme/rows.tsv"
+t; assert_eq "T-1293: summary leaves _abs rows out of the denominator" \
+  "# recall_any@5${TAB}2/3${TAB}66.7%|# recall_all@5${TAB}1/3${TAB}33.3%" \
+  "$(awk -v mode=summary -v secs=0 -f "$BAWK" "$TMP/lme/rows.tsv" | grep '^# recall' | paste -sd'|' -)"
 
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
