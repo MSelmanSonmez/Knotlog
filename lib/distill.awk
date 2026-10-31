@@ -66,13 +66,16 @@ mode == "plan" {
   next
 }
 mode == "insert" {
+  # Windows awks drop the CR on input, so the caller measures the file's
+  # line end (DS_CRLF) and every line is written back with it.
+  cr = ENVIRON["DS_CRLF"] == 1 ? CR : ""
+  if (cr != "" && substr($0, length($0), 1) == CR) $0 = substr($0, 1, length($0) - 1)
   if (mk($0, "start")) ins = 1
   else if (ins && !done && mk($0, "end")) {
-    cr = (substr($0, length($0), 1) == CR) ? CR : ""
     for (i = 1; i <= nadd; i++) print add[i] cr
     done = 1
   }
-  print
+  print $0 cr
   next
 }
 FNR == 1 { rel = FILENAME; if (PRE != "" && index(rel, PRE) == 1) rel = substr(rel, length(PRE) + 1) }

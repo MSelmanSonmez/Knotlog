@@ -6327,7 +6327,9 @@ _q_cmd_distill() {
       _q_ds_ctmp="$_q_ds_comp.distill-tmp"
       _q_guard "$_q_v" "$_q_ds_ctmp"
       rm -f "$_q_ds_ctmp"
-      if ! { DS_ADD="$_q_ds_t/a2" DS_COUNT="$_q_ds_t/count" awk -v mode=insert -f "$_q_HOME/lib/distill.awk" "$_q_ds_comp" > "$_q_ds_t/comp.new" </dev/null &&
+      _q_ds_ccr=0
+      case $(tail -c 2 "$_q_ds_comp" | od -An -tx1 | tr -d ' \n') in *0d0a) _q_ds_ccr=1 ;; esac
+      if ! { DS_CRLF=$_q_ds_ccr DS_ADD="$_q_ds_t/a2" DS_COUNT="$_q_ds_t/count" awk -v mode=insert -f "$_q_HOME/lib/distill.awk" "$_q_ds_comp" > "$_q_ds_t/comp.new" </dev/null &&
         cp -p "$_q_ds_comp" "$_q_ds_ctmp" && cat "$_q_ds_t/comp.new" > "$_q_ds_ctmp" && mv "$_q_ds_ctmp" "$_q_ds_comp"; }; then
         _q_die err_note_write 1 "${_q_ds_comp#"$_q_v"/}"
       fi
