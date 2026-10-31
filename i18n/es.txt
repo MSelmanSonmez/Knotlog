@@ -87,6 +87,8 @@ doc_ctx_max_config=configuración: %s
 doc_ctx_max_default=por defecto: %s
 doc_ctx_max_bad=ctx_max=%s de la configuración no es un entero positivo, se ignora (se usa %s)
 doc_ctx_max_profile=perfil: %s
+doc_untouched=%d línea(s) de hilos activos sin tocar desde hace más de %d días (la más antigua: %s, %s)
+doc_stale_days_bad=stale_days=%s de la configuración no es un entero positivo, se ignora (se usa %s)
 doc_profile=perfil
 doc_profile_bad=profile=%s de la configuración no es normal, economical ni manual; se usa normal
 doc_write_approval=write_approval

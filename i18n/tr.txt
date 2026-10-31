@@ -87,6 +87,8 @@ doc_ctx_max_config=config: %s
 doc_ctx_max_default=varsayılan: %s
 doc_ctx_max_bad=config ctx_max=%s pozitif tamsayı değil, yok sayıldı (%s kullanılıyor)
 doc_ctx_max_profile=profil: %s
+doc_untouched=%d aktif konu satırına %d günden uzun süredir dokunulmadı (en eskisi: %s, %s)
+doc_stale_days_bad=config stale_days=%s pozitif tamsayı değil, yok sayıldı (%s kullanılıyor)
 doc_profile=profil
 doc_profile_bad=config profile=%s normal, economical ya da manual değil, normal kullanılıyor
 doc_write_approval=write_approval

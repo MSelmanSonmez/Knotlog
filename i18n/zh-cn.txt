@@ -87,6 +87,8 @@ doc_ctx_max_config=配置：%s
 doc_ctx_max_default=默认：%s
 doc_ctx_max_bad=配置中的 ctx_max=%s 不是正整数，已忽略（使用 %s）
 doc_ctx_max_profile=profile：%s
+doc_untouched=%d 条活跃线索已超过 %d 天未更新（最早：%s，%s）
+doc_stale_days_bad=配置中的 stale_days=%s 不是正整数，已忽略（使用 %s）
 doc_profile=profile
 doc_profile_bad=配置中的 profile=%s 不是 normal、economical 或 manual，改用 normal
 doc_write_approval=write_approval

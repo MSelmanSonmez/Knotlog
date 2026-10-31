@@ -87,6 +87,8 @@ doc_ctx_max_config=config: %s
 doc_ctx_max_default=既定値: %s
 doc_ctx_max_bad=config の ctx_max=%s は正の整数ではないため無視します (%s を使用)
 doc_ctx_max_profile=プロファイル: %s
+doc_untouched=進行中のスレッドの %d 行が %d 日以上更新されていません (最も古い行: %s, %s)
+doc_stale_days_bad=config の stale_days=%s は正の整数ではないため無視します (%s を使用)
 doc_profile=プロファイル
 doc_profile_bad=config の profile=%s は normal、economical、manual のいずれでもないため normal を使用します
 doc_write_approval=write_approval

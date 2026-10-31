@@ -388,6 +388,24 @@ _q_ctx_max() {
   fi
 }
 
+_q_stale_days() {
+  # stale_days= (vault config, default 30): the age doctor names untouched
+  # active thread lines at. Same positive-integer check as ctx_max=; a bad
+  # value falls back to 30 and sets $_q_sd_bad=1 so doctor can say so.
+  # Sets $_q_sd (days), $_q_sd_cfg (raw value), $_q_sd_bad. $1 = vault path.
+  _q_sd_cfg=
+  if [ -f "$1/$_q_SD/config" ]; then
+    _q_sd_cfg=$(awk -F= -v k=stale_days '$1==k{sub(/^[^=]*=/,"");print;exit}' "$1/$_q_SD/config" 2>/dev/null || true)
+  fi
+  _q_sd=30
+  _q_sd_bad=0
+  case "$_q_sd_cfg" in
+    '') ;;
+    *[!0-9]*|0|0?*|??????????*) _q_sd_bad=1 ;;
+    *) _q_sd=$_q_sd_cfg ;;
+  esac
+}
+
 _q_msg() {
   # Look up a key in the active language file; fall back to en, then the key.
   # `help` sets _q_msg_lang for its explicit language contract only.
@@ -1284,6 +1302,75 @@ $_q_dt_rows
 EOF
 }
 
+_q_doctor_untouched() {
+  # C1: one warn row when list lines of the active threads section carry no
+  # ISO date (YYYY-MM-DD) newer than stale_days= days. A line's age is its
+  # NEWEST date; undated lines, the closed section and the pin block never
+  # count. Section search = _q_note_thread_write's (threads markers, then the
+  # "### <active>" heading up to the next heading). Read-only. Day numbers
+  # use the civil-from-days formula in awk, so there is no `date -d`.
+  _q_stale_days "$1"
+  if [ "$_q_sd_bad" -eq 1 ]; then
+    # shellcheck disable=SC2059
+    _q_line warn stale_days "$(printf "$(_q_msg doc_stale_days_bad)" "$_q_sd_cfg" "$_q_sd")"
+  fi
+  _q_du_thr=$(_q_threads_path "$1")
+  [ -f "$_q_du_thr" ] || return 0
+  # LC_ALL=C: byte semantics in every awk, so the 40-character cut below
+  # counts UTF-8 lead bytes itself instead of depending on the awk's locale.
+  _q_du_row=$(LC_ALL=C awk -v h="### $(_q_msg threads_head_active)" -v today="$(date +%Y-%m-%d)" -v max="$_q_sd" '
+    function dn(y, m, d,    era, yoe, mp) {
+      y -= (m <= 2); era = int(y / 400); yoe = y - era * 400
+      mp = (m > 2) ? m - 3 : m + 9
+      return era * 146097 + yoe * 365 + int(yoe / 4) - int(yoe / 100) + int((153 * mp + 2) / 5) + d - 1
+    }
+    function cut(s, n,    i, c, k, o) {
+      k = 0; o = ""
+      for (i = 1; i <= length(s); i++) {
+        c = substr(s, i, 1)
+        if (!(c >= "\200" && c <= "\277") && ++k > n) break
+        o = o c
+      }
+      return o
+    }
+    BEGIN {
+      re = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"
+      if (today !~ "^" re "$") exit
+      tn = dn(substr(today, 1, 4) + 0, substr(today, 6, 2) + 0, substr(today, 9, 2) + 0)
+    }
+    { t = $0; sub(/\r$/, "", t) }
+    !blk { if (index(t, "knotlog:threads:start") || index(t, "quipu:threads:start")) blk = 1; next }
+    index(t, "knotlog:threads:end") || index(t, "quipu:threads:end") { exit }
+    index(t, "knotlog:pin:start") || index(t, "quipu:pin:start") { pin = 1; next }
+    pin { if (index(t, "knotlog:pin:end") || index(t, "quipu:pin:end")) pin = 0; next }
+    t == h { act = 1; next }
+    /^#/ { act = 0; next }
+    !act || t !~ /^[ \t]*[-*+] / { next }
+    {
+      best = -1; off = 1
+      while (off <= length(t) && match(substr(t, off), re)) {
+        p = off + RSTART - 1; off = p + 10
+        # "v2026-10-01", "1.2026-10-01", "2026-10-011" are not dates.
+        if (p > 1 && substr(t, p - 1, 1) ~ /[0-9A-Za-z.]/) continue
+        if (substr(t, p + 10, 1) ~ /[0-9]/) continue
+        m = substr(t, p + 5, 2) + 0; d = substr(t, p + 8, 2) + 0
+        if (m < 1 || m > 12 || d < 1 || d > 31) continue
+        n = dn(substr(t, p, 4) + 0, m, d)
+        if (n > best) { best = n; bd = substr(t, p, 10) }
+      }
+      if (best < 0 || tn - best <= max) next
+      cnt++
+      if (cnt == 1 || best < ob) { ob = best; od = bd; ot = t; sub(/^[ \t]*[-*+] /, "", ot) }
+    }
+    END { if (cnt) printf "%d\t%s\t%s\n", cnt, od, cut(ot, 40) }' "$_q_du_thr")
+  [ -n "$_q_du_row" ] || return 0
+  IFS="$(printf '\t')" read -r _q_du_n _q_du_d _q_du_t <<EOF
+$_q_du_row
+EOF
+  # shellcheck disable=SC2059
+  _q_line warn threads "$(printf "$(_q_msg doc_untouched)" "$_q_du_n" "$_q_sd" "$_q_du_d" "$_q_du_t")"
+}
+
 _q_mem_find() {
   # Locate one narrative memory file in vault $1: name $3 (current, i.e. the
   # vault language's spelling) then $4 (legacy spelling) inside the vault
@@ -1778,6 +1865,7 @@ _q_doctor() {
       _q_line warn threads "$(_q_msg doc_threads_empty)"
     fi
     _q_doctor_stale_topics "$_q_v"
+    _q_doctor_untouched "$_q_v"
     # B5: the facts file. One informational ok row when present, naming the
     # tagged fact-line count -- the vault's semantic layer reporting that it
     # exists. Silence when absent: an old vault without Facts.md is normal,

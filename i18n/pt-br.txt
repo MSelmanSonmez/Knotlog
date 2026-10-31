@@ -87,6 +87,8 @@ doc_ctx_max_config=config: %s
 doc_ctx_max_default=padrão: %s
 doc_ctx_max_bad=ctx_max=%s da config não é um inteiro positivo, ignorado (usando %s)
 doc_ctx_max_profile=perfil: %s
+doc_untouched=%d linha(s) de threads ativas sem alteração há mais de %d dias (mais antiga: %s, %s)
+doc_stale_days_bad=stale_days=%s da config não é um inteiro positivo, ignorado (usando %s)
 doc_profile=perfil
 doc_profile_bad=profile=%s da config não é normal, economical nem manual, usando normal
 doc_write_approval=write_approval

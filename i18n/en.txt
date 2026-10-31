@@ -87,6 +87,8 @@ doc_ctx_max_config=config: %s
 doc_ctx_max_default=default: %s
 doc_ctx_max_bad=config ctx_max=%s is not a positive integer, ignored (using %s)
 doc_ctx_max_profile=profile: %s
+doc_untouched=%d active thread line(s) untouched for more than %d days (oldest: %s, %s)
+doc_stale_days_bad=config stale_days=%s is not a positive integer, ignored (using %s)
 doc_profile=profile
 doc_profile_bad=config profile=%s is not normal, economical or manual, using normal
 doc_write_approval=write_approval
