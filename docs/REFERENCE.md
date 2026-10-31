@@ -577,6 +577,8 @@ knotlog propose --kind lesson "<text>"   # also: --kind skill, --kind fix
 
 `review=off` in `.knotlog/config` turns both routes off (any other value, or no key, is on). Under `profile=economical` or `manual` `remember` writes no flag either.
 
+Only Edit, Write, NotebookEdit and Read events count toward the threshold; work done through shell commands adds nothing. Claude Code shows the Stop ask under a "Stop hook error" label; it is not an error.
+
 **Trigger points** (after the "dreaming" triggers of oh-my-hermes, which also only remind and never call a model):
 
 | Trigger | Knotlog | |
@@ -589,11 +591,11 @@ knotlog propose --kind lesson "<text>"   # also: --kind skill, --kind fix
 
 PreCompact is not used: in Claude Code it can only block the compaction (its `systemMessage` and `continue` are dropped and it has no `additionalContext`), and blocking an automatic compaction can fail the request at the context limit.
 
-**Agents** (hook documentation read 2026-10-30/31; "not live-verified" until someone runs a session):
+**Agents** (hook documentation read 2026-10-30/31; "not live-verified" means no one has run a live session for that route yet; the Claude Code Stop route has been run live):
 
 | Agent | Stop route | Fallback route | Before compaction | Source |
 |---|---|---|---|---|
-| Claude Code | `Stop` → `decision:block` + `reason`; covered by tests | `SessionStart` (no matcher, so it also runs after compaction); the compaction case not live-verified | `PreCompact` can only block; not used | [hooks](https://code.claude.com/docs/en/hooks) |
+| Claude Code | `Stop` → `decision:block` + `reason`; covered by tests; live-verified (2026-10-31, Fedora Linux, Claude Code 2.1.312) | `SessionStart` (no matcher, so it also runs after compaction); the compaction case not live-verified | `PreCompact` can only block; not used | [hooks](https://code.claude.com/docs/en/hooks) |
 | Codex | `Stop` → `decision:block` + `reason`; the docs say it "creates a new continuation prompt"; not live-verified | `SessionStart`; the docs list `source: "compact"` | `PreCompact` (can only stop compaction) and `PostCompact`; not used | [hooks](https://developers.openai.com/codex/hooks) |
 | omp | `agent_end` → `context --json Stop`; the adapter forwards the reason with `pi.sendMessage(…, {triggerTurn:false})`, which the docs say appends the message without starting a turn; that the model reads it is not live-verified | `session_start` | `session_before_compact` can cancel or replace; `session.compacting` can add context (docs); not used | [extensions](https://github.com/can1357/oh-my-pi/blob/main/docs/extensions.md), [hooks](https://github.com/can1357/oh-my-pi/blob/main/docs/skills/authoring-hooks.md) |
 | Antigravity | `Stop --antigravity` → `decision:continue` + `reason`; covered by tests, not live-verified | `SessionStart` | not checked | adapter, this file |
