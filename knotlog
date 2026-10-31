@@ -6231,7 +6231,8 @@ _q_note_thread_write() {
   if [ "$(head -n "$((_q_nt_anchor - 1))" "$_q_nt_tp" | tail -n 1 | tr -d '\n' | tail -c 1 | od -An -c | tr -d ' ')" = '\r' ]; then
     _q_nt_crs=$_q_nt_cr
   fi
-  _q_nt_now=$(date +%H:%M)
+  # Dated (C1): doctor ages active lines by their newest YYYY-MM-DD.
+  _q_nt_now=$(date '+%Y-%m-%d %H:%M')
   printf '%s %s %s%s\n' '-' "$_q_nt_now" "$_q_nt_text" "$_q_nt_crs" > "$_q_nt_line"
   if ! {
     head -n "$((_q_nt_anchor - 1))" "$_q_nt_tp"

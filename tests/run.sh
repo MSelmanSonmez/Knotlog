@@ -10957,6 +10957,8 @@ t; assert_eq "T-770: note --thread exits 0" '0' "$RC770"
 N770=$(awk '/Active threads/{a=1} /Closed threads/{exit} a' "$TH/Threads.md" | tail -n 1)
 t; assert_eq "T-770: note --thread puts the text on the last line of the active section" 'yes' \
   "$(printf '%s\n' "$N770" | grep -qF 'B-K3 bitti \ % & $HOME' && printf yes || printf no)"
+t; assert_eq "T-770: the new line is '- YYYY-MM-DD HH:MM <text>' (C1: dated, so doctor can age it)" 'yes' \
+  "$(printf '%s\n' "$N770" | grep -Eq '^- [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2} B-K3 bitti ' && printf yes || printf no)"
 t; assert_eq "T-770: the diff is exactly one added line, nothing removed" 'yes' \
   "$([ "$(diff "$TH/before.md" "$TH/Threads.md" | grep -c '^<')" -eq 0 ] && [ "$(diff "$TH/before.md" "$TH/Threads.md" | grep -c '^>')" -eq 1 ] && printf yes || printf no)"
 PINA=$(awk '/quipu:pin:start/{p=1} p{print} /quipu:pin:end/{if(p) exit}' "$TH/before.md")
@@ -12977,7 +12979,7 @@ b1_mk() { # name size config-line [pin-pad] -> en vault whose Threads.md is exac
   _b1_n=$(($2 - $(wc -c < "$_b1_f") - $(printf '%s\n' '<!-- knotlog:threads:end -->' | wc -c) - 3))
   printf '%s\n' "- $(b1_x "$_b1_n")" '<!-- knotlog:threads:end -->' >> "$_b1_f"
 }
-b1_note() { # name [env...] -- note --thread "b1 note" (a 16-byte line); stdout/stderr to name.out/.err
+b1_note() { # name [env...] -- note --thread "b1 note" (a 27-byte dated line); stdout/stderr to name.out/.err
   _b1_v=$1; shift
   env QUIPU_LANG=en QUIPU_VAULT="$TMP/$_b1_v" "$@" sh "$ROOT/knotlog" note --thread "b1 note" \
     </dev/null >"$TMP/$_b1_v.out" 2>"$TMP/$_b1_v.err"
@@ -12987,7 +12989,7 @@ b1_bud() { # name -> the budget doctor prints in its doc_threads_overflow row (e
     sed -n 's/.*context budget is \([0-9][0-9]*\) bytes.*/\1/p' | head -n 1
 }
 b1_ck() { cksum < "$1"; }
-B1_L=16
+B1_L=27 # "- YYYY-MM-DD HH:MM b1 note\n"
 
 b1_mk b1probe 3000 ctx_max=600
 B1_BUD=$(b1_bud b1probe)
@@ -13008,7 +13010,7 @@ b1_note b1over; R1142=$?
 t; assert_eq "T-1142: note --thread past the budget exits 3 and leaves the file byte-identical" '3 yes' \
   "$R1142 $([ "$(b1_ck "$TMP/b1over/Threads.md")" = "$C1142" ] && printf yes || printf no)"
 t; assert_eq "T-1142: the refusal names size, budget and bytes to free on stderr, nothing on stdout" 'yes' \
-  "$([ -s "$TMP/b1over.err" ] && [ "$(cat "$TMP/b1over.err")" = "$(memfmt en err_budget_full Threads.md $((B1_BUD + 11)) "$B1_BUD" 11)" ] && [ ! -s "$TMP/b1over.out" ] && printf yes || printf no)"
+  "$([ -s "$TMP/b1over.err" ] && [ "$(cat "$TMP/b1over.err")" = "$(memfmt en err_budget_full Threads.md $((B1_BUD - 5 + B1_L)) "$B1_BUD" $((B1_L - 5)))" ] && [ ! -s "$TMP/b1over.out" ] && printf yes || printf no)"
 t; assert_eq "T-1142: the refusal names compact --apply and archive --list" 'yes yes' \
   "$(grep -qF 'knotlog compact --apply' "$TMP/b1over.err" && printf yes || printf no) $(grep -qF 'archive --list' "$TMP/b1over.err" && printf yes || printf no)"
 t; assert_eq "T-1143: a refusal leaves no lock, temp file or line file behind" '3 yes' \
