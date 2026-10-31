@@ -5,7 +5,7 @@ usage_doctor=  doctor    ortamı denetle: araçlar, lehçeler, kasa, ajanlar
 usage_capture=  capture   activity.log'a araç kullanım olayı ekle (stdin okur)
 usage_index=  index     .knotlog/index.tsv üret/güncelle (artımlı)
 usage_compile=  compile   türetilmiş kavram notlarını deterministik üretir (elle; context'e girmez)
-usage_search=  search    indeks üzerinde katlanmış sözcüksel + BM25 arama (--brief: 120 baytlık künye; --tag/--status: front matter'a göre daraltma; --all: validity: rejected notları da dahil et)
+usage_search=  search    indeks üzerinde katlanmış sözcüksel + BM25 arama (--brief: 120 baytlık künye; --tag/--status: front matter'a göre daraltma; --all: validity: rejected notları da dahil et; --max-bytes N: çıktıyı N bayta sınırla)
 usage_init=  init      .knotlog/ ve AGENTS.md köprü bloğunu kur (--scope core|goals|money|body|mind|full; tekrarlanabilir)
 usage_install=  install   <kullanıcı>'nın Knotlog kasasını kur ve checkout'u PATH'e bağla (--no-link: sarmalayıcılar için; --force yabancı komut bağlantısını değiştirir; --no-git: kasayı git deposu yapma; --tone <slug>: üslup preseti ayarla; kasa içinde repair-hooks girişleri oluşturur)
 usage_uninstall=  uninstall `knotlog` komutunu PATH'ten kaldır; kasasına asla dokunmaz (--dry-run: önizleme)
@@ -133,6 +133,8 @@ compile_summary=# bilgi klasörü altında %d kavram derlendi
 compile_stale=%s canlı konu ama %d gündür anılmadı
 # search
 err_empty_query=boş sorgu
+err_max_bytes=geçersiz --max-bytes: %s (pozitif bir tamsayı kullanın)
+search_cut=search: %d sonuç daha gösterilmedi (--max-bytes %d)
 err_no_index=index.tsv yok; çalıştır: knotlog index
 # links
 usage_links=  links     bir notun giden/gelen [[wikilink]]'lerini bas
@@ -561,3 +563,17 @@ doc_flair_invalid=flair=%s none, kaomoji ya da emoji değil — none kullanılı
 err_state_link=%s sembolik bağ ya da içinde sembolik bağ var; knotlog bağların üzerinden yazmaz. Bağları kaldır (doctor bu denetimi gösterir)
 err_unsafe_write=%s yazılmıyor: sembolik bağ ya da kasanın dışına çıkıyor
 doc_state_link=durum dizini sembolik bağ ya da içinde sembolik bağ var; kaldırılana kadar diğer komutlar çalışmaz
+usage_distill=  distill   işaretli satırları yukarı taşır: oturum notu -> olgu dosyası -> companion.md çekirdek bloğu (varsayılan kuru çalıştırma; --apply yazar; işaretler: [olgu] ve [çekirdek])
+distill_fact_mark=[olgu]
+distill_core_mark=[çekirdek]
+distill_tags=Tercih|Karar|Konvansiyon
+distill_source=kaynak
+distill_add=eklenecek
+distill_added=eklendi
+distill_untagged=atlandı (etiket yok)
+distill_dup=atlandı (zaten var)
+distill_no_facts=distill: 1. katman atlandı, olgu dosyası yok
+distill_no_core=distill: 2. katman atlandı, çekirdek bloklu companion.md yok
+distill_summary=%d olgu, %d çekirdek satırı eklendi
+distill_busy=distill atlandı: başka bir işlem 5 saniye sonunda hâlâ kilidi tutuyor; hiçbir şey yazılmadı
+distill_facts_unsafe=distill: atlandı, olgu dosyası sembolik bağ ya da kasanın dışına çıkıyor

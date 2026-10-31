@@ -206,7 +206,7 @@ fi
 # ---- cli skeleton ----
 
 t; VERSION=$(sh "$ROOT/knotlog" --version)
-t; assert_eq "knotlog --version prints knotlog 1.2.1" 'knotlog 1.2.1' "$VERSION"
+t; assert_eq "knotlog --version prints knotlog 1.3.0" 'knotlog 1.3.0' "$VERSION"
 
 mkdir -p "$TMP/empty"
 t; (cd "$TMP/empty" && "$ROOT/knotlog" doctor) >"$TMP/empty.out" 2>&1; RC=$?
@@ -3978,7 +3978,7 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
     "$([ -L "$IBIN/knotlog" ] && [ -f "$IBIN/knotlog" ] \
        && [ -x "$IBIN/knotlog" ] && [ ! -e "$ILATER/knotlog" ] && printf yes || printf no)"
   t; IVERSION=$(PATH="$IBIN:$INSTALL_TOOLS" "$IBIN/knotlog" --version)
-  assert_eq "install: installed symlink executes the real knotlog script" 'knotlog 1.2.1' "$IVERSION"
+  assert_eq "install: installed symlink executes the real knotlog script" 'knotlog 1.3.0' "$IVERSION"
 
   # Existing matching vault/link is idempotent and preserves user-authored text.
   touch -t 200001010101 "$ITARGET/.claude/settings.json"
@@ -6890,10 +6890,10 @@ t; assert_eq "B7 T-378: the default URL is the pinned GitHub release archive" 'y
 t; assert_eq "B7 T-378: README leads Install with the one-line command" 'yes' \
   "$(grep -qF 'curl -fsSL https://raw.githubusercontent.com/MSelmanSonmez/Knotlog/main/install.sh | sh' \
      "$ROOT/README.md" && printf yes || printf no)"
-t; assert_eq "release 1.2.1: update defaults point at MSelmanSonmez/Knotlog" 'yes' \
+t; assert_eq "release 1.3.0: update defaults point at MSelmanSonmez/Knotlog" 'yes' \
   "$(grep -qF 'https://api.github.com/repos/MSelmanSonmez/Knotlog/releases/latest' "$ROOT/knotlog" \
      && grep -qF 'https://github.com/MSelmanSonmez/Knotlog/releases/download/v$_q_up_latest/knotlog-$_q_up_latest.tar.gz' "$ROOT/knotlog" \
-     && grep -qF 'archive/refs/tags/v1.2.1.tar.gz' "$INST" && printf yes || printf no)"
+     && grep -qF 'archive/refs/tags/v1.3.0.tar.gz' "$INST" && printf yes || printf no)"
 t; assert_eq "release 1.1.1: no shipped file mentions SelmanBuilds" '' \
   "$(cd "$ROOT" && grep -rIil selmanbuilds . --exclude-dir=.git --exclude-dir=tests \
      --exclude=ORCHESTRATOR_LOG.md --exclude='CHANGELOG*' 2>/dev/null)"
@@ -8951,7 +8951,7 @@ t; UPD509=$(QUIPU_LANG=en QUIPU_RELEASE_API_URL="$FIXURL/release-current.json" \
   sh "$ROOT/knotlog" update --check); RC509=$?
 t; assert_eq "T-509: already up to date exits 0" '0' "$RC509"
 t; assert_eq "T-509: up-to-date names the current version" 'yes' \
-  "$(printf '%s\n' "$UPD509" | grep -qF '1.2.1' && printf yes || printf no)"
+  "$(printf '%s\n' "$UPD509" | grep -qF '1.3.0' && printf yes || printf no)"
 t; assert_eq "T-509: up-to-date identifies this checkout as git" 'yes' \
   "$(printf '%s\n' "$UPD509" | grep -qF 'git' && printf yes || printf no)"
 
@@ -8978,7 +8978,7 @@ t; UPD510=$(QUIPU_LANG=en QUIPU_RELEASE_API_URL="$FIXURL/release-newer.json" \
   sh "$ROOT/knotlog" update --check); RC510=$?
 t; assert_eq "T-510: newer release exits 0" '0' "$RC510"
 t; assert_eq "T-510: newer release names the current version" 'yes' \
-  "$(printf '%s\n' "$UPD510" | grep -qF '1.2.1' && printf yes || printf no)"
+  "$(printf '%s\n' "$UPD510" | grep -qF '1.3.0' && printf yes || printf no)"
 t; assert_eq "T-510: newer release names the new version" 'yes' \
   "$(printf '%s\n' "$UPD510" | grep -qF '2.8.0' && printf yes || printf no)"
 
@@ -12368,7 +12368,7 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
     --no-prompt --user L20 --force >"$TMP/l20-a.out" 2>"$TMP/l20-a.err"; IRC=$?
   assert_install_rc "T-1020: --force replaces a foreign symlink (exit 0)" '0' "$IRC" "$TMP/l20-a.err"
   t; assert_eq "T-1020: the link now runs this knotlog; its old target is untouched" 'yes' \
-    "$([ -L "$L20_BIN/knotlog" ] && [ "$(PATH="$L20_BIN:$INSTALL_TOOLS" "$L20_BIN/knotlog" --version)" = 'knotlog 1.2.1' ] \
+    "$([ -L "$L20_BIN/knotlog" ] && [ "$(PATH="$L20_BIN:$INSTALL_TOOLS" "$L20_BIN/knotlog" --version)" = 'knotlog 1.3.0' ] \
        && [ "$(cat "$L20_TGT")" = 'dev checkout' ] && printf yes || printf no)"
 
   _l20_setup b
@@ -12656,7 +12656,7 @@ printf '#!/bin/sh\necho "knotlog 1.1.1"\n' > "$SH72_OLD/knotlog"; chmod +x "$SH7
 mkvault vsh72; QUIPU_VAULT="$TMP/vsh72" sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang en >/dev/null 2>&1
 SH72_DOC=$(PATH="$SH72_OLD:$INSTALL_TOOLS" QUIPU_VAULT="$TMP/vsh72" QUIPU_LANG=en sh "$ROOT/knotlog" doctor 2>&1); SH72_RC=$?
 t; assert_eq "T-1072: doctor warns (exit 0) when an older knotlog is first on PATH, naming its path and both versions" 'yes 0' \
-  "$(printf '%s\n' "$SH72_DOC" | grep -qF "warn	knotlog	hooks will run $SH72_OLD/knotlog (knotlog 1.1.1), but this is knotlog 1.2.1" && printf yes || printf no) $SH72_RC"
+  "$(printf '%s\n' "$SH72_DOC" | grep -qF "warn	knotlog	hooks will run $SH72_OLD/knotlog (knotlog 1.1.1), but this is knotlog 1.3.0" && printf yes || printf no) $SH72_RC"
 SH72_NOKL=$(printf '%s\n' "$INSTALL_TOOLS" | tr ':' '\n' | while IFS= read -r _d; do [ -e "$_d/knotlog" ] || printf '%s:' "$_d"; done)
 SH72_DOC=$(PATH="${SH72_NOKL%:}" QUIPU_VAULT="$TMP/vsh72" QUIPU_LANG=en sh "$ROOT/knotlog" doctor 2>&1)
 t; assert_eq "T-1072: doctor warns when knotlog is not on PATH at all" 'yes' \
@@ -12994,6 +12994,217 @@ mkvault s103
 R103=$(QUIPU_VAULT="$TMP/s103" QUIPU_LANG=en sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang 'en/x' >/dev/null 2>&1; printf '%s' "$?")
 t; assert_eq "T-1103: init --lang en/x exits 2 and writes no lang= line" '2 no' \
   "$R103 $(grep -q '^lang=' "$TMP/s103/.knotlog/config" && printf yes || printf no)"
+
+# ---- search --max-bytes (T-1104..T-1109) ----
+mkvault s104
+mkdir -p "$TMP/s104/n"
+for i in 1 2 3 4 5; do printf '# Zebra %s\nzebra apples\n' "$i" > "$TMP/s104/n/z$i.md"; done
+sb() { QUIPU_VAULT="$TMP/s104" QUIPU_LANG=en sh "$ROOT/knotlog" "$@" </dev/null; }
+sb index >/dev/null 2>&1
+sb search --paths zebra > "$TMP/s104.full" 2>/dev/null
+sb search --paths --max-bytes 20 zebra > "$TMP/s104.out" 2> "$TMP/s104.err"
+# T-1104: output stops at the budget on a row boundary; stderr names the omitted count.
+t; assert_eq "T-1104: --max-bytes 20 --paths keeps 2 of 5 rows (8 bytes each incl. newline)" '2 16' \
+  "$(wc -l < "$TMP/s104.out" | tr -d ' ') $(wc -c < "$TMP/s104.out" | tr -d ' ')"
+t; assert_eq "T-1104: stderr says 3 results were not shown" 'search: 3 more result(s) not shown (--max-bytes 20)' "$(cat "$TMP/s104.err")"
+# T-1105: no flag -> all 5 rows, plain stderr silence (green on the old code too); a roomy budget changes nothing.
+sb search --paths zebra > "$TMP/s104.nf" 2> "$TMP/s104.nferr"
+t; assert_eq "T-1105: without the flag all 5 rows print, stderr empty, same bytes as before" '5 yes yes' \
+  "$(wc -l < "$TMP/s104.nf" | tr -d ' ') $(cmp -s "$TMP/s104.full" "$TMP/s104.nf" && printf yes || printf no) $([ ! -s "$TMP/s104.nferr" ] && printf yes || printf no)"
+sb search --paths --max-bytes 1000 zebra > "$TMP/s104.big" 2> "$TMP/s104.bigerr"
+t; assert_eq "T-1105: a budget that fits everything gives identical output and empty stderr" 'yes yes' \
+  "$(cmp -s "$TMP/s104.full" "$TMP/s104.big" && printf yes || printf no) $([ ! -s "$TMP/s104.bigerr" ] && printf yes || printf no)"
+# T-1106: a single row longer than the budget is cut to a character boundary.
+mkvault s106
+SH4=$(printf '\303\237')   # U+00DF, two bytes
+printf '# Longline\nzebra\n' > "$TMP/s106/a.md"
+mv "$TMP/s106/a.md" "$TMP/s106/${SH4}${SH4}${SH4}${SH4}${SH4}${SH4}${SH4}${SH4}.md"
+QUIPU_VAULT="$TMP/s106" QUIPU_LANG=en sh "$ROOT/knotlog" index </dev/null >/dev/null 2>&1
+QUIPU_VAULT="$TMP/s106" QUIPU_LANG=en sh "$ROOT/knotlog" search --paths --max-bytes 6 zebra </dev/null > "$TMP/s106.out" 2>/dev/null
+t; assert_eq "T-1106: a 19-byte row under --max-bytes 6 is cut at a character boundary (2 characters + newline)" 'c39fc39f0a' \
+  "$(od -An -v -tx1 "$TMP/s106.out" | tr -d ' \n')"
+# T-1107: invalid N exits 2 and prints no results.
+R107=$(sb search --max-bytes abc zebra 2>&1 >/dev/null)
+R107a=$(sb search --max-bytes abc zebra >/dev/null 2>&1; printf '%s' "$?")
+R107b=$(sb search --max-bytes 0 zebra >/dev/null 2>&1; printf '%s' "$?")
+R107c=$(sb search --max-bytes >/dev/null 2>&1; printf '%s' "$?")
+t; assert_eq "T-1107: --max-bytes abc / 0 / missing value all exit 2, stderr names the value" 'invalid --max-bytes: abc (use a positive integer)|2 2 2' \
+  "$R107|$R107a $R107b $R107c"
+# T-1108: --brief works with the budget too.
+sb search --brief --max-bytes 60 zebra > "$TMP/s108.out" 2>/dev/null
+t; assert_eq "T-1108: --brief --max-bytes 60 stays within 60 bytes and keeps at least one row" 'yes yes' \
+  "$([ "$(wc -c < "$TMP/s108.out")" -le 60 ] && printf yes || printf no) $([ -s "$TMP/s108.out" ] && printf yes || printf no)"
+# T-1109: MCP knotlog_search applies the ctx_max budget (env > config > default) on its own.
+mc109() { printf '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"knotlog_search","arguments":{"query":"zebra"}}}\n' \
+  | QUIPU_CTX_MAX=$1 QUIPU_VAULT="$TMP/s104" QUIPU_LANG=en sh "$ROOT/knotlog" mcp 2>/dev/null \
+  | awk -f "$LIB/jsonfield.awk" -f "$DRV/mcptext.awk"; }
+mc109 100 > "$TMP/s109.small"
+mc109 100000 > "$TMP/s109.big"
+sb search --brief --max-bytes 100 zebra > "$TMP/s109.cli" 2>&1
+sb search --brief zebra > "$TMP/s109.all" 2>/dev/null
+t; assert_eq "T-1109: MCP search under ctx_max=100 equals the CLI (results, then the omitted-count line) under --max-bytes 100 and is shorter than the full result" 'yes yes' \
+  "$(cmp -s "$TMP/s109.small" "$TMP/s109.cli" && printf yes || printf no) $([ "$(wc -c < "$TMP/s109.small")" -lt "$(wc -c < "$TMP/s109.all")" ] && printf yes || printf no)"
+t; assert_eq "T-1109: with a roomy ctx_max the MCP text equals the unbudgeted CLI output" 'yes' \
+  "$(cmp -s "$TMP/s109.big" "$TMP/s109.all" && printf yes || printf no)"
+
+# ---- distill (T-1110..T-1118) ----
+sec_init s110
+mkdir -p "$TMP/s110/700-Sessions"
+printf '# s\n- Decision: use sh [fact]\n- [fact] Convention: names in English (source: old.md)\n- [fact] loose line without a tag\n- unmarked line\n- Preference: tabs [fact]\n' > "$TMP/s110/700-Sessions/2026-10-01.md"
+printf -- '- Decision:  USE   SH [fact]\n' > "$TMP/s110/700-Sessions/2026-10-02.md"
+printf -- '- Decision: a core claim [core]\n' >> "$TMP/s110/Facts.md"
+dsl() { QUIPU_VAULT="$TMP/$1" QUIPU_LANG=${DSL:-en} sh "$ROOT/knotlog" distill ${2:+"$2"} </dev/null 2>&1; }
+ds_sum() { cksum "$TMP/s110/Facts.md" "$TMP/s110/700-Sessions/"*.md "$TMP/s110/850-Companion/companion.md" | tr '\n' ' '; }
+# T-1110: the dry run writes nothing and lists the additions and the skips.
+DS0=$(ds_sum); DSO=$(dsl s110 ''); DS1=$(ds_sum)
+t; assert_eq "T-1110: dry run leaves every file byte for byte as it was, and prints rows" "$DS0 yes" "$DS1 $(printf "%s\n" "$DSO" | grep -q "^would add" && printf yes || printf no)"
+t; assert_eq "T-1110: dry run lists 3 additions, 1 untagged, 1 duplicate (folded) and the core line" '3 1 1 1' \
+  "$(printf '%s\n' "$DSO" | grep -c "^would add${TAB}facts") $(printf '%s\n' "$DSO" | grep -c '^skipped (no tag)') $(printf '%s\n' "$DSO" | grep -c '^skipped (already there)') $(printf '%s\n' "$DSO" | grep -c "^would add${TAB}core")"
+# T-1111: --apply adds layer 1 with the source suffix and the mark dropped.
+DSA=$(dsl s110 --apply)
+t; assert_eq "T-1111: --apply adds the 3 facts to Facts.md with (source: <session note>) and no mark" '- Decision: use sh (source: 700-Sessions/2026-10-01.md)|- Convention: names in English (source: 700-Sessions/2026-10-01.md)|- Preference: tabs (source: 700-Sessions/2026-10-01.md)' \
+  "$(grep '(source: ' "$TMP/s110/Facts.md" | tr '\n' '|' | sed 's/|$//')"
+t; assert_eq "T-1111: the summary says 3 facts, 1 core line" '3 fact(s), 1 core line(s) added' "$(printf '%s\n' "$DSA" | tail -n 1)"
+# T-1112: layer 2 lands right before the end marker; the facts file is the source.
+t; assert_eq "T-1112: the core claim sits just before knotlog:core:end with the facts file as source" '- Decision: a core claim (source: Facts.md)|<!-- knotlog:core:end -->' \
+  "$(grep -B1 'knotlog:core:end' "$TMP/s110/850-Companion/companion.md" | tr '\n' '|' | sed 's/|$//')"
+# T-1113: a second --apply adds nothing and changes nothing.
+DS2=$(ds_sum); DSB=$(dsl s110 --apply); DS3=$(ds_sum)
+t; assert_eq "T-1113: second --apply reports 0 and 0, files unchanged" '0 fact(s), 0 core line(s) added yes' \
+  "$(printf '%s\n' "$DSB" | tail -n 1) $([ "$DS2" = "$DS3" ] && printf yes || printf no)"
+# T-1114: the untagged line never lands; the source session notes are unchanged.
+t; assert_eq "T-1114: untagged line absent from Facts.md, the 3 facts present; session notes keep their marks" 'no 3 yes' \
+  "$(grep -qF 'loose line' "$TMP/s110/Facts.md" && printf yes || printf no) $(grep -c '(source: 700' "$TMP/s110/Facts.md") $(grep -qF 'use sh [fact]' "$TMP/s110/700-Sessions/2026-10-01.md" && printf yes || printf no)"
+# T-1115: no core block -> layer 2 skipped, no error, layer 1 still runs.
+sec_init s115; mkdir -p "$TMP/s115/700-Sessions"
+printf -- '- Decision: one [fact]\n' > "$TMP/s115/700-Sessions/2026-10-01.md"
+printf -- '- Decision: two [core]\n' >> "$TMP/s115/Facts.md"
+rm "$TMP/s115/850-Companion/companion.md"
+O115=$(dsl s115 --apply); R115=$?
+t; assert_eq "T-1115: without companion.md layer 2 is skipped with a line, exit 0, layer 1 added" '0 yes 1' \
+  "$R115 $(sec_has "$O115" "$(i18n distill_no_core)") $(grep -c '(source: ' "$TMP/s115/Facts.md")"
+# T-1116: a flag distill does not know exits 2.
+R116=$(dsl s110 --bogus); R116c=$?
+t; assert_eq "T-1116: distill --bogus names the flag and exits 2" "$(i18n err_unknown_flag | sed 's/%s/--bogus/') 2" "$R116 $R116c"
+# T-1117: a facts file that is a link is refused by --apply and nothing is written.
+if [ "$TRUE_SYMLINKS" -eq 1 ]; then
+  sec_init s117; mkdir -p "$TMP/s117/700-Sessions"
+  printf -- '- Decision: one [fact]\n' > "$TMP/s117/700-Sessions/2026-10-01.md"
+  printf -- '# out\n' > "$SO/t117.md"; rm "$TMP/s117/Facts.md"; sec_slink "$SO/t117.md" "$TMP/s117/Facts.md"
+  R117=$(dsl s117 --apply >/dev/null; printf '%s' "$?")
+  t; assert_eq "T-1117: --apply on a linked Facts.md exits 1 and leaves the target alone" '1 # out' "$R117 $(cat "$SO/t117.md")"
+else
+  t; skip "T-1117: linked facts file" "no native symlinks on this host"
+fi
+# T-1118: a Turkish vault reads [olgu] and Tercih/Karar/Konvansiyon and writes (kaynak: ...).
+mkvault s118; QUIPU_VAULT="$TMP/s118" sh "$ROOT/knotlog" init --plain --no-prompt --user Ada --lang tr </dev/null >/dev/null 2>&1
+printf -- '- Karar: Quipu sıfır bağımlılıkla kalır [olgu]\n- Not: etiketsiz [olgu]\n' > "$TMP/s118/700-Sessions/2026-10-01.md"
+printf -- '- Karar: ÇEKİRDEK bir olgu [çekirdek]\n' >> "$TMP/s118/Gerçekler.md"
+(DSL=tr; dsl s118 --apply) >/dev/null
+t; assert_eq "T-1118: tr vault: [olgu] moved with (kaynak: ...), untagged left, [çekirdek] reached the core block" '1 0 1' \
+  "$(grep -cF -- '- Karar: Quipu sıfır bağımlılıkla kalır (kaynak: 700-Sessions/2026-10-01.md)' "$TMP/s118/Gerçekler.md") $(grep -cF 'etiketsiz' "$TMP/s118/Gerçekler.md") $(grep -cF -- '- Karar: ÇEKİRDEK bir olgu (kaynak: Gerçekler.md)' "$TMP/s118/850-Companion/companion.md")"
+
+# T-1119: a line written by `knotlog note` ("- HH:MM text") reaches the facts file without the clock stamp.
+sec_init s119
+QUIPU_VAULT="$TMP/s119" QUIPU_LANG=en sh "$ROOT/knotlog" note 'Decision: notes keep no clock in facts. [fact]' </dev/null >/dev/null 2>&1
+dsl s119 --apply >/dev/null
+t; assert_eq "T-1119: note-written line becomes a stamp-free fact with the dated note as source" "- Decision: notes keep no clock in facts. (source: 700-Sessions/$(date +%Y-%m-%d).md)" \
+  "$(grep -F 'notes keep no clock' "$TMP/s119/Facts.md")"
+# T-1120: a companion.md that is a link is skipped in the dry run: layer 2 reported, exit 0, nothing written.
+if [ "$TRUE_SYMLINKS" -eq 1 ]; then
+  sec_init s120; printf -- '- Decision: up [core]\n' >> "$TMP/s120/Facts.md"
+  cp "$TMP/s120/850-Companion/companion.md" "$SO/t120.md"; rm "$TMP/s120/850-Companion/companion.md"; sec_slink "$SO/t120.md" "$TMP/s120/850-Companion/companion.md"
+  C120=$(cksum < "$SO/t120.md"); O120=$(dsl s120 ''); R120=$?
+  t; assert_eq "T-1120: linked companion.md: layer 2 skipped with a line, exit 0, no core row, target unchanged" '0 yes 0 same' \
+    "$R120 $(sec_has "$O120" "$(i18n distill_no_core)") $(printf '%s\n' "$O120" | grep -c "^would add${TAB}core") $([ "$(cksum < "$SO/t120.md")" = "$C120" ] && printf same || printf changed)"
+else
+  t; skip "T-1120: linked companion" "no native symlinks on this host"
+fi
+
+# ---- distill, second round (T-1121..T-1130) ----
+dsv() { sec_init "$1"; mkdir -p "$TMP/$1/700-Sessions"; printf -- '- Decision: first [fact]\n- Decision: second [fact]\n' > "$TMP/$1/700-Sessions/2026-10-01.md"; }
+DSC="850-Companion/companion.md"
+# T-1121: planning and listing take no lock; --apply with nothing to add never waits for it.
+dsv s121; dsl s121 --apply >/dev/null
+mkdir "$TMP/s121/.knotlog/remember.lock"; printf '%s\n' "$$" > "$TMP/s121/.knotlog/remember.lock/pid"
+O121=$(dsl s121 --apply); R121=$?
+t; assert_eq "T-1121: a held remember lock does not stop a dry run or an --apply that adds nothing" '0 0 0 fact(s), 0 core line(s) added' \
+  "$R121 $(dsl s121 '' >/dev/null; printf '%s' "$?") $(printf '%s\n' "$O121" | tail -n 1)"
+rm -rf "$TMP/s121/.knotlog/remember.lock"
+# T-1122: a fact removed or reworded in the facts file is not added again; the ledger names it; deleting its row allows a second move.
+dsv s122; dsl s122 --apply >/dev/null
+grep -v 'first' "$TMP/s122/Facts.md" > "$TMP/s122.f"; cat "$TMP/s122.f" > "$TMP/s122/Facts.md"
+O122=$(dsl s122 --apply | tail -n 1)
+t; assert_eq "T-1122: the removed fact stays removed on the next --apply; the ledger holds both facts" '0 fact(s), 0 core line(s) added 0 2' \
+  "$O122 $(grep -c 'first' "$TMP/s122/Facts.md") $(grep -c "^facts${TAB}decision: " "$TMP/s122/.knotlog/distilled")"
+grep -v 'first' "$TMP/s122/.knotlog/distilled" > "$TMP/s122.l"; cat "$TMP/s122.l" > "$TMP/s122/.knotlog/distilled"
+dsl s122 --apply >/dev/null
+t; assert_eq "T-1122: with its ledger row deleted the fact moves again, and the move is recorded again" '1 1' "$(grep -c 'first' "$TMP/s122/Facts.md") $(cat "$TMP/s122/.knotlog/distilled" 2>/dev/null | grep -c 'first')"
+# T-1123: the same for the core block.
+dsv s123; printf -- '- Decision: up [core]\n' >> "$TMP/s123/Facts.md"; dsl s123 --apply >/dev/null
+grep -v 'Decision: up (source' "$TMP/s123/$DSC" > "$TMP/s123.c"; cat "$TMP/s123.c" > "$TMP/s123/$DSC"
+O123=$(dsl s123 --apply | tail -n 1)
+t; assert_eq "T-1123: a core line removed from the block is not added again" '0 fact(s), 0 core line(s) added 0' "$O123 $(grep -c 'Decision: up' "$TMP/s123/$DSC")"
+# T-1124: a block that never opens, or whose end comes first, is not a block; the summary counts what was written.
+dsv s124a; printf -- '- Decision: core a [core]\n' >> "$TMP/s124a/Facts.md"
+grep -v 'knotlog:core:start' "$TMP/s124a/$DSC" > "$TMP/s124a.c"; { printf 'Prose: the block opens with knotlog:core:start.\n'; cat "$TMP/s124a.c"; } > "$TMP/s124a/$DSC"
+cp "$TMP/s124a/$DSC" "$TMP/s124a.before"
+O124a=$(dsl s124a --apply)
+t; assert_eq "T-1124: no start marker: layer 2 skipped with its line, companion unchanged, summary 2 and 0" 'yes yes 2 fact(s), 0 core line(s) added' \
+  "$(sec_has "$O124a" "$(i18n distill_no_core)") $(cmp -s "$TMP/s124a/$DSC" "$TMP/s124a.before" && printf yes || printf no) $(printf '%s\n' "$O124a" | tail -n 1)"
+dsv s124b; printf -- '- Decision: core b [core]\n' >> "$TMP/s124b/Facts.md"
+grep -v 'knotlog:core:end' "$TMP/s124b/$DSC" > "$TMP/s124b.c"; { printf '<!-- knotlog:core:end -->\n'; cat "$TMP/s124b.c"; } > "$TMP/s124b/$DSC"
+cp "$TMP/s124b/$DSC" "$TMP/s124b.before"
+O124b=$(dsl s124b --apply)
+t; assert_eq "T-1124: an end marker before the start: companion unchanged, summary 0 core" 'yes 0' \
+  "$(cmp -s "$TMP/s124b/$DSC" "$TMP/s124b.before" && printf yes || printf no) $(printf '%s\n' "$O124b" | tail -n 1 | sed 's/.*, \([0-9]*\) core.*/\1/')"
+# T-1125: a pre-rename companion.md (quipu:core markers) still receives the line.
+dsv s125; sed 's/knotlog:core/quipu:core/' "$TMP/s125/$DSC" > "$TMP/s125.c"; cat "$TMP/s125.c" > "$TMP/s125/$DSC"
+printf -- '- Decision: old family [core]\n' >> "$TMP/s125/Facts.md"; dsl s125 --apply >/dev/null
+t; assert_eq "T-1125: quipu:core markers: the line lands just before the end marker" '- Decision: old family (source: Facts.md)|<!-- quipu:core:end -->' \
+  "$(grep -B1 'quipu:core:end' "$TMP/s125/$DSC" | tr '\n' '|' | sed 's/|$//')"
+# T-1126: knotlog_search appends the omitted-results line to the returned text.
+mc126() { printf '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"knotlog_search","arguments":{"query":"zebra"}}}\n' \
+  | QUIPU_CTX_MAX=100 QUIPU_VAULT="$TMP/s104" QUIPU_LANG=en sh "$ROOT/knotlog" mcp 2>/dev/null \
+  | awk -f "$LIB/jsonfield.awk" -f "$DRV/mcptext.awk"; }
+t; assert_eq "T-1126: a cut MCP search ends with the omitted-results line" 'yes' "$(mc126 | tail -n 1 | grep -q 'more result(s) not shown (--max-bytes 100)' && printf yes || printf no)"
+# T-1127: companion.md keeps its permissions and no temp file is left beside it.
+dsv s127; printf -- '- Decision: perm [core]\n' >> "$TMP/s127/Facts.md"; chmod 600 "$TMP/s127/$DSC"
+# shellcheck disable=SC2012,SC2010
+I127=$(ls -i "$TMP/s127/$DSC" | cut -d' ' -f1)
+# NTFS ignores chmod 600 (Git Bash shows -rw-r--r--): expect the mode the file had, not a literal 600.
+# shellcheck disable=SC2012,SC2010
+B127=$(ls -l "$TMP/s127/$DSC" | cut -c1-10)
+dsl s127 --apply >/dev/null
+# shellcheck disable=SC2012,SC2010
+N127=$([ "$(ls -i "$TMP/s127/$DSC" | cut -d' ' -f1)" != "$I127" ] && printf new || printf same)
+# shellcheck disable=SC2012,SC2010
+M127=$(ls -l "$TMP/s127/$DSC" | cut -c1-10)
+# shellcheck disable=SC2012,SC2010
+L127=$(ls "$TMP/s127/850-Companion" | grep -c 'distill-tmp')
+t; assert_eq "T-1127: companion.md is replaced by rename (new inode), keeps its mode (600 where honoured), no .distill-tmp left" "new $B127 0" "$N127 $M127 $L127"
+# T-1128: an empty facts file gets no leading blank line.
+dsv s128; : > "$TMP/s128/Facts.md"; dsl s128 --apply >/dev/null
+t; assert_eq "T-1128: first byte of a formerly empty Facts.md is the dash of the first fact" '-' "$(head -c 1 "$TMP/s128/Facts.md")"
+# T-1129: CRLF files get CRLF on the new lines (facts and companion).
+dsv s129; printf -- '- Decision: crlf up [core]\n' >> "$TMP/s129/Facts.md"
+sed 's/$/\r/' "$TMP/s129/$DSC" > "$TMP/s129.c"; cat "$TMP/s129.c" > "$TMP/s129/$DSC"
+sed 's/$/\r/' "$TMP/s129/Facts.md" > "$TMP/s129.f"; cat "$TMP/s129.f" > "$TMP/s129/Facts.md"
+dsl s129 --apply >/dev/null
+# Count CRs against lines, not grep | od: Git Bash grep drops the CR on output, and the old companion
+# rewrite there turned every line to LF. "yes" = the new line is present and every line ends in CR LF.
+crlf_all() { [ "$(grep -c "$2" "$1")" -ge 1 ] && [ "$(wc -l < "$1")" -eq "$(tr -cd '\r' < "$1" | wc -c)" ] && printf yes || printf no; }
+t; assert_eq "T-1129: Facts.md and companion.md get the new lines and stay CR LF on every line" 'yes yes' \
+  "$(crlf_all "$TMP/s129/Facts.md" 'first (source') $(crlf_all "$TMP/s129/$DSC" 'crlf up (source')"
+# T-1130: a linked facts file in a dry run says so (not "no facts file").
+if [ "$TRUE_SYMLINKS" -eq 1 ]; then
+  dsv s130; printf '# out\n' > "$SO/t130.md"; rm "$TMP/s130/Facts.md"; sec_slink "$SO/t130.md" "$TMP/s130/Facts.md"
+  O130=$(dsl s130 ''); R130=$?
+  t; assert_eq "T-1130: linked Facts.md, dry run: the link message, not the missing-file one, exit 0" 'yes no 0' \
+    "$(sec_has "$O130" "$(i18n distill_facts_unsafe)") $(sec_has "$O130" "$(i18n distill_no_facts)") $R130"
+else
+  t; skip "T-1130: linked facts file, dry run" "no native symlinks on this host"
+fi
 
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1

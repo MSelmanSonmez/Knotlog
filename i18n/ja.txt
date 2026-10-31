@@ -5,7 +5,7 @@ usage_doctor=  doctor    環境を確認: ツール、方言、ボールト、�
 usage_capture=  capture   ツール使用イベントを activity.log に追記 (標準入力から読み取り)
 usage_index=  index     .knotlog/index.tsv を構築/更新 (増分)
 usage_compile=  compile   決定的な派生コンセプトノートを生成 (手動実行。コンテキストには入らない)
-usage_search=  search    インデックスに対する正規化字句検索 + BM25 検索 (--brief: 120 バイトのスニペット; --tag/--status: フロントマターで絞り込み; --all: validity: rejected のノートも含める)
+usage_search=  search    インデックスに対する正規化字句検索 + BM25 検索 (--brief: 120 バイトのスニペット; --tag/--status: フロントマターで絞り込み; --all: validity: rejected のノートも含める; --max-bytes N: 出力を N バイトに制限)
 usage_init=  init      .knotlog/ と AGENTS.md のブリッジブロックを作成 (--scope core|goals|money|body|mind|full; 複数指定可)
 usage_install=  install   <user> の Knotlog ボールトを作成し、このチェックアウトを PATH にリンク (--no-link: ラッパー用; --force: 他のコマンドリンクを置き換え; --no-git: ボールトを git リポジトリにしない; --tone <slug>: トーンプリセットを設定; ボールト内に repair-hooks のエントリポイントを作成)
 usage_uninstall=  uninstall PATH から `knotlog` コマンドを削除。ボールトには一切触れません (--dry-run: プレビュー)
@@ -133,6 +133,8 @@ compile_summary=# ナレッジフォルダー配下に %d 件のコンセプト�
 compile_stale=%s は現役のトピックですが、%d 日間言及されていません
 # search
 err_empty_query=クエリが空です
+err_max_bytes=--max-bytes が不正です: %s (正の整数を指定してください)
+search_cut=search: 残り %d 件の結果は表示されません (--max-bytes %d)
 err_no_index=index.tsv がありません; 実行してください: knotlog index
 # links
 usage_links=  links     ノートの発リンク/被リンク [[ウィキリンク]] を表示
@@ -561,3 +563,17 @@ doc_flair_invalid=flair=%s は none、kaomoji、emoji のいずれでもない�
 err_state_link=%s はシンボリックリンクであるか、シンボリックリンクを含んでいます。knotlog はリンク経由で書き込みません。リンクを削除してください (doctor がこの検査を表示します)
 err_unsafe_write=%s には書き込みません: シンボリックリンクであるか、ボールトの外を指しています
 doc_state_link=状態ディレクトリがシンボリックリンクであるか、シンボリックリンクを含んでいます。削除するまで他のコマンドは実行されません
+usage_distill=  distill   印を付けた行を上へ移す: セッションノート -> 事実ファイル -> companion.md のコアブロック (既定はドライラン; --apply で書き込み; 印: [事実] と [中核])
+distill_fact_mark=[事実]
+distill_core_mark=[中核]
+distill_tags=Preference|Decision|Convention
+distill_source=出典
+distill_add=追加予定
+distill_added=追加しました
+distill_untagged=スキップ (タグなし)
+distill_dup=スキップ (既にあります)
+distill_no_facts=distill: 第 1 層をスキップしました (事実ファイルがありません)
+distill_no_core=distill: 第 2 層をスキップしました (コアブロックのある companion.md がありません)
+distill_summary=事実 %d 件、コア %d 行を追加しました
+distill_busy=distill をスキップしました: 5 秒経っても別のプロセスがロックを保持しています; 何も書き込みませんでした
+distill_facts_unsafe=distill: スキップしました (事実ファイルがシンボリックリンクであるか、ボールトの外を指しています)

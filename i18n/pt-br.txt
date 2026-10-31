@@ -5,7 +5,7 @@ usage_doctor=  doctor    verifica o ambiente: ferramentas, dialetos, cofre, agen
 usage_capture=  capture   acrescenta um evento de uso de ferramenta ao activity.log (lê o stdin)
 usage_index=  index     cria/atualiza o .knotlog/index.tsv (incremental)
 usage_compile=  compile   gera notas de conceito derivadas e determinísticas (manual; nunca entra no contexto)
-usage_search=  search    busca lexical normalizada + BM25 sobre o índice (--brief: trecho de 120 bytes; --tag/--status: filtra pelo frontmatter; --all: inclui notas com validity: rejected)
+usage_search=  search    busca lexical normalizada + BM25 sobre o índice (--brief: trecho de 120 bytes; --tag/--status: filtra pelo frontmatter; --all: inclui notas com validity: rejected; --max-bytes N: limita a saída a N bytes)
 usage_init=  init      cria o .knotlog/ e o bloco de ponte do AGENTS.md (--scope core|goals|money|body|mind|full; repetível)
 usage_install=  install   cria o cofre Knotlog de <user> e liga este checkout ao PATH (--no-link para wrappers; --force substitui um link de comando alheio; --no-git para não tornar o cofre um repositório git; --tone <slug> para definir um preset de tom; cria os pontos de entrada repair-hooks locais do cofre)
 usage_uninstall=  uninstall remove o comando `knotlog` do PATH; nunca toca no seu cofre (--dry-run para simular)
@@ -133,6 +133,8 @@ compile_summary=# compilados %d conceito(s) na pasta de conhecimento
 compile_stale=%s é um tópico vivo, mas não é mencionado há %d dias
 # search
 err_empty_query=consulta vazia
+err_max_bytes=--max-bytes inválido: %s (use um inteiro positivo)
+search_cut=search: mais %d resultado(s) não exibido(s) (--max-bytes %d)
 err_no_index=index.tsv ausente; execute: knotlog index
 # links
 usage_links=  links     imprime os [[wikilinks]] de saída/entrada de uma nota
@@ -561,3 +563,17 @@ doc_flair_invalid=flair=%s não é none, kaomoji nem emoji — usando none (exec
 err_state_link=%s é um link simbólico ou contém um; o knotlog não grava através de links. Remova-os (o doctor mostra esta verificação)
 err_unsafe_write=%s não será gravado: é um link simbólico ou leva para fora do cofre
 doc_state_link=o diretório de estado é um link simbólico ou contém um; os demais comandos não rodam até que seja removido
+usage_distill=  distill   sobe as linhas marcadas: nota de sessão -> arquivo de fatos -> bloco núcleo do companion.md (simulação por padrão; --apply grava; marcas: [fato] e [núcleo])
+distill_fact_mark=[fato]
+distill_core_mark=[núcleo]
+distill_tags=Preferência|Decisão|Convenção
+distill_source=fonte
+distill_add=seria adicionado
+distill_added=adicionado
+distill_untagged=ignorado (sem etiqueta)
+distill_dup=ignorado (já existe)
+distill_no_facts=distill: camada 1 ignorada, não há arquivo de fatos
+distill_no_core=distill: camada 2 ignorada, não há companion.md com bloco núcleo
+distill_summary=%d fato(s), %d linha(s) de núcleo adicionadas
+distill_busy=distill ignorado: outro processo ainda detém o bloqueio após 5 segundos; nada foi gravado
+distill_facts_unsafe=distill: ignorado, o arquivo de fatos é um link simbólico ou leva para fora do cofre
