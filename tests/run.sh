@@ -13552,6 +13552,135 @@ t; assert_eq "T-1229: Turkish vault: exit 5, the text is the 6th field byte for 
 t; assert_eq "T-1230: usage_propose and help_review exist in every i18n file and help prints them" ' yes yes' \
   "$(for _f in "$ROOT"/i18n/*.txt; do grep -q '^usage_propose=.*--kind' "$_f" && grep -q '^help_review=.*review=off' "$_f" || printf '%s ' "${_f##*/}"; done) $(sh "$ROOT/knotlog" help 2>&1 | grep -qxF "$(mi18n en usage_propose)" && printf yes || printf no) $(sh "$ROOT/knotlog" help 2>&1 | grep -qxF "$(mi18n en help_review)" && printf yes || printf no)"
 
+# ---- doctor: untouched active thread lines (T-1250..T-1262) ----------------
+# C1: doctor reads the newest ISO date (YYYY-MM-DD) on each list line of the
+# active section of the threads block and warns once when lines are older
+# than stale_days= (config, default 30). Read-only; undated lines, the closed
+# section and the pin block never count. Fixture dates are counted back from
+# today with the same pure-awk day formula (no `date -d`); the formula itself
+# is pinned by fixed date pairs through a fake `date` that only fakes today.
+c1_ago() { # N -> today minus N days, YYYY-MM-DD
+  date +%Y-%m-%d | awk -F- -v n="$1" '
+    function dfc(y, m, d,    era, yoe, doy, mp) {
+      y -= (m <= 2); era = int(y / 400); yoe = y - era * 400
+      mp = (m > 2) ? m - 3 : m + 9; doy = int((153 * mp + 2) / 5) + d - 1
+      return era * 146097 + yoe * 365 + int(yoe / 4) - int(yoe / 100) + doy
+    }
+    { z = dfc($1 + 0, $2 + 0, $3 + 0) - n
+      era = int(z / 146097); doe = z - era * 146097
+      yoe = int((doe - int(doe / 1460) + int(doe / 36524) - int(doe / 146096)) / 365)
+      doy = doe - (365 * yoe + int(yoe / 4) - int(yoe / 100)); mp = int((5 * doy + 2) / 153)
+      d = doy - int((153 * mp + 2) / 5) + 1; m = (mp < 10) ? mp + 3 : mp - 9
+      printf "%04d-%02d-%02d\n", yoe + era * 400 + (m <= 2), m, d }'
+}
+c1_doc() { # vault lang -> doctor output (stdout+stderr), rc in $C1RC
+  C1RC=0
+  QUIPU_LANG=$2 QUIPU_VAULT="$TMP/$1" sh "$ROOT/knotlog" doctor </dev/null >"$TMP/$1.doc" 2>&1 || C1RC=$?
+}
+c1_row() { # lang count days date text -> the exact doctor warn row
+  printf '%s\t%s\t%s' "$(mi18n "$1" doc_warn)" threads "$(memfmt "$1" doc_untouched "$2" "$3" "$4" "$5")"
+}
+c1_tree() { (cd "$TMP/$1" && find . -type f | LC_ALL=C sort | while IFS= read -r _c1f; do printf '%s ' "$_c1f"; cksum < "$_c1f"; done); }
+C1D0=$(c1_ago 0); C1D1=$(c1_ago 1); C1D2=$(c1_ago 2); C1D29=$(c1_ago 29); C1D31=$(c1_ago 31)
+C1D40=$(c1_ago 40); C1D100=$(c1_ago 100); C1D200=$(c1_ago 200); C1D300=$(c1_ago 300)
+c1_en() { # name config-line -> en vault with the C1 fixture
+  mkvault "$1"; printf '%s\n' "$2" > "$TMP/$1/.knotlog/config"
+  printf '%s\n' '# Threads' '<!-- knotlog:threads:start -->' '### Active threads' \
+    "- fresh today ($C1D0)" "- almost stale ($C1D29)" "- c1 stale ($C1D31)" \
+    "- c1 oldest stale line that runs well past the forty character limit ($C1D40)" \
+    "- two dates: started $C1D100, touched $C1D2" '- no date at all' \
+    '- release v2020-01-01 and 1.2.0 and v2026-10 and build 2020-01-015 and x2020-01-01' \
+    '<!-- knotlog:pin:start -->' "- pinned ($C1D200)" '<!-- knotlog:pin:end -->' \
+    "- after the pin ($C1D1)" '### Closed threads' "- closed ($C1D300)" \
+    '<!-- knotlog:threads:end -->' > "$TMP/$1/Threads.md"
+}
+C1ROW=$(c1_row en 2 30 "$C1D40" 'c1 oldest stale line that runs well past')
+
+# T-1250: one warn row naming the count (31 and 40 days) and the oldest line.
+c1_en c1a ''
+c1_doc c1a en
+t; assert_eq "T-1250: doctor prints exactly one untouched row, count 2, oldest date + first 40 chars" '1' \
+  "$(grep -cxF "$C1ROW" "$TMP/c1a.doc")"
+t; assert_eq "T-1250: no other row mentions the untouched lines" '1' \
+  "$(grep -c 'untouched' "$TMP/c1a.doc")"
+
+# T-1251: undated, version-like, pinned and closed lines never count (count stays 2).
+t; assert_eq "T-1251: v2020-01-01, 1.2.0, v2026-10, 2020-01-015, pin and closed are not counted" 'no' \
+  "$(grep -qF '2020-01-01' "$TMP/c1a.doc" || grep -qF "$C1D200" "$TMP/c1a.doc" || grep -qF "$C1D300" "$TMP/c1a.doc" && printf yes || printf no)"
+
+# T-1252: doctor writes nothing and its exit code is the same as without stale lines.
+c1_en c1b ''
+C1T0=$(c1_tree c1b)
+c1_doc c1b en; C1RCB=$C1RC
+C1T1=$(c1_tree c1b)
+c1_en c1c ''
+awk '!/c1 stale|c1 oldest/' "$TMP/c1c/Threads.md" > "$TMP/c1c.t" && mv "$TMP/c1c.t" "$TMP/c1c/Threads.md"
+c1_doc c1c en
+t; assert_eq "T-1252: every vault file is byte-identical (cksum) after doctor" 'yes' \
+  "$([ -n "$C1T0" ] && [ "$C1T0" = "$C1T1" ] && printf yes || printf no)"
+t; assert_eq "T-1252: the warning does not change doctor's exit code" "$C1RC" "$C1RCB"
+t; assert_eq "T-1252: a vault with no line past the threshold prints no untouched row" '0' \
+  "$(grep -c 'untouched' "$TMP/c1c.doc")"
+
+# T-1253: stale_days= raises the threshold; 45 silences both lines.
+c1_en c1d 'stale_days=45'
+c1_doc c1d en
+t; assert_eq "T-1253: stale_days=45 prints no untouched row" '0' "$(grep -c 'untouched' "$TMP/c1d.doc")"
+c1_en c1e 'stale_days=35'
+c1_doc c1e en
+t; assert_eq "T-1253: stale_days=35 counts only the 40-day line" '1' \
+  "$(grep -cxF "$(c1_row en 1 35 "$C1D40" 'c1 oldest stale line that runs well past')" "$TMP/c1e.doc")"
+
+# T-1254: an invalid stale_days falls back to 30 and doctor says so.
+for _c1b in abc 0 08 -5; do
+  c1_en "c1bad$_c1b" "stale_days=$_c1b"
+  c1_doc "c1bad$_c1b" en
+done
+t; assert_eq "T-1254: abc, 0, 08 and -5 each warn and fall back to 30" 'yes yes yes yes' \
+  "$(for _c1b in abc 0 08 -5; do grep -qxF "$(printf '%s\t%s\t%s' "$(mi18n en doc_warn)" stale_days "$(memfmt en doc_stale_days_bad "$_c1b" 30)")" "$TMP/c1bad$_c1b.doc" && grep -qxF "$C1ROW" "$TMP/c1bad$_c1b.doc" && printf 'yes ' || printf 'no '; done | sed 's/ $//')"
+t; assert_eq "T-1254: a valid or absent stale_days prints no stale_days row" '0 0' \
+  "$(grep -c "${TAB}stale_days${TAB}" "$TMP/c1a.doc") $(grep -c "${TAB}stale_days${TAB}" "$TMP/c1d.doc")"
+
+# T-1255: Turkish vault (Konular.md, Aktif/Kapanmış konular), Turkish row, UTF-8-safe 40 chars.
+mkvault c1tr; printf 'lang=tr\n' > "$TMP/c1tr/.knotlog/config"
+printf '%s\n' '# Konular' '<!-- knotlog:threads:start -->' '### Aktif konular' \
+  "- taze ($C1D0)" "- Çok eski açık konu: şöyle böyle ğüşiöç ÇĞİÖŞÜ uzun satır ($C1D40)" \
+  '### Kapanmış konular' "- kapandı ($C1D300)" '<!-- knotlog:threads:end -->' > "$TMP/c1tr/Konular.md"
+c1_doc c1tr tr
+t; assert_eq "T-1255: Turkish vault prints the Turkish row, count 1, cut at 40 characters not bytes" '1' \
+  "$(grep -cxF "$(c1_row tr 1 30 "$C1D40" 'Çok eski açık konu: şöyle böyle ğüşiöç Ç')" "$TMP/c1tr.doc")"
+
+# T-1256..T-1261: the day formula on fixed pairs. A fake `date` answers only
+# +%Y-%m-%d (today); stale_days=AGE-1 must warn and stale_days=AGE must not,
+# which pins the computed age to exactly AGE days.
+mkdir -p "$TMP/c1bin"
+printf '#!/bin/sh\nif [ "$1" = +%%Y-%%m-%%d ]; then printf "%%s\\n" "$C1_TODAY"; exit 0; fi\nexec %s "$@"\n' "$(command -v date)" > "$TMP/c1bin/date"
+chmod +x "$TMP/c1bin/date"
+c1_pair() { # line-date today age -> "yes" when the computed age is exactly AGE
+  for _c1t in $(($3 - 1)) "$3"; do
+    mkvault "c1p$_c1t"; printf 'stale_days=%s\n' "$_c1t" > "$TMP/c1p$_c1t/.knotlog/config"
+    printf '%s\n' '<!-- knotlog:threads:start -->' '### Active threads' "- pair ($1)" '### Closed threads' \
+      '<!-- knotlog:threads:end -->' > "$TMP/c1p$_c1t/Threads.md"
+    C1_TODAY=$2 PATH="$TMP/c1bin:$PATH" QUIPU_LANG=en QUIPU_VAULT="$TMP/c1p$_c1t" sh "$ROOT/knotlog" doctor </dev/null >"$TMP/c1p$_c1t.doc" 2>&1
+  done
+  grep -qxF "$(c1_row en 1 $(($3 - 1)) "$1" "pair ($1)")" "$TMP/c1p$(($3 - 1)).doc" &&
+    ! grep -q 'untouched' "$TMP/c1p$3.doc" && printf yes || printf no
+  rm -rf "$TMP/c1p$(($3 - 1))" "$TMP/c1p$3"
+}
+t; assert_eq "T-1256: 2024-01-31 -> 2024-03-01 is 30 days (leap year)" 'yes' "$(c1_pair 2024-01-31 2024-03-01 30)"
+t; assert_eq "T-1257: 2023-01-31 -> 2023-03-01 is 29 days (common year)" 'yes' "$(c1_pair 2023-01-31 2023-03-01 29)"
+t; assert_eq "T-1258: 2024-02-29 -> 2024-03-02 is 2 days" 'yes' "$(c1_pair 2024-02-29 2024-03-02 2)"
+t; assert_eq "T-1259: 2024-12-31 -> 2025-01-02 is 2 days" 'yes' "$(c1_pair 2024-12-31 2025-01-02 2)"
+t; assert_eq "T-1260: 1999-12-31 -> 2000-03-01 is 61 days (2000 is leap)" 'yes' "$(c1_pair 1999-12-31 2000-03-01 61)"
+t; assert_eq "T-1261: 2099-12-31 -> 2100-03-01 is 60 days (2100 is not leap)" 'yes' "$(c1_pair 2099-12-31 2100-03-01 60)"
+
+# T-1262: a line written by note --thread carries today's date and does not count.
+c1_en c1n ''
+QUIPU_LANG=en QUIPU_VAULT="$TMP/c1n" sh "$ROOT/knotlog" note --thread "c1 new line" </dev/null >/dev/null 2>&1
+c1_doc c1n en
+t; assert_eq "T-1262: note --thread writes '- YYYY-MM-DD HH:MM text' and the line is not counted" 'yes 1' \
+  "$(grep -Eq '^- [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2} c1 new line$' "$TMP/c1n/Threads.md" && printf yes || printf no) $(grep -cxF "$C1ROW" "$TMP/c1n.doc")"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
