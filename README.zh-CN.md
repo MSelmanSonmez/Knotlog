@@ -28,7 +28,7 @@
   <img src="https://img.shields.io/badge/network-offline-lightgrey" alt="Works offline">
   <!-- badge counts are re-measured at the release commit: tests = `sh tests/run.sh` -> "# pass N"; scripts = `git ls-files | grep -cE '^(knotlog|lib/.*\.awk|fold/.*\.sed)$'`; LongMemEval-S = `tests/bench/longmemeval.sh` -->
   <img src="https://img.shields.io/badge/tests-1939%20passing-brightgreen" alt="1939 项测试通过">
-  <img src="https://img.shields.io/badge/agents-8-blue" alt="支持 8 种代理">
+  <img src="https://img.shields.io/badge/agents-9-blue" alt="支持 9 种代理">
   <img src="https://img.shields.io/badge/scripts-28-lightgrey" alt="28 个发布脚本">
   <img src="https://img.shields.io/badge/LongMemEval--S-recall__any%405%2060.4%25-blue" alt="LongMemEval-S recall_any@5 60.4%">
 </p>
@@ -121,7 +121,8 @@ Hook 记录智能体碰过哪些文件，`remember` 把这份记录变成带日�
 | **Antigravity** | `knotlog setup antigravity` 写入 `.agents/hooks.json`（会话开始时的上下文，回合结束时的保存守卫） | 已有测试覆盖；尚未实测验证 |
 | **Windsurf / Devin Desktop** | `knotlog setup windsurf` 写入 `.devin/hooks.json`（记录编辑，每次响应后 remember；上下文经由 `AGENTS.md`） | 已在 Linux 上实测验证（Devin Desktop 3.11.216）；Windows 未验证 |
 | **OpenCode** | `knotlog setup opencode` 写入 `.opencode/plugins/knotlog.js`（记录编辑，空闲时 remember；上下文经由 `AGENTS.md`） | 已在 Linux 上实测验证（OpenCode 1.19.4）；Windows 未验证 |
-| **其他任何智能体**（Cursor 等） | `knotlog context --bridge` 把记忆写入 `AGENTS.md` 和 `CLAUDE.md` | 无需 hook |
+| **GitHub Copilot CLI** | `knotlog setup copilot` 写入 `.github/hooks/knotlog.json`（会话开始时的上下文、记录编辑、回合结束时的回顾提问、会话结束时 remember） | 已有测试覆盖；尚未实测验证 |
+| **其他任何智能体**（Cursor、Cline、Goose、Zed、Aider 等） | `knotlog context --bridge` 把记忆写入 `AGENTS.md` 和 `CLAUDE.md`；Aider 仅在 `.aider.conf.yml` 中有 `read: AGENTS.md` 时读取 `AGENTS.md`，Zed 仅在前面没有其他规则文件（`.rules`、`.cursorrules` 等）时读取 | 无需 hook |
 
 Claude Code 读取 `CLAUDE.md`，其他大多数智能体读取 `AGENTS.md`；Knotlog 把同一份记忆写入两者，因此在一个智能体中完成的工作也能传到另一个。各适配器的详情见 [docs/REFERENCE.md](docs/REFERENCE.md#claude-code)。
 

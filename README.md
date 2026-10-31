@@ -24,7 +24,7 @@
   <img src="https://img.shields.io/badge/network-offline-lightgrey" alt="Works offline">
   <!-- badge counts are re-measured at the release commit: tests = `sh tests/run.sh` -> "# pass N"; scripts = `git ls-files | grep -cE '^(knotlog|lib/.*\.awk|fold/.*\.sed)$'`; LongMemEval-S = `tests/bench/longmemeval.sh` -->
   <img src="https://img.shields.io/badge/tests-1939%20passing-brightgreen" alt="1939 tests passing">
-  <img src="https://img.shields.io/badge/agents-8-blue" alt="8 supported agents">
+  <img src="https://img.shields.io/badge/agents-9-blue" alt="9 supported agents">
   <img src="https://img.shields.io/badge/scripts-28-lightgrey" alt="28 shipped scripts">
   <img src="https://img.shields.io/badge/LongMemEval--S-recall__any%405%2060.4%25-blue" alt="LongMemEval-S recall_any@5 60.4%">
 </p>
@@ -118,7 +118,8 @@ Hooks record which files the agent touched, `remember` turns that ledger into a 
 | **Antigravity** | `knotlog setup antigravity` writes `.agents/hooks.json` (session-start context, save guard at turn end) | Covered by tests; not yet live-verified |
 | **Windsurf / Devin Desktop** | `knotlog setup windsurf` writes `.devin/hooks.json` (edit capture, remember after each response; context via `AGENTS.md`) | Live-verified on Linux (Devin Desktop 3.11.216); Windows not verified |
 | **OpenCode** | `knotlog setup opencode` writes `.opencode/plugins/knotlog.js` (edit capture, remember when idle; context via `AGENTS.md`) | Live-verified on Linux (OpenCode 1.19.4); Windows not verified |
-| **Anything else** (Cursor, …) | `knotlog context --bridge` writes memory into `AGENTS.md` and `CLAUDE.md` | No hooks needed |
+| **GitHub Copilot CLI** | `knotlog setup copilot` writes `.github/hooks/knotlog.json` (session-start context, edit capture, review ask at turn end, remember at session end) | Covered by tests; not yet live-verified |
+| **Anything else** (Cursor, Cline, Goose, Zed, Aider, …) | `knotlog context --bridge` writes memory into `AGENTS.md` and `CLAUDE.md`; Aider reads `AGENTS.md` only with `read: AGENTS.md` in `.aider.conf.yml`, Zed only when no other rules file (`.rules`, `.cursorrules`, …) comes first | No hooks needed |
 
 Claude Code reads `CLAUDE.md`, most other agents read `AGENTS.md`; Knotlog writes the same memory to both, so work done in one agent reaches the other. Details per adapter: [docs/REFERENCE.md](docs/REFERENCE.md#claude-code).
 

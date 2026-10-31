@@ -59,7 +59,7 @@ Prerequisites: POSIX sh plus `sed`, `awk`, `grep`, `tr`, and `git`.
 
 ## Setup
 
-`knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode> [--dry-run]` writes one agent's hook file into the vault, the vault being found the same way every command finds it:
+`knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode|copilot> [--dry-run]` writes one agent's hook file into the vault, the vault being found the same way every command finds it:
 
 | Agent | Written to | Shipped from |
 |---|---|---|
@@ -71,6 +71,7 @@ Prerequisites: POSIX sh plus `sed`, `awk`, `grep`, `tr`, and `git`.
 | `antigravity` | `<vault>/.agents/hooks.json` | `adapters/antigravity/hooks.json` (see [Antigravity](#antigravity)) |
 | `windsurf` (alias `devin`) | `<vault>/.devin/hooks.json` | `adapters/windsurf/hooks.json` (see [Windsurf / Devin Desktop](#windsurf--devin-desktop)) |
 | `opencode` | `<vault>/.opencode/plugins/knotlog.js` | `adapters/opencode/knotlog.js` (see [OpenCode](#opencode)) |
+| `copilot` | `<vault>/.github/hooks/knotlog.json` | `adapters/copilot/hooks.json` (see [GitHub Copilot CLI](#github-copilot-cli)) |
 
 Per target, exactly one of three results is printed:
 
@@ -189,7 +190,7 @@ left it says so and changes nothing.
 | `knotlog doctor` | environment diagnostics: tools present, agents installed, what's broken |
 | `knotlog init` | create `.knotlog/` + ten layout folders + AGENTS.md/CLAUDE.md bridges (`--plain`: ASCII names; `--layout tr|en`: localized number-free names; repeated `--scope goals|money|body|mind`, or `full`, adds optional folders) |
 | `knotlog migrate [--apply]` | bring a pre-rename (Quipu) vault over to Knotlog: renames `.quipu/` to `.knotlog/`, rewrites the `QUIPU_*` keys in the state folder's `config`, the `<!-- quipu:` block markers, the hook commands in `.claude/settings.json`, `.codex/hooks.json`, `.gemini/settings.json`, `.cursor/hooks.json` and `.agents/hooks.json`, the `.quipu` entries in `.gitignore`, the secret-gate hook and the old omp hook (replaced by `knotlog.ts`). Dry run unless `--apply`; safe to repeat. A bridge block in `AGENTS.md`/`CLAUDE.md` is refreshed only if unedited; a hand-edited one keeps its text, only its markers are renamed, and a warning says so. Stops if both `.quipu/` and `.knotlog/` exist |
-| `knotlog setup <agent> [--dry-run]` | write one agent's hook file into the vault (`claude`, `codex`, `omp`, `gemini`, `cursor`, `antigravity`, `windsurf`, `opencode`); an existing, differing file is never overwritten; see Setup |
+| `knotlog setup <agent> [--dry-run]` | write one agent's hook file into the vault (`claude`, `codex`, `omp`, `gemini`, `cursor`, `antigravity`, `windsurf`, `opencode`, `copilot`); an existing, differing file is never overwritten; see Setup |
 | `knotlog tui` | browse the newest session notes in the terminal; see Terminal browser |
 | `knotlog mcp` | run a stdio MCP server exposing `knotlog_search`, `knotlog_context` and `knotlog_note`; takes no arguments; see MCP server |
 | `knotlog uninstall` | remove the `knotlog` command from PATH; never touches your vault (`--dry-run` previews) |
@@ -300,6 +301,17 @@ Live-verified on 2026-10-25, Linux, Devin Desktop 3.11.216: `post_write_code` ca
 The plugin runs `knotlog` from OpenCode's environment, so `knotlog` must be on the `PATH` OpenCode starts with, or it silently does nothing. OpenCode sends no session id, so `remember` keeps a single block.
 
 Live-verified on 2026-10-25, Linux, OpenCode 1.19.4: `file.edited` captured an edit, and `session.idle` ran `remember` and `index`. Not verified: Windows. Covered by `tests/run.sh` (T-975..T-982) for the written file only; the JS is not executed in CI.
+
+## GitHub Copilot CLI
+
+`knotlog setup copilot` writes `adapters/copilot/hooks.json` to `<vault>/.github/hooks/knotlog.json`, one of the repository hook files Copilot CLI loads (`.github/hooks/*.json`; other files there are left alone). The keys are PascalCase, which makes Copilot send its Claude-compatible payloads (`hook_event_name`, `tool_name`, `tool_input`, `stop_hook_active`), so the commands are the ones the Claude Code adapter runs. Each entry has a `bash` and a `powershell` command.
+
+- **`SessionStart`** runs `knotlog remember`, then `knotlog context --json SessionStart --copilot`, which prints `{"additionalContext": …}`: the only field Copilot reads from a session-start hook.
+- **`PostToolUse`** runs `knotlog capture`. Copilot's edit tools name the file `path` in `tool_input`; `capture` reads it for the edit-shaped tools (`Edit`, `Write`, `edit`, `create`) only.
+- **`Stop`** runs `knotlog context --json Stop`: the review ask as `decision:block` + `reason`, which Copilot turns into the next turn's prompt. A turn that was already continued (`stop_hook_active`) gets nothing; Copilot also stops after 8 continuations.
+- **`SessionEnd`** runs `knotlog remember`, then `knotlog index`.
+
+Copilot CLI also reads a repository's `.claude/settings.json`, and "all hook entries from all sources are run" (its docs). In a vault that also ran `setup claude`, the Claude entries may run as well (a second capture row, a second remember); Copilot ignores the Claude envelope's `hookSpecificOutput`, so the context is not sent twice. Not live-verified.
 
 ## Terminal browser
 
@@ -643,6 +655,7 @@ PreCompact is not used: in Claude Code it can only block the compaction (its `sy
 | omp | `agent_end` → `context --json Stop`; the adapter forwards the reason with `pi.sendMessage(…, {triggerTurn:false})`, which the docs say appends the message without starting a turn; that the model reads it is not live-verified | `session_start` | `session_before_compact` can cancel or replace; `session.compacting` can add context (docs); not used | [extensions](https://github.com/can1357/oh-my-pi/blob/main/docs/extensions.md), [hooks](https://github.com/can1357/oh-my-pi/blob/main/docs/skills/authoring-hooks.md) |
 | Antigravity | `Stop --antigravity` → `decision:continue` + `reason`; covered by tests, not live-verified | `SessionStart` | not checked | adapter, this file |
 | Gemini CLI | none in this release (the adapter binds no end-of-turn event; Gemini's `AfterAgent` can send a reason back as a new prompt per its docs, not wired) | `SessionStart`; not live-verified | `PreCompress` is advisory, a `systemMessage` for the user only | [hooks reference](https://geminicli.com/docs/hooks/reference/) |
+| GitHub Copilot CLI | `Stop` (PascalCase `agentStop`) → `decision:block` + `reason`, which the docs say forces another turn with the reason as its prompt; `stop_hook_active` guards the loop; covered by tests; not live-verified | `SessionStart` (`additionalContext`); not live-verified | `PreCompact` is notification-only per the docs; not wired | docs.github.com/en/copilot/reference/copilot-cli-reference/cli-hooks-reference |
 | Cursor | none in this release (Cursor's `stop` can return a `followup_message` submitted as the next user message per its docs, not wired) | `sessionStart`; not live-verified | `preCompact` is observational, a `user_message` for the user only | [hooks](https://cursor.com/docs/agent/hooks) |
 | Windsurf / Devin Desktop | not supported yet: the docs do not say that hook output reaches the model | — | not documented | [hooks](https://docs.devin.ai/desktop/cascade/hooks) |
 | OpenCode | not supported yet: the plugin docs do not document sending a prompt into the session | — | `experimental.session.compacting` can add context (docs) | [plugins](https://opencode.ai/docs/plugins/) |

@@ -26,7 +26,7 @@
   <img src="https://img.shields.io/badge/network-offline-lightgrey" alt="Funciona offline">
   <!-- badge counts are re-measured at the release commit: tests = `sh tests/run.sh` -> "# pass N"; scripts = `git ls-files | grep -cE '^(knotlog|lib/.*\.awk|fold/.*\.sed)$'`; LongMemEval-S = `tests/bench/longmemeval.sh` -->
   <img src="https://img.shields.io/badge/tests-1939%20passing-brightgreen" alt="1939 testes passando">
-  <img src="https://img.shields.io/badge/agents-8-blue" alt="8 agentes compatíveis">
+  <img src="https://img.shields.io/badge/agents-9-blue" alt="9 agentes compatíveis">
   <img src="https://img.shields.io/badge/scripts-28-lightgrey" alt="28 scripts distribuídos">
   <img src="https://img.shields.io/badge/LongMemEval--S-recall__any%405%2060.4%25-blue" alt="LongMemEval-S recall_any@5 60,4%">
 </p>
@@ -120,7 +120,8 @@ Os hooks registram quais arquivos o agente tocou, o `remember` transforma esse r
 | **Antigravity** | `knotlog setup antigravity` grava `.agents/hooks.json` (contexto no início da sessão, proteção de salvamento ao fim do turno) | Coberto por testes; ainda não verificado ao vivo |
 | **Windsurf / Devin Desktop** | `knotlog setup windsurf` grava `.devin/hooks.json` (captura de edições, remember após cada resposta; contexto via `AGENTS.md`) | Verificado ao vivo no Linux (Devin Desktop 3.11.216); Windows não verificado |
 | **OpenCode** | `knotlog setup opencode` grava `.opencode/plugins/knotlog.js` (captura de edições, remember em repouso; contexto via `AGENTS.md`) | Verificado ao vivo no Linux (OpenCode 1.19.4); Windows não verificado |
-| **Qualquer outro** (Cursor, …) | `knotlog context --bridge` grava a memória em `AGENTS.md` e `CLAUDE.md` | Sem necessidade de hooks |
+| **GitHub Copilot CLI** | `knotlog setup copilot` grava `.github/hooks/knotlog.json` (contexto no início da sessão, captura de edições, pergunta de revisão no fim do turno, remember no fim da sessão) | Coberto por testes; ainda não verificado ao vivo |
+| **Qualquer outro** (Cursor, Cline, Goose, Zed, Aider, …) | `knotlog context --bridge` grava a memória em `AGENTS.md` e `CLAUDE.md`; o Aider só lê `AGENTS.md` com `read: AGENTS.md` em `.aider.conf.yml`, o Zed só se nenhum outro arquivo de regras (`.rules`, `.cursorrules`, …) vier antes | Sem necessidade de hooks |
 
 O Claude Code lê o `CLAUDE.md`, a maioria dos outros agentes lê o `AGENTS.md`; o Knotlog grava a mesma memória nos dois, então o trabalho feito em um agente chega ao outro. Detalhes por adaptador: [docs/REFERENCE.md](docs/REFERENCE.md#claude-code).
 

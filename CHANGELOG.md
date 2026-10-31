@@ -7,6 +7,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - `knotlog import claude [--project DIR] [--apply]` turns Claude Code transcripts (`~/.claude/projects/<vault path>/*.jsonl`) into session notes, one per session. Dry run by default; only user and assistant text is kept (no thinking, tool calls or tool output); secret-shaped lines and paths outside the vault are masked; a session already imported (`claude_session:` in the front matter) is skipped.
+- `knotlog setup copilot` writes `.github/hooks/knotlog.json` for GitHub Copilot CLI: session-start context (`context --json SessionStart --copilot`, a top-level `additionalContext`), edit capture (`capture` also reads `tool_input.path` of edit tools), the review ask at turn end (`Stop`) and remember at session end. Not live-verified.
+- README: Cline, Goose, Zed and Aider listed under the `AGENTS.md` bridge, with the Aider (`read: AGENTS.md`) and Zed (first rules file wins) notes.
 
 ## [1.4.0] - 2026-10-31
 

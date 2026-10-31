@@ -24,7 +24,7 @@
   <img src="https://img.shields.io/badge/network-offline-lightgrey" alt="Çevrimdışı çalışır">
   <!-- badge counts are re-measured at the release commit: tests = `sh tests/run.sh` -> "# pass N"; scripts = `git ls-files | grep -cE '^(knotlog|lib/.*\.awk|fold/.*\.sed)$'`; LongMemEval-S = `tests/bench/longmemeval.sh` -->
   <img src="https://img.shields.io/badge/tests-1939%20passing-brightgreen" alt="1939 test geçiyor">
-  <img src="https://img.shields.io/badge/agents-8-blue" alt="8 desteklenen ajan">
+  <img src="https://img.shields.io/badge/agents-9-blue" alt="9 desteklenen ajan">
   <img src="https://img.shields.io/badge/scripts-28-lightgrey" alt="28 dağıtılan betik">
   <img src="https://img.shields.io/badge/LongMemEval--S-recall__any%405%2060.4%25-blue" alt="LongMemEval-S recall_any@5 %60,4">
 </p>
@@ -118,7 +118,8 @@ Hook'lar ajanın hangi dosyalara dokunduğunu kaydeder, `remember` bu kaydı tar
 | **Antigravity** | `knotlog setup antigravity` `.agents/hooks.json` yazar (oturum açılışında bağlam, tur sonunda kayıt bekçisi) | Testlerle kapsandı; henüz canlı doğrulanmadı |
 | **Windsurf / Devin Desktop** | `knotlog setup windsurf` `.devin/hooks.json` yazar (düzenleme kaydı, her yanıttan sonra remember; bağlam `AGENTS.md` ile) | Linux'ta canlı doğrulandı (Devin Desktop 3.11.216); Windows doğrulanmadı |
 | **OpenCode** | `knotlog setup opencode` `.opencode/plugins/knotlog.js` yazar (düzenleme kaydı, boştayken remember; bağlam `AGENTS.md` ile) | Linux'ta canlı doğrulandı (OpenCode 1.19.4); Windows doğrulanmadı |
-| **Diğerleri** (Cursor, …) | `knotlog context --bridge` hafızayı `AGENTS.md` ve `CLAUDE.md`'ye yazar | Hook gerekmez |
+| **GitHub Copilot CLI** | `knotlog setup copilot` `.github/hooks/knotlog.json` yazar (oturum başı bağlam, düzenleme kaydı, tur sonunda gözden geçirme sorusu, oturum sonunda remember) | Testlerle kapsandı; henüz canlı doğrulanmadı |
+| **Diğerleri** (Cursor, Cline, Goose, Zed, Aider, …) | `knotlog context --bridge` hafızayı `AGENTS.md` ve `CLAUDE.md`'ye yazar; Aider `AGENTS.md`'yi yalnız `.aider.conf.yml` içinde `read: AGENTS.md` ile okur, Zed yalnız önünde başka kural dosyası (`.rules`, `.cursorrules`, …) yoksa | Hook gerekmez |
 
 Claude Code `CLAUDE.md`'yi, diğer ajanların çoğu `AGENTS.md`'yi okur; Knotlog ikisine de aynı hafızayı yazar, böylece bir ajanda yapılan iş diğerine ulaşır. Adaptör ayrıntıları: [docs/REFERENCE.md](docs/REFERENCE.md#claude-code) (İngilizce).
 

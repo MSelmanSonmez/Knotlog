@@ -26,7 +26,7 @@
   <img src="https://img.shields.io/badge/network-offline-lightgrey" alt="Works offline">
   <!-- badge counts are re-measured at the release commit: tests = `sh tests/run.sh` -> "# pass N"; scripts = `git ls-files | grep -cE '^(knotlog|lib/.*\.awk|fold/.*\.sed)$'`; LongMemEval-S = `tests/bench/longmemeval.sh` -->
   <img src="https://img.shields.io/badge/tests-1939%20passing-brightgreen" alt="1939 件のテストが成功">
-  <img src="https://img.shields.io/badge/agents-8-blue" alt="対応エージェント 8 種">
+  <img src="https://img.shields.io/badge/agents-9-blue" alt="対応エージェント 9 種">
   <img src="https://img.shields.io/badge/scripts-28-lightgrey" alt="配布スクリプト 28 本">
   <img src="https://img.shields.io/badge/LongMemEval--S-recall__any%405%2060.4%25-blue" alt="LongMemEval-S recall_any@5 60.4%">
 </p>
@@ -120,7 +120,8 @@ flowchart LR
 | **Antigravity** | `knotlog setup antigravity` が `.agents/hooks.json` を書き込み(セッション開始時のコンテキスト、ターン終了時の保存ガード) | テストでカバー済み。実機検証はまだ |
 | **Windsurf / Devin Desktop** | `knotlog setup windsurf` が `.devin/hooks.json` を書き込み(編集の記録、応答のたびに remember。コンテキストは `AGENTS.md` 経由) | Linux で実機検証済み(Devin Desktop 3.11.216)。Windows は未検証 |
 | **OpenCode** | `knotlog setup opencode` が `.opencode/plugins/knotlog.js` を書き込み(編集の記録、アイドル時に remember。コンテキストは `AGENTS.md` 経由) | Linux で実機検証済み(OpenCode 1.19.4)。Windows は未検証 |
-| **その他すべて** (Cursor など) | `knotlog context --bridge` がメモリを `AGENTS.md` と `CLAUDE.md` に書き込み | フック不要 |
+| **GitHub Copilot CLI** | `knotlog setup copilot` が `.github/hooks/knotlog.json` を書き込み(セッション開始時のコンテキスト、編集の記録、ターン終了時のふり返りの問い、セッション終了時に remember) | テストで確認済み。実機では未検証 |
+| **その他すべて** (Cursor、Cline、Goose、Zed、Aider など) | `knotlog context --bridge` がメモリを `AGENTS.md` と `CLAUDE.md` に書き込み。Aider は `.aider.conf.yml` に `read: AGENTS.md` がある場合のみ、Zed は先に別のルールファイル(`.rules`、`.cursorrules` など)がない場合のみ `AGENTS.md` を読む | フック不要 |
 
 Claude Code は `CLAUDE.md` を、他の多くのエージェントは `AGENTS.md` を読みます。Knotlog は同じメモリを両方に書くので、一方のエージェントでの作業がもう一方にも届きます。アダプターごとの詳細: [docs/REFERENCE.md](docs/REFERENCE.md#claude-code)。
 
