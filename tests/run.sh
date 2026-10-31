@@ -14090,7 +14090,7 @@ t; assert_eq "T-1344: the vault's own path is kept, the outside one masked" 'yes
 ic_vault ic5; printf '%s\n' '{"type":"custom-title","customTitle":"empty","sessionId":"e"}' > "$TMP/ic5.cc/claude-session.jsonl"
 O1345=$(ic ic5 --project "$TMP/ic5.cc" --apply 2>&1); R1345=$?
 t; assert_eq "T-1345: a dump without messages is skipped, no note, exit 0" "skipped (no messages)${TAB}-${TAB}0${TAB}0${TAB}claude-session.jsonl|0 session(s) imported, 1 skipped 0 no" \
-  "$(printf '%s\n' "$O1345" | tr '\n' '|' | sed 's/|$//') $R1345 $([ -d "$TMP/ic5/700-Sessions" ] && ls "$TMP/ic5/700-Sessions" | grep -q . && printf yes || printf no)"
+  "$(printf '%s\n' "$O1345" | tr '\n' '|' | sed 's/|$//') $R1345 $([ -d "$TMP/ic5/700-Sessions" ] && [ "$(sec_empty "$TMP/ic5/700-Sessions")" = filled ] && printf yes || printf no)"
 # T-1346: a dump that is a link is skipped (the transcripts folder is read, never followed).
 if [ "$TRUE_SYMLINKS" -eq 1 ]; then
   ic_vault ic6; mv "$TMP/ic6.cc/claude-session.jsonl" "$TMP/ic6.real.jsonl"
