@@ -3524,8 +3524,12 @@ spaced.md" "$T270"
 
 # T-271 (regression): the ALREADY-working literal punctuated query
 # ("ortakterim.") still finds dotted.md -- the fix must not break this path.
-T271=$(QUIPU_VAULT="$TMP/vt270" sh "$ROOT/knotlog" search "ortakterim." --paths)
-t; assert_eq "T-271: literal punctuated query still finds the dotted note" 'dotted.md' "$T271"
+# S1 (2026-10-30): the query's trailing "." is now stripped, so it matches all three notes like T-270.
+T271=$(QUIPU_VAULT="$TMP/vt270" sh "$ROOT/knotlog" search "ortakterim." --paths | sort)
+t; assert_eq "T-271: punctuated query matches the same notes as the bare term" \
+  "comma.md
+dotted.md
+spaced.md" "$T271"
 
 # T-272 (word-boundary discipline preserved): "term" must never match inside
 # "terminal", even now that trailing punctuation is tolerated. Vault has a
@@ -13333,6 +13337,55 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"k
 QUIPU_LANG=en QUIPU_VAULT="$TMP/b1plain" sh "$ROOT/knotlog" mcp < "$TMP/b1mcp.req" > "$TMP/b1mcp.out" 2>/dev/null
 t; assert_eq "T-1152: MCP knotlog_note on an overflowing vault is not an error and writes the line" 'yes yes' \
   "$(grep -qF '"isError":false' "$TMP/b1mcp.out" && printf yes || printf no) $(grep -rqF 'b1 mcp' "$TMP/b1plain" && printf yes || printf no)"
+# ---- search query normalization (T-1300..T-1313) ----
+# Query terms get the same word-boundary treatment as the document side:
+# leading ( ' " and trailing . , ; : ! ? ) ' " are dropped, inner punctuation
+# stays, punctuation-only terms are dropped, repeated terms count once.
+mk_qnorm_vault() { # dir fold
+  mkvault "$1"; printf 'fold=%s\nlang=en\n' "$2" > "$TMP/$1/.knotlog/config"
+}
+mk_qnorm_vault qn1 tr
+printf '# Music\n\nI use spotify for playlist building. Another playlist here.\n' > "$TMP/qn1/spot.md"
+printf '# Songs\n\nA playlist of old songs.\n' > "$TMP/qn1/other.md"
+printf '# Code\n\nc++ and node.js tips, see #etiket and the --tag flag. Version 3.14 on 2026-10-30.\n' > "$TMP/qn1/code.md"
+printf '# Turkce\n\nÇalışma ğüşıöç notları.\n' > "$TMP/qn1/tr.md"
+printf '# Filler one\n\nnothing to see.\n' > "$TMP/qn1/f1.md"
+printf '# Filler two\n\nstill nothing.\n' > "$TMP/qn1/f2.md"
+QUIPU_VAULT="$TMP/qn1" sh "$ROOT/knotlog" index >/dev/null 2>&1
+qn() { QUIPU_VAULT="$TMP/$1" sh "$ROOT/knotlog" search "$2" 2>&1; }
+
+QN_BASE=$(qn qn1 spotify)
+t; assert_eq "T-1300: search 'spotify?' returns the same rows as 'spotify'" "$QN_BASE" "$(qn qn1 'spotify?')"
+t; assert_eq "T-1301: search '(\"spotify\"),' returns the same rows as 'spotify'" "$QN_BASE" "$(qn qn1 '("spotify"),')"
+t; assert_eq "T-1302: a repeated term scores like a single one" \
+  "$(qn qn1 'playlist spotify')" "$(qn qn1 'playlist playlist spotify')"
+
+# A term repeated more often than there are notes used to push df past n and log() below zero.
+mk_qnorm_vault qn2 tr
+printf '# One\n\nplaylist spotify\n' > "$TMP/qn2/one.md"
+QUIPU_VAULT="$TMP/qn2" sh "$ROOT/knotlog" index >/dev/null 2>&1
+QN2=$(qn qn2 'playlist playlist playlist')
+t; assert_eq "T-1303: a thrice-repeated term in a one-note vault prints no nan and no awk warning" \
+  "$(qn qn2 playlist)" "$QN2"
+
+# Edge cases below are green on the old code too: they pin today's behavior.
+qnp() { QUIPU_VAULT="$TMP/$1" sh "$ROOT/knotlog" search "$2" --paths 2>&1; }
+t; assert_eq "T-1304: c++ keeps its trailing plus" 'code.md' "$(qnp qn1 'c++')"
+t; assert_eq "T-1305: node.js keeps its inner dot" 'code.md' "$(qnp qn1 'node.js')"
+t; assert_eq "T-1306: #etiket keeps its leading hash" 'code.md' "$(qnp qn1 '#etiket')"
+t; assert_eq "T-1307: --tag keeps its leading dashes" 'code.md' "$(qnp qn1 'zzz --tag')"
+t; assert_eq "T-1308: a number and a date match" 'code.md code.md' "$(qnp qn1 '3.14') $(qnp qn1 '2026-10-30')"
+t; assert_eq "T-1309: folded Turkish letters match (fold=tr)" 'tr.md' "$(qnp qn1 'ğüşıöç')"
+t; assert_eq "T-1310: a punctuation-only term is ignored" "$QN_BASE" "$(qn qn1 'spotify ?')"
+t; QN_P=$(QUIPU_VAULT="$TMP/qn1" sh "$ROOT/knotlog" search '?!' 2>&1); RC=$?
+assert_eq "T-1311: an all-punctuation query is a no-match (exit 0, no output)" '0 []' "$RC [$QN_P]"
+
+mk_qnorm_vault qn3 default
+printf '# Turkce\n\nÇalışma ğüşıöç notları.\n' > "$TMP/qn3/tr.md"
+printf '# Other\n\nnothing here.\n' > "$TMP/qn3/o.md"
+QUIPU_VAULT="$TMP/qn3" sh "$ROOT/knotlog" index >/dev/null 2>&1
+t; assert_eq "T-1312: unfolded Turkish letters match (fold=default)" 'tr.md' "$(qnp qn3 'ğüşıöç')"
+t; assert_eq "T-1313: trailing punctuation drops off an unfolded Turkish term (fold=default)" 'tr.md' "$(qnp qn3 'ğüşıöç?')"
 
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1

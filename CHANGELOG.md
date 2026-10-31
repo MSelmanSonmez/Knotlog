@@ -11,6 +11,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `distill` remembers what it moved in `.knotlog/distilled`, so a line removed from its target does not come back. The MCP `knotlog_search` result ends with the omitted-results line when it was cut.
 - Write-time budget: `knotlog note --thread` refuses a line that would push the threads file past the context budget, so `context` never has to crop it. It exits 3, writes nothing, and says how many bytes to free and how (`knotlog compact --apply`, `knotlog archive`, or a larger `ctx_max`). The check uses the same formula as `doctor`'s threads-overflow warning, so the warning and the refusal start at the same byte. Plain `note` (and MCP `knotlog_note`) writes the session note, which never enters context, and is not checked.
 
+### Fixed
+- `search` strips punctuation from the ends of query terms the way it already tolerates it after a word in a note: `knotlog search "spotify?"` now finds what `knotlog search spotify` finds, and a trailing-punctuated query such as `"term."` matches the same notes as the bare term instead of only the notes where the word is followed by that punctuation. Leading `(` `'` `"` and trailing `. , ; : ! ? ) ' "` go; inner and other punctuation stays (`node.js`, `c++`, `#tag`, `--flag`, `2026-10-30`), and a term that is only punctuation is ignored. Present in 1.2.0 and earlier.
+- `search` counts a repeated query term once. `knotlog search "playlist playlist spotify"` scores like `knotlog search "playlist spotify"`; before, each repeat raised the term's document frequency again, which could push it past the note count and print `-nan` scores with awk warnings on stderr. Present in 1.2.0 and earlier.
+
 ## [1.2.1] - 2026-10-31
 
 ### Fixed
