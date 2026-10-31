@@ -13211,6 +13211,26 @@ if [ "$TRUE_SYMLINKS" -eq 1 ]; then
 else
   t; skip "T-1130: linked facts file, dry run" "no native symlinks on this host"
 fi
+# T-1131..T-1133: distill never grows the facts file past the context budget (the formula context
+# drops the section by). ctx_max=800 leaves ~80 bytes for a ~290-byte section; 1200 leaves ~480.
+dsb() { (KNOTLOG_CTX_MAX=$1; export KNOTLOG_CTX_MAX; shift; dsl "$@"); }
+# "yes" when the message is err_facts_budget for Facts.md and its numbers add up (size - budget = free).
+ds_over() {
+  _do_n=$(printf '%s\n' "$1" | sed -n 's/^the facts section of Facts\.md would be \([0-9]*\) bytes in context, the budget leaves \([0-9]*\): free \([0-9]*\) bytes first.*nothing was written$/\1 \2 \3/p')
+  # shellcheck disable=SC2086
+  set -- $_do_n
+  if [ "$#" -eq 3 ] && [ $(($1 - $2)) -eq "$3" ] && [ "$3" -gt 0 ]; then printf yes; else printf no; fi
+}
+dsv s131; F131=$(cksum < "$TMP/s131/Facts.md")
+O131=$(dsb 800 s131 --apply); R131=$?
+t; assert_eq "T-1131: --apply past the facts budget exits 3, says so, Facts.md unchanged, no ledger, no lock" '3 yes yes no no' \
+  "$R131 $(ds_over "$O131") $([ "$F131" = "$(cksum < "$TMP/s131/Facts.md")" ] && printf yes || printf no) $([ -e "$TMP/s131/.knotlog/distilled" ] && printf yes || printf no) $([ -e "$TMP/s131/.knotlog/remember.lock" ] && printf yes || printf no)"
+O132=$(dsb 800 s131 ''); R132=$?
+t; assert_eq "T-1132: the dry run prints the same warning, still lists the rows, exit 0, Facts.md unchanged" '0 yes yes yes' \
+  "$R132 $(ds_over "$(printf '%s\n' "$O132" | grep '^the facts section')") $(printf '%s\n' "$O132" | grep -q "^would add${TAB}facts" && printf yes || printf no) $([ "$F131" = "$(cksum < "$TMP/s131/Facts.md")" ] && printf yes || printf no)"
+O133=$(dsb 1200 s131 --apply); R133=$?
+t; assert_eq "T-1133: within the budget --apply writes, prints no warning, and the facts reach context" '0 no 2 yes' \
+  "$R133 $(sec_has "$O133" 'the facts section') $(grep -c '(source: ' "$TMP/s131/Facts.md") $( (KNOTLOG_CTX_MAX=1200; export KNOTLOG_CTX_MAX; QUIPU_VAULT="$TMP/s131" QUIPU_LANG=en sh "$ROOT/knotlog" context) | grep -q 'first (source' && printf yes || printf no)"
 
 # ---- note --thread: write-time budget (T-1140..T-1152) ---------------------
 # B1: `note --thread` refuses a line that would push the threads file past the
