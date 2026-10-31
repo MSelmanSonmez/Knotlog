@@ -14051,6 +14051,70 @@ c1_doc c1n en
 t; assert_eq "T-1262: note --thread writes '- YYYY-MM-DD HH:MM text' and the line is not counted" 'yes 1' \
   "$(grep -Eq '^- [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2} c1 new line$' "$TMP/c1n/Threads.md" && printf yes || printf no) $(grep -cxF "$C1ROW" "$TMP/c1n.doc")"
 
+# ---- import claude: Claude Code transcripts -> session notes (T-1340..T-1349) ----
+# The fixture is synthetic: one title event, four real messages, a fake key, two outside paths,
+# a second day, and one *_LEAK marker in every part that must stay out (thinking, tool_use,
+# tool_result, isMeta, a harness tag, a sidechain, an api-request blob, last-prompt).
+ic_vault() { mkvault "$1"; printf 'layout=plain\nlang=en\n' > "$TMP/$1/.knotlog/config"; mkdir -p "$TMP/$1.cc"; cp "$ROOT/tests/fixtures/claude-session.jsonl" "$TMP/$1.cc/"; }
+ic() { _ic_v=$1; shift; QUIPU_VAULT="$TMP/$_ic_v" QUIPU_LANG=en sh "$ROOT/knotlog" import claude "$@" </dev/null; }
+ic_sum() { find "$TMP/$1" -type f ! -path '*/.knotlog/*' -exec cksum {} + 2>/dev/null | sort | cksum; }
+IC_NOTE=700-Sessions/2026-10-01-claude-0f3a9c2e.md
+ic_vault ic1
+IC0=$(ic_sum ic1); O1340=$(ic ic1 --project "$TMP/ic1.cc" 2>&1); R1340=$?; IC1=$(ic_sum ic1)
+t; assert_eq "T-1340: dry run lists the note, 4 messages, 2 masked lines, writes nothing, exit 0" \
+  "would import${TAB}$IC_NOTE${TAB}4${TAB}2${TAB}claude-session.jsonl 0 yes" \
+  "$O1340 $R1340 $([ "$IC0" = "$IC1" ] && printf yes || printf no)"
+O1341=$(ic ic1 --project "$TMP/ic1.cc" --apply 2>&1); R1341=$?
+printf '%s\n' '---' 'title: "Listing files"' 'type: import' 'source: claude' 'claude_session: 0f3a9c2e-1111-4222-8333-444455556666' '---' '' '# Listing files' '' \
+  '### user (2026-10-01 09:15 UTC)' '' 'How do I list the files here?' '' \
+  '### assistant (2026-10-01 09:15 UTC)' '' 'Use ls; the notes are in <path outside the vault> and <path outside the vault>.' '' \
+  '### user (2026-10-01 09:17 UTC)' '' 'Thanks.' '[masked: secret-shaped line]' '' \
+  '### assistant (2026-10-02 08:00 UTC)' '' 'Next day: see https://example.com/docs and /loop for more.' > "$TMP/ic1.want"
+t; assert_eq "T-1341: --apply writes the note byte for byte as expected, exit 0, with the summary" \
+  "0 same 1 session(s) imported, 0 skipped" \
+  "$R1341 $(cmp -s "$TMP/ic1.want" "$TMP/ic1/$IC_NOTE" && printf same || printf differs) $(printf '%s\n' "$O1341" | tail -n 1)"
+t; assert_eq "T-1342: nothing from thinking, tool_use, tool_result, meta, harness tags, sidechains, blobs; no key" '0 no' \
+  "$(grep -c '_LEAK' "$TMP/ic1/$IC_NOTE") $(grep -qF 'sk-abcdef' "$TMP/ic1/$IC_NOTE" && printf yes || printf no)"
+IC2=$(ic_sum ic1); O1343=$(ic ic1 --project "$TMP/ic1.cc" --apply 2>&1); R1343=$?; IC3=$(ic_sum ic1)
+t; assert_eq "T-1343: a second --apply skips the imported session, writes nothing, exit 0" \
+  "skipped (already imported)${TAB}$IC_NOTE${TAB}4${TAB}2${TAB}claude-session.jsonl|0 session(s) imported, 1 skipped 0 yes" \
+  "$(printf '%s\n' "$O1343" | tr '\n' '|' | sed 's/|$//') $R1343 $([ "$IC2" = "$IC3" ] && printf yes || printf no)"
+# T-1344: a path inside the vault stays, one outside is masked.
+ic_vault ic4
+sed -e 's/0f3a9c2e-1111/0f3a9c2e-4444/g' -e "s|/home/ada/private/notes.txt|$TMP/ic4/notes/a.md|" "$TMP/ic4.cc/claude-session.jsonl" > "$TMP/ic4.cc/second.jsonl"
+rm "$TMP/ic4.cc/claude-session.jsonl"
+ic ic4 --project "$TMP/ic4.cc" --apply >/dev/null 2>&1
+t; assert_eq "T-1344: the vault's own path is kept, the outside one masked" 'yes 1' \
+  "$(grep -qF "$TMP/ic4/notes/a.md" "$TMP/ic4/$IC_NOTE" && printf yes || printf no) $(grep -o '<path outside the vault>' "$TMP/ic4/$IC_NOTE" | grep -c .)"
+# T-1345: a dump with no message lines is listed and skipped.
+ic_vault ic5; printf '%s\n' '{"type":"custom-title","customTitle":"empty","sessionId":"e"}' > "$TMP/ic5.cc/claude-session.jsonl"
+O1345=$(ic ic5 --project "$TMP/ic5.cc" --apply 2>&1); R1345=$?
+t; assert_eq "T-1345: a dump without messages is skipped, no note, exit 0" "skipped (no messages)${TAB}-${TAB}0${TAB}0${TAB}claude-session.jsonl|0 session(s) imported, 1 skipped 0 no" \
+  "$(printf '%s\n' "$O1345" | tr '\n' '|' | sed 's/|$//') $R1345 $([ -d "$TMP/ic5/700-Sessions" ] && ls "$TMP/ic5/700-Sessions" | grep -q . && printf yes || printf no)"
+# T-1346: a dump that is a link is skipped (the transcripts folder is read, never followed).
+if [ "$TRUE_SYMLINKS" -eq 1 ]; then
+  ic_vault ic6; mv "$TMP/ic6.cc/claude-session.jsonl" "$TMP/ic6.real.jsonl"
+  MSYS="${MSYS:+$MSYS }winsymlinks:nativestrict" ln -s "$TMP/ic6.real.jsonl" "$TMP/ic6.cc/claude-session.jsonl"
+  O1346=$(ic ic6 --project "$TMP/ic6.cc" --apply 2>&1)
+  t; assert_eq "T-1346: a linked dump is skipped, no note written" "skipped (link)${TAB}-${TAB}0${TAB}0${TAB}claude-session.jsonl no" \
+    "$(printf '%s\n' "$O1346" | head -n 1) $([ -e "$TMP/ic6/$IC_NOTE" ] && printf yes || printf no)"
+else
+  t; skip "T-1346: a linked dump is skipped" "no native symlinks on this host"
+fi
+# T-1347: without --project the folder is Claude's own encoding of the vault path under CLAUDE_CONFIG_DIR.
+ic_vault ic7; IC7P="$TMP/ic7"
+if command -v cygpath >/dev/null 2>&1; then IC7P=$(cygpath -w "$IC7P"); fi
+IC7D="$TMP/ic7.home/projects/$(printf '%s' "$IC7P" | LC_ALL=C tr -c 'A-Za-z0-9' '-')"
+mkdir -p "$IC7D"; cp "$TMP/ic7.cc/claude-session.jsonl" "$IC7D/"
+O1347=$( (CLAUDE_CONFIG_DIR="$TMP/ic7.home"; export CLAUDE_CONFIG_DIR; ic ic7) 2>&1)
+t; assert_eq "T-1347: the default transcripts folder is found from the vault path" "would import${TAB}$IC_NOTE" \
+  "$(printf '%s\n' "$O1347" | cut -f1-2)"
+O1348=$( (CLAUDE_CONFIG_DIR="$TMP/ic7.none"; export CLAUDE_CONFIG_DIR; ic ic7) 2>&1); R1348=$?
+t; assert_eq "T-1348: a missing transcripts folder names it and exits 2" 'yes 2' \
+  "$(sec_has "$O1348" 'no Claude Code transcripts folder: ') $R1348"
+O1349=$(ic ic1 --bogus 2>&1); R1349=$?
+t; assert_eq "T-1349: import claude --bogus names the flag and exits 2" "$(i18n err_unknown_flag | sed 's/%s/--bogus/') 2" "$O1349 $R1349"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
