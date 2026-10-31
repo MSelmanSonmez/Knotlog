@@ -539,13 +539,13 @@ err_compact_write=não foi possível acrescentar ao arquivo: %s — o arquivo de
 err_compact_verify=os bytes acrescentados em %s não correspondem à origem — o arquivo de origem NÃO foi alterado (o arquivo pode conter uma cópia solta; confira)
 err_compact_source=não foi possível reescrever %s — as entradas estão seguras no arquivo e a origem continua inalterada
 doc_tone_invalid=tone=%s não é um preset distribuído para o idioma deste cofre — voltando para a seção Tone do companion.md (execute: knotlog tone --list)
-usage_setup=  setup     grava o arquivo de hook de um agente no cofre: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode (--dry-run para simular; um arquivo diferente nunca é sobrescrito)
+usage_setup=  setup     grava o arquivo de hook de um agente no cofre: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode, copilot (--dry-run para simular; um arquivo diferente nunca é sobrescrito)
 setup_line_written=%s: gravado em %s
 setup_line_uptodate=%s: já está atualizado (%s)
 setup_line_preserved=%s: %s preservado; ele difere de %s - mescle à mão
 setup_dry_run=simulação: nada é gravado
-err_setup_agent=agente desconhecido: %s; compatíveis: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode
-err_setup_usage=uso: knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode> [--dry-run]
+err_setup_agent=agente desconhecido: %s; compatíveis: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode, copilot
+err_setup_usage=uso: knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode|copilot> [--dry-run]
 err_setup_parent=não foi possível criar %s: ele existe e não é um diretório
 err_mcp_usage=uso: knotlog mcp (não aceita argumentos; fala MCP em stdin/stdout)
 usage_migrate=  migrate   traz um cofre anterior à renomeação (Quipu) para o Knotlog: pasta de estado, configurações QUIPU_*, marcadores de bloco, comandos de hook (simulação por padrão; --apply grava; seguro repetir)

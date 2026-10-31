@@ -539,13 +539,13 @@ err_compact_write=no se pudo añadir al archivo: %s — el archivo de origen no 
 err_compact_verify=los bytes añadidos en %s no coinciden con el origen — el archivo de origen NO se cambió (el archivo puede contener una copia suelta; revísalo)
 err_compact_source=no se pudo reescribir %s — las entradas están a salvo en el archivo y el origen no cambió
 doc_tone_invalid=tone=%s no es un preset incluido para el idioma de esta bóveda — se vuelve a la sección Tone de companion.md (ejecuta: knotlog tone --list)
-usage_setup=  setup     escribe en la bóveda el archivo de hooks de un agente: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode (--dry-run para previsualizar; un archivo distinto nunca se sobrescribe)
+usage_setup=  setup     escribe en la bóveda el archivo de hooks de un agente: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode, copilot (--dry-run para previsualizar; un archivo distinto nunca se sobrescribe)
 setup_line_written=%s: escrito en %s
 setup_line_uptodate=%s: ya está al día (%s)
 setup_line_preserved=%s: se conservó %s; difiere de %s - combínalo a mano
 setup_dry_run=simulación: no se escribe nada
-err_setup_agent=agente desconocido: %s; compatibles: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode
-err_setup_usage=uso: knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode> [--dry-run]
+err_setup_agent=agente desconocido: %s; compatibles: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode, copilot
+err_setup_usage=uso: knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode|copilot> [--dry-run]
 err_setup_parent=no se puede crear %s: existe y no es un directorio
 err_mcp_usage=uso: knotlog mcp (no admite argumentos; habla MCP por stdin/stdout)
 usage_migrate=  migrate   lleva a Knotlog una bóveda anterior al cambio de nombre (Quipu): carpeta de estado, ajustes QUIPU_*, marcadores de bloque, comandos de hooks (simulación por defecto; --apply escribe; se puede repetir sin riesgo)

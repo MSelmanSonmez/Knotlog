@@ -539,13 +539,13 @@ err_compact_write=无法追加到归档：%s — 源文件未被触碰
 err_compact_verify=%s 中追加的字节与源文件不一致 — 源文件【未】更改（归档中可能留有多余副本；请检查）
 err_compact_source=无法重写 %s — 这些条目已安全存入归档，源文件保持不变
 doc_tone_invalid=tone=%s 不是此知识库语言随附的预设 — 回退到 companion.md 的 Tone 部分（请运行：knotlog tone --list）
-usage_setup=  setup     把某个智能体的钩子文件写入知识库：claude、codex、omp、gemini、cursor、antigravity、windsurf、opencode（--dry-run 仅预览；内容不同的文件绝不覆盖）
+usage_setup=  setup     把某个智能体的钩子文件写入知识库：claude、codex、omp、gemini、cursor、antigravity、windsurf、opencode、copilot（--dry-run 仅预览；内容不同的文件绝不覆盖）
 setup_line_written=%s：已写入 %s
 setup_line_uptodate=%s：已是最新（%s）
 setup_line_preserved=%s：已保留 %s；它与 %s 不同 - 请手动合并
 setup_dry_run=试运行：不写入任何内容
-err_setup_agent=未知智能体：%s；支持：claude、codex、omp、gemini、cursor、antigravity、windsurf、opencode
-err_setup_usage=用法：knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode> [--dry-run]
+err_setup_agent=未知智能体：%s；支持：claude、codex、omp、gemini、cursor、antigravity、windsurf、opencode、copilot
+err_setup_usage=用法：knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode|copilot> [--dry-run]
 err_setup_parent=无法创建 %s：它已存在且不是目录
 err_mcp_usage=用法：knotlog mcp（不接受参数；在 stdin/stdout 上使用 MCP 协议）
 usage_migrate=  migrate   把改名前（Quipu）的知识库迁移到 Knotlog：状态文件夹、QUIPU_* 设置、块标记、钩子命令（默认为试运行；--apply 写入；可安全重复）

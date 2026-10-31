@@ -42,9 +42,10 @@ function je_hook_context(ev, ctx,   o) {
   return o
 }
 
-# Cursor hook output (cursor.com/docs/hooks): sessionStart takes additional_context.
+# Cursor hook output (cursor.com/docs/hooks): sessionStart takes additional_context. Copilot CLI
+# takes a top-level additionalContext instead (JE_KEY=additionalContext).
 function je_cursor_ctx(ev, ctx,   o) {
-  return "{" je_str("additional_context") ":" je_str(ctx) "}"
+  return "{" je_str(JE_KEY != "" ? JE_KEY : "additional_context") ":" je_str(ctx) "}"
 }
 
 # {"decision":"block","reason":<reason>}

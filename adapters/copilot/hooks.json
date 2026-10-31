@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "hooks": {
+    "SessionStart": [
+      { "type": "command",
+        "bash": "KNOTLOG_HOOK=1 knotlog remember && KNOTLOG_HOOK=1 knotlog context --json SessionStart --copilot",
+        "powershell": "$env:KNOTLOG_HOOK='1'; knotlog remember; knotlog context --json SessionStart --copilot",
+        "timeoutSec": 10 }
+    ],
+    "PostToolUse": [
+      { "type": "command",
+        "bash": "KNOTLOG_HOOK=1 knotlog capture",
+        "powershell": "$env:KNOTLOG_HOOK='1'; knotlog capture",
+        "timeoutSec": 10 }
+    ],
+    "Stop": [
+      { "type": "command",
+        "bash": "KNOTLOG_HOOK=1 knotlog context --json Stop",
+        "powershell": "$env:KNOTLOG_HOOK='1'; knotlog context --json Stop",
+        "timeoutSec": 10 }
+    ],
+    "SessionEnd": [
+      { "type": "command",
+        "bash": "KNOTLOG_HOOK=1 knotlog remember && KNOTLOG_HOOK=1 knotlog index",
+        "powershell": "$env:KNOTLOG_HOOK='1'; knotlog remember; knotlog index",
+        "timeoutSec": 10 }
+    ]
+  }
+}

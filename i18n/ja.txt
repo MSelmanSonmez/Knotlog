@@ -539,13 +539,13 @@ err_compact_write=アーカイブに追記できませんでした: %s — 元�
 err_compact_verify=%s に追記したバイト列が元と一致しません — 元のファイルは変更していません (アーカイブに余分なコピーが残っている可能性があります; 確認してください)
 err_compact_source=%s を書き換えられませんでした — エントリはアーカイブに安全に残っており、元のファイルは変更されていません
 doc_tone_invalid=tone=%s はこのボールトの言語に同梱されたプリセットではありません — companion.md の Tone セクションにフォールバックします (実行: knotlog tone --list)
-usage_setup=  setup     エージェント 1 つ分のフックファイルをボールトに書き込み: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode (--dry-run: プレビュー; 内容が異なるファイルは上書きしません)
+usage_setup=  setup     エージェント 1 つ分のフックファイルをボールトに書き込み: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode, copilot (--dry-run: プレビュー; 内容が異なるファイルは上書きしません)
 setup_line_written=%s: %s に書き込みました
 setup_line_uptodate=%s: すでに最新です (%s)
 setup_line_preserved=%s: %s を保持しました; %s と異なります - 手動でマージしてください
 setup_dry_run=ドライラン: 何も書き込みません
-err_setup_agent=不明なエージェント: %s; 対応: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode
-err_setup_usage=使い方: knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode> [--dry-run]
+err_setup_agent=不明なエージェント: %s; 対応: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode, copilot
+err_setup_usage=使い方: knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode|copilot> [--dry-run]
 err_setup_parent=%s を作成できません: ディレクトリ以外のものがすでに存在します
 err_mcp_usage=使い方: knotlog mcp (引数なし; 標準入出力で MCP を話します)
 usage_migrate=  migrate   名称変更前 (Quipu) のボールトを Knotlog に移行: 状態フォルダー、QUIPU_* 設定、ブロックマーカー、フックコマンド (既定はドライラン; --apply で書き込み; 繰り返しても安全)

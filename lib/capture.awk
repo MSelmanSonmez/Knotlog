@@ -37,6 +37,11 @@ function strip_(s) {
     p = jsonfield($0, "file_path")
     if (p != "") tool = "Write"
   }
+  # Copilot CLI (Claude-compatible payload): its edit tools name the file
+  # "path". Only edit-shaped tools, so a "path" argument of another tool is no edit.
+  if (p == "" && (tool == "Edit" || tool == "Write" || tool == "edit" || tool == "create")) {
+    p = jsonfield_scoped($0, "tool_input", "path")
+  }
   ev = strip_(ev)
   tool = strip_(tool)
   if (p != "") {

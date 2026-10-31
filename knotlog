@@ -4645,7 +4645,8 @@ _q_cmd_uninstall() {
     for _q_u_pair in .claude/settings.json:claude-code.json .codex/hooks.json:codex/hooks.json \
       .omp/hooks/pre/knotlog.ts:omp/hooks/pre/knotlog.ts .gemini/settings.json:gemini/settings.json \
       .cursor/hooks.json:cursor/hooks.json .agents/hooks.json:antigravity/hooks.json \
-      .devin/hooks.json:windsurf/hooks.json .opencode/plugins/knotlog.js:opencode/knotlog.js; do
+      .devin/hooks.json:windsurf/hooks.json .opencode/plugins/knotlog.js:opencode/knotlog.js \
+      .github/hooks/knotlog.json:copilot/hooks.json; do
       _q_u_rel=${_q_u_pair%%:*}
       _q_u_tpl="$_q_HOME/adapters/${_q_u_pair#*:}"
       [ -f "$_q_u_vault/$_q_u_rel" ] || continue
@@ -5616,6 +5617,7 @@ _q_cmd_context() {
   _q_limit=10
   _q_bridge=0
   _q_cursor=0
+  _q_copilot=0
   _q_ag=0
 
   while [ "$#" -gt 0 ]; do
@@ -5624,6 +5626,7 @@ _q_cmd_context() {
       --limit) [ "$#" -ge 2 ] || _q_die err_missing_arg 2; _q_limit=$2; shift 2 ;;
       --bridge) _q_bridge=1; shift ;;
       --cursor) _q_cursor=1; shift ;;
+      --copilot) _q_copilot=1; shift ;;
       --antigravity) _q_ag=1; shift ;;
       -*) _q_die err_unknown_flag 2 "$1" ;;
       *) _q_die err_missing_arg 2 ;;
@@ -5839,6 +5842,9 @@ ${_q_text}"
 
   if [ -n "$_q_ev" ] && [ "$_q_ag" -eq 1 ]; then
     printf '%s' "$_q_text" | awk -f "$_q_HOME/lib/jsonemit.awk" -f "$_q_HOME/lib/emit_agctx.awk"
+  elif [ -n "$_q_ev" ] && [ "$_q_copilot" -eq 1 ]; then
+    # Copilot CLI consumes only a top-level additionalContext on sessionStart.
+    printf '%s' "$_q_text" | awk -v JE_EV="$_q_ev" -v JE_KEY=additionalContext -f "$_q_HOME/lib/jsonemit.awk" -f "$_q_HOME/lib/emit_cursorctx.awk"
   elif [ -n "$_q_ev" ] && [ "$_q_cursor" -eq 1 ]; then
     printf '%s' "$_q_text" | awk -v JE_EV="$_q_ev" -f "$_q_HOME/lib/jsonemit.awk" -f "$_q_HOME/lib/emit_cursorctx.awk"
   elif [ -n "$_q_ev" ]; then
@@ -8314,7 +8320,7 @@ _q_cmd_flair() {
 }
 
 # ---- setup: one agent's hook file into the vault ---------------------------
-# knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode> [--dry-run]. Writes the shipped adapter
+# knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode|copilot> [--dry-run]. Writes the shipped adapter
 # only where the target is absent. An identical file is left alone; a
 # differing one is never overwritten (the user merges it by hand). The
 # decision lives in _q_setup_place, shared by the write and --dry-run paths.
@@ -8370,6 +8376,7 @@ _q_cmd_setup() {
     antigravity) _q_st_source="$_q_HOME/adapters/antigravity/hooks.json"; _q_st_rel=.agents/hooks.json ;;
     windsurf|devin) _q_st_agent=windsurf; _q_st_source="$_q_HOME/adapters/windsurf/hooks.json"; _q_st_rel=.devin/hooks.json ;;
     opencode) _q_st_source="$_q_HOME/adapters/opencode/knotlog.js"; _q_st_rel=.opencode/plugins/knotlog.js ;;
+    copilot) _q_st_source="$_q_HOME/adapters/copilot/hooks.json"; _q_st_rel=.github/hooks/knotlog.json ;;
     '') _q_die err_setup_usage 2 ;;
     *) _q_die err_setup_agent 2 "$_q_st_agent" ;;
   esac

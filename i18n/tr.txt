@@ -539,13 +539,13 @@ err_compact_write=arşive eklenemedi: %s — kaynak dosyaya dokunulmadı
 err_compact_verify=%s dosyasına eklenen baytlar kaynakla eşleşmiyor — kaynak dosya DEĞİŞTİRİLMEDİ (arşivde artık bir kopya kalmış olabilir; kontrol et)
 err_compact_source=%s yeniden yazılamadı — girdiler arşivde güvende, kaynak değişmedi
 doc_tone_invalid=tone=%s bu kasanın dili için sunulan setlerden biri değil — companion.md'nin ## Üslup bölümüne düşülüyor (çalıştır: knotlog tone --list)
-usage_setup=  setup     ajanın kanca dosyasını kasaya yaz: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode (--dry-run: önizleme; farklı bir dosyanın üzerine asla yazmaz)
+usage_setup=  setup     ajanın kanca dosyasını kasaya yaz: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode, copilot (--dry-run: önizleme; farklı bir dosyanın üzerine asla yazmaz)
 setup_line_written=%s: %s konumuna yazıldı
 setup_line_uptodate=%s: zaten güncel (%s)
 setup_line_preserved=%s: %s korundu; %s ile farklı - elle birleştir
 setup_dry_run=kuru çalıştırma: hiçbir şey yazılmaz
-err_setup_agent=bilinmeyen ajan: %s; desteklenen: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode
-err_setup_usage=kullanım: knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode> [--dry-run]
+err_setup_agent=bilinmeyen ajan: %s; desteklenen: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode, copilot
+err_setup_usage=kullanım: knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode|copilot> [--dry-run]
 err_setup_parent=%s oluşturulamaz: var ama dizin değil
 err_mcp_usage=kullanım: knotlog mcp (argüman almaz; stdin/stdout üzerinde MCP konuşur)
 usage_migrate=  migrate   adı değişmeden önceki (Quipu) kasayı Knotlog'a geçirir: durum klasörü, QUIPU_* ayarları, blok işaretleri, kanca komutları (varsayılan kuru çalıştırma; --apply yazar; tekrarlanabilir)

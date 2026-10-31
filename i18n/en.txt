@@ -539,13 +539,13 @@ err_compact_write=could not append to the archive: %s — the source file was no
 err_compact_verify=the appended bytes in %s do not match the source — the source file was NOT changed (the archive may hold a stray copy; check it)
 err_compact_source=could not rewrite %s — the entries are safe in the archive and the source is unchanged
 doc_tone_invalid=tone=%s is not a shipped preset for this vault's language — falling back to companion.md's Tone section (run: knotlog tone --list)
-usage_setup=  setup     write one agent's hook file into the vault: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode (--dry-run to preview; a differing file is never overwritten)
+usage_setup=  setup     write one agent's hook file into the vault: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode, copilot (--dry-run to preview; a differing file is never overwritten)
 setup_line_written=%s: written to %s
 setup_line_uptodate=%s: already up to date (%s)
 setup_line_preserved=%s: preserved %s; it differs from %s - merge it by hand
 setup_dry_run=dry run: nothing is written
-err_setup_agent=unknown agent: %s; supported: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode
-err_setup_usage=usage: knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode> [--dry-run]
+err_setup_agent=unknown agent: %s; supported: claude, codex, omp, gemini, cursor, antigravity, windsurf, opencode, copilot
+err_setup_usage=usage: knotlog setup <claude|codex|omp|gemini|cursor|antigravity|windsurf|opencode|copilot> [--dry-run]
 err_setup_parent=cannot create %s: it exists and is not a directory
 err_mcp_usage=usage: knotlog mcp (takes no arguments; speaks MCP on stdin/stdout)
 usage_migrate=  migrate   bring a pre-rename (Quipu) vault over to Knotlog: state folder, QUIPU_* settings, block markers, hook commands (dry run by default; --apply writes; safe to repeat)
