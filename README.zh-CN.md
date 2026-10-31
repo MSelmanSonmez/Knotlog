@@ -147,6 +147,7 @@ Claude Code 读取 `CLAUDE.md`，其他大多数智能体读取 `AGENTS.md`；Kn
 | `knotlog doctor` | 检查设置：工具、智能体、失效链接、未提交的记忆 |
 | `knotlog search <terms>` | 查找笔记（BM25，忽略重音符号；支持 `--tag`/`--status` 过滤） |
 | `knotlog note "<text>"` | 向今天会话的反思中添加一行 |
+| `knotlog pending` | 在写入前审核队列中的笔记和提案（笔记在 `write_approval=on` 时入队；`propose` 总是入队；`--approve N`、`--reject N`） |
 | `knotlog context` | 打印智能体在会话开始时看到的内容 |
 | `knotlog tui` | 在终端中浏览最新的会话笔记 |
 | `knotlog plan <name> --proje <Project>` | 在项目内打开一份计划笔记 |

@@ -274,6 +274,26 @@ gerektiğini ve nasıl açılacağını söyler (`knotlog compact --apply`, `kno
 archive` ya da daha büyük bir `ctx_max`). Geçmiş bir oturumda olan şey buraya
 girmez; oturum notlarında kalır, `knotlog search` onu bulur.
 
+Yeni satır bugünün tarihi ve saatiyle başlar (`- YYYY-MM-DD HH:MM`), böylece
+`doctor` satırın yaşını görür: aktif satırlar `stale_days=` günden (`.knotlog/config`,
+varsayılan 30) yeni bir tarih taşımıyorsa sayıyı ve en eski satırı adlandıran
+tek bir uyarı basar. Tarihsiz satırlar sayılmaz.
+
+`note`'un iki biçimi de sır gibi görünen metni (API anahtarı, token, özel
+anahtar) çıkış kodu 4 ile reddeder. Her satırı yazılmadan önce görmek
+istersen `.knotlog/config`'e `write_approval=on` yaz: notlar `knotlog pending
+--approve N` (ya da `--reject N`) çalıştırana kadar `.knotlog/pending`'de
+bekler; ajana verilmiş bir emir gibi okunan satır ("bundan sonra … yapmalısın")
+reddedilir, "yarın" geçen satır tarih verebilesin diye bekletilir.
+
+Yoğun bir çalışmadan sonra (40'tan fazla kayıtlı etkinlik) Knotlog ajana bir
+kez, tur sonunda ya da sonraki oturum açılışında, bu işten bir ders, skill
+olmaya değer bir iş akışı ya da düzeltilmiş bir yanlış çıkıp çıkmadığını sorar.
+Ajan `knotlog propose --kind lesson|skill|fix "<metin>"` ile cevap verir; bulgu
+`knotlog pending`'de senin `--approve N` onayını bekler, kendiliğinden hiç
+yazılmaz (skill dosyası da yazılmaz). `.knotlog/config`'e `review=off` yazmak
+isteği kapatır.
+
 ### Kurallar dosyası
 
 `init`, kasanın köküne **`Kurallar.md`** (İngilizce kasada `Rules.md`)
@@ -480,7 +500,7 @@ claude mcp add knotlog -- knotlog mcp
 
 Kasa ayarları `.knotlog/config` içinde düz `anahtar=değer` satırları hâlinde
 durur: `layout`, `lang`, `fold`, `user`, `companion`, `purpose`, `tone`, `flair`,
-`ctx_max`. `fold` değişince ardından `knotlog index --full` gerekir; diğerleri
+`ctx_max`, `stale_days`, `write_approval`. `fold` değişince ardından `knotlog index --full` gerekir; diğerleri
 bir sonraki komutta etkili olur. `ctx_max`'ı `init` kendiliğinden yazmaz —
 zaten çalışan bir varsayılanı var (4096), satırı yalnız değiştirmek istersen
 elle eklersin; `doctor` kullandığı değerin nereden geldiğini (ortam/config/

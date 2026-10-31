@@ -11,11 +11,15 @@ usage_install=  install   create <user>'s Knotlog vault and link this checkout i
 usage_uninstall=  uninstall remove the `knotlog` command from PATH; never touches your vault (--dry-run to preview)
 usage_context=  context   print session memory context for the agent
 help_profile=            config: profile=normal|economical|manual trims hook context (see REFERENCE)
+help_write_approval=            config: write_approval=on queues note / note --thread for review (knotlog pending; see REFERENCE)
+help_review=            config: review=off stops the session review ask; KNOTLOG_REVIEW_AFTER=N sets its threshold (default 40 events)
 usage_remember=  remember  write mechanical digest from activity.log (append-only)
 usage_mcp=  mcp       run the MCP server on stdin/stdout (JSON-RPC, one message per line)
 usage_note=  note      add one line to today's session reflection block (note "text")
 usage_digest=  digest    summarize one date's activity (--date YYYY-MM-DD) or a range (--since YYYY-MM-DD [--until YYYY-MM-DD]); --dry-run, --limit N
 usage_note_thread=  note --thread  add one line to the active threads section (note --thread "text")
+usage_pending=  pending   list notes waiting for review (write_approval=on); --approve N writes one, --reject N drops it
+usage_propose=  propose   queue a review finding for approval (propose --kind lesson|skill|fix "text"; knotlog pending)
 usage_import=  import    convert a local JSON conversation export into a session note (FILE, --date YYYY-MM-DD)
 usage_plan=  plan      open a project plan under <Projects>/<Project>/<Plans>/ from the front-matter template (--proje <Project>)
 usage_tone=  tone      show/set the active tone preset (--list to browse; a bare slug writes tone= to config)
@@ -33,6 +37,12 @@ err_thread_nofile=threads file is missing: %s; run knotlog init or knotlog remem
 err_thread_nosection=the threads block has no active section (knotlog:threads:start/end with an active heading); nothing was written
 err_thread_pinned=the active section ends inside the pin block; nothing was written
 err_budget_full=%s would be %d bytes, context budget leaves %d: free %d bytes first — `knotlog compact --apply` (old closed threads) or `knotlog archive "<heading>"` (`archive --list` shows headings), or raise `ctx_max`; nothing was written
+err_pending_args=pending takes no argument, --approve N or --reject N
+err_pending_closed=#%s is not an open proposal (knotlog pending lists them)
+err_pending_tab=a note waiting for review must not contain a tab; nothing was queued
+err_pending_kind=#%s has an unknown kind %s; nothing was written
+err_propose_args=propose takes --kind lesson|skill|fix and one quoted text argument
+err_propose_kind=unknown kind %s: use lesson, skill or fix
 err_help_args=help accepts no arguments or exactly --<code> of a shipped language (e.g. --en, --tr)
 # doctor
 doc_head=knotlog doctor - environment check
@@ -77,8 +87,12 @@ doc_ctx_max_config=config: %s
 doc_ctx_max_default=default: %s
 doc_ctx_max_bad=config ctx_max=%s is not a positive integer, ignored (using %s)
 doc_ctx_max_profile=profile: %s
+doc_untouched=%d active thread line(s) untouched for more than %d days (oldest: %s, %s)
+doc_stale_days_bad=config stale_days=%s is not a positive integer, ignored (using %s)
 doc_profile=profile
 doc_profile_bad=config profile=%s is not normal, economical or manual, using normal
+doc_write_approval=write_approval
+doc_write_approval_bad=config write_approval=%s is not on or off, using off
 doc_threads_overflow=%s is %d bytes, context budget is %d bytes — roughly %d%% is dropped every session
 doc_pin_oversize=the pin block (<!-- knotlog:pin:start/end -->) is %d bytes but ctx_max is %d bytes — it can never fit without exceeding the configured budget; shrink the pin block or raise ctx_max
 doc_identity=identity
@@ -277,6 +291,7 @@ ctx_truncated=… (truncated)
 ctx_threads_dropped=(%d bytes of the threads file never entered this context — see: knotlog compact)
 ctx_precompact=Context may be compacted: write your memory now — fill the reflection block in today's session file (%s) and update Threads.md.
 ctx_checkpoint_due=Checkpoint: session note was written %s min ago, there is work in vault since then — write a short bullet in session note (what was done, pending, next).
+ctx_review_ask=Review: %s events since the last review (most touched: %s). Did this work leave a lasting lesson, a repeated workflow worth a skill, or a corrected mistake? If so, propose each as one line: knotlog propose --kind lesson|skill|fix "<text>" (it waits for the user's approval in knotlog pending; nothing is written to memory yet). If not, do nothing.
 # remember
 remember_ok=wrote: %s
 remember_empty=no new lines to remember
@@ -286,6 +301,14 @@ remember_events=events
 note_busy=note skipped: another process still owns the lock after 5 seconds; nothing was written
 note_ok=wrote: %s
 thread_ok=wrote to active threads: %s
+pending_none=no notes waiting for review
+pending_rejected=rejected #%s; nothing was written
+admit_secret=looks like a secret (key, token or password); nothing was written — keep secrets out of memory
+admit_instruction=reads as an instruction to the agent; nothing was written — restate it as an observation
+admit_relative=#%s waits for review (knotlog pending) — restate it with an absolute date (YYYY-MM-DD)
+admit_review=#%s (knotlog pending)
+admit_inject_marks=(^|[^A-Za-z])(ignore (all |any |the )?(previous|prior|above) instructions|ignore all instructions|disregard (all |the )?(previous|prior|above) instructions|you must|you should|from now on)([^A-Za-z]|$)|^[[:space:]]*(system|assistant):
+admit_reltime_words=(^|[^A-Za-z])(today|tonight|tomorrow|yesterday|(next|last|this) (week|month)|in [0-9]+ (days?|weeks?)|[0-9]+ (days?|weeks?) ago)([^A-Za-z]|$)
 digest_range=Range: %s → %s (%d events)
 digest_tools=Tools: %s
 digest_title=Activity digest: %s

@@ -25,6 +25,7 @@ _q_SD=.knotlog
 [ -z "${KNOTLOG_NUDGE_AFTER+x}" ] || QUIPU_NUDGE_AFTER=$KNOTLOG_NUDGE_AFTER
 [ -z "${KNOTLOG_CHECKPOINT_AFTER+x}" ] || QUIPU_CHECKPOINT_AFTER=$KNOTLOG_CHECKPOINT_AFTER
 [ -z "${KNOTLOG_LOG_MAX+x}" ] || QUIPU_LOG_MAX=$KNOTLOG_LOG_MAX
+[ -z "${KNOTLOG_REVIEW_AFTER+x}" ] || QUIPU_REVIEW_AFTER=$KNOTLOG_REVIEW_AFTER
 
 # ---- helpers ----------------------------------------------------------------
 
@@ -289,6 +290,52 @@ _q_profile() {
   esac
 }
 
+_q_write_approval() {
+  # Global setter: $_q_wa = on|off (only the exact value on turns it on);
+  # $_q_wa_raw = the raw config value (doctor). $1 = vault path.
+  _q_wa_raw=
+  if [ -n "$1" ] && [ -f "$1/$_q_SD/config" ]; then
+    _q_wa_raw=$(awk -F= -v k=write_approval '$1==k{sub(/^[^=]*=/,"");print;exit}' "$1/$_q_SD/config" 2>/dev/null || true)
+  fi
+  _q_wa=off
+  [ "$_q_wa_raw" != on ] || _q_wa=on
+}
+
+_q_review_due() {
+  # _q_review_due VAULT -- 0 when the review ask is due: review= is not off,
+  # the profile is normal, and more than QUIPU_REVIEW_AFTER (default 40)
+  # activity events follow the .knotlog/reviewed watermark (the last log
+  # line at the previous ask; none -> the whole log). Leaves $_q_rv_msg (the
+  # ask: event count and the three most touched paths).
+  _q_rv_log="$1/$_q_SD/activity.log"
+  [ -s "$_q_rv_log" ] || return 1
+  _q_rv_off=$(awk -F= '$1=="review"{sub(/^[^=]*=/,"");print;exit}' "$1/$_q_SD/config" 2>/dev/null || true)
+  [ "$_q_rv_off" != off ] || return 1
+  _q_profile "$1"
+  [ "$_q_prof" = normal ] || return 1
+  _q_rv_after=${QUIPU_REVIEW_AFTER:-40}
+  case "$_q_rv_after" in '' | *[!0-9]*) _q_rv_after=40 ;; esac
+  _q_rv_wm="$1/$_q_SD/reviewed"
+  [ -s "$_q_rv_wm" ] || _q_rv_wm=/dev/null
+  # The watermark is data, so it is read as a file, never passed with -v.
+  # shortcut: the watermark is a line's text, so a later identical line (same minute, tool, path) restarts the count early; upgrade to a line offset if asks go missing.
+  _q_rv_d=$(awk 'FILENAME != ARGV[2] { wm = $0; next } { line[FNR] = $0; if ($0 == wm) last = FNR }
+    END { for (i = last + 1; i <= FNR; i++) print line[i] }' "$_q_rv_wm" "$_q_rv_log" |
+    awk -v mode=digest -f "$_q_HOME/lib/digest.awk")
+  _q_rv_tab=$(printf '\t')
+  _q_rv_n=$(printf '%s\n' "$_q_rv_d" | awk -F"$_q_rv_tab" '$1=="RANGE"{print $4 + 0; exit}')
+  [ "${_q_rv_n:-0}" -gt "$_q_rv_after" ] || return 1
+  _q_rv_files=$(printf '%s\n' "$_q_rv_d" | awk -F"$_q_rv_tab" 'BEGIN{OFS=sprintf("%c",9)} $1=="FILE"{print $2, $3}' |
+    sort -t "$_q_rv_tab" -k2,2nr | head -n 3 | awk -F"$_q_rv_tab" '{ printf "%s%s", (NR > 1 ? ", " : ""), $1 }')
+  # shellcheck disable=SC2059
+  _q_rv_msg=$(printf "$(_q_msg ctx_review_ask)" "$_q_rv_n" "$_q_rv_files")
+}
+
+_q_review_mark() {
+  # _q_review_mark VAULT -- move the review watermark to the last log line.
+  awk 'END { print }' "$1/$_q_SD/activity.log" > "$1/$_q_SD/reviewed"
+}
+
 _q_ctx_max() {
   # Global setter (mirrors _q_lang()/_q_fold_prof()'s config-awk read
   # pattern, but sets globals instead of printing -- doctor needs the
@@ -339,6 +386,24 @@ _q_ctx_max() {
       _q_cm_src="default"
     fi
   fi
+}
+
+_q_stale_days() {
+  # stale_days= (vault config, default 30): the age doctor names untouched
+  # active thread lines at. Same positive-integer check as ctx_max=; a bad
+  # value falls back to 30 and sets $_q_sd_bad=1 so doctor can say so.
+  # Sets $_q_sd (days), $_q_sd_cfg (raw value), $_q_sd_bad. $1 = vault path.
+  _q_sd_cfg=
+  if [ -f "$1/$_q_SD/config" ]; then
+    _q_sd_cfg=$(awk -F= -v k=stale_days '$1==k{sub(/^[^=]*=/,"");print;exit}' "$1/$_q_SD/config" 2>/dev/null || true)
+  fi
+  _q_sd=30
+  _q_sd_bad=0
+  case "$_q_sd_cfg" in
+    '') ;;
+    *[!0-9]*|0|0?*|??????????*) _q_sd_bad=1 ;;
+    *) _q_sd=$_q_sd_cfg ;;
+  esac
 }
 
 _q_msg() {
@@ -420,6 +485,10 @@ usage() {
   _q_msg usage_mcp
   _q_msg usage_note
   _q_msg usage_note_thread
+  _q_msg usage_pending
+  _q_msg help_write_approval
+  _q_msg usage_propose
+  _q_msg help_review
   _q_msg usage_digest
   _q_msg usage_import
   _q_msg usage_plan
@@ -1234,6 +1303,75 @@ $_q_dt_rows
 EOF
 }
 
+_q_doctor_untouched() {
+  # C1: one warn row when list lines of the active threads section carry no
+  # ISO date (YYYY-MM-DD) newer than stale_days= days. A line's age is its
+  # NEWEST date; undated lines, the closed section and the pin block never
+  # count. Section search = _q_note_thread_write's (threads markers, then the
+  # "### <active>" heading up to the next heading). Read-only. Day numbers
+  # use the civil-from-days formula in awk, so there is no `date -d`.
+  _q_stale_days "$1"
+  if [ "$_q_sd_bad" -eq 1 ]; then
+    # shellcheck disable=SC2059
+    _q_line warn stale_days "$(printf "$(_q_msg doc_stale_days_bad)" "$_q_sd_cfg" "$_q_sd")"
+  fi
+  _q_du_thr=$(_q_threads_path "$1")
+  [ -f "$_q_du_thr" ] || return 0
+  # LC_ALL=C: byte semantics in every awk, so the 40-character cut below
+  # counts UTF-8 lead bytes itself instead of depending on the awk's locale.
+  _q_du_row=$(LC_ALL=C awk -v h="### $(_q_msg threads_head_active)" -v today="$(date +%Y-%m-%d)" -v max="$_q_sd" '
+    function dn(y, m, d,    era, yoe, mp) {
+      y -= (m <= 2); era = int(y / 400); yoe = y - era * 400
+      mp = (m > 2) ? m - 3 : m + 9
+      return era * 146097 + yoe * 365 + int(yoe / 4) - int(yoe / 100) + int((153 * mp + 2) / 5) + d - 1
+    }
+    function cut(s, n,    i, c, k, o) {
+      k = 0; o = ""
+      for (i = 1; i <= length(s); i++) {
+        c = substr(s, i, 1)
+        if (!(c >= "\200" && c <= "\277") && ++k > n) break
+        o = o c
+      }
+      return o
+    }
+    BEGIN {
+      re = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"
+      if (today !~ "^" re "$") exit
+      tn = dn(substr(today, 1, 4) + 0, substr(today, 6, 2) + 0, substr(today, 9, 2) + 0)
+    }
+    { t = $0; sub(/\r$/, "", t) }
+    !blk { if (index(t, "knotlog:threads:start") || index(t, "quipu:threads:start")) blk = 1; next }
+    index(t, "knotlog:threads:end") || index(t, "quipu:threads:end") { exit }
+    index(t, "knotlog:pin:start") || index(t, "quipu:pin:start") { pin = 1; next }
+    pin { if (index(t, "knotlog:pin:end") || index(t, "quipu:pin:end")) pin = 0; next }
+    t == h { act = 1; next }
+    /^#/ { act = 0; next }
+    !act || t !~ /^[ \t]*[-*+] / { next }
+    {
+      best = -1; off = 1
+      while (off <= length(t) && match(substr(t, off), re)) {
+        p = off + RSTART - 1; off = p + 10
+        # "v2026-10-01", "1.2026-10-01", "2026-10-011" are not dates.
+        if (p > 1 && substr(t, p - 1, 1) ~ /[0-9A-Za-z.]/) continue
+        if (substr(t, p + 10, 1) ~ /[0-9]/) continue
+        m = substr(t, p + 5, 2) + 0; d = substr(t, p + 8, 2) + 0
+        if (m < 1 || m > 12 || d < 1 || d > 31) continue
+        n = dn(substr(t, p, 4) + 0, m, d)
+        if (n > best) { best = n; bd = substr(t, p, 10) }
+      }
+      if (best < 0 || tn - best <= max) next
+      cnt++
+      if (cnt == 1 || best < ob) { ob = best; od = bd; ot = t; sub(/^[ \t]*[-*+] /, "", ot) }
+    }
+    END { if (cnt) printf "%d\t%s\t%s\n", cnt, od, cut(ot, 40) }' "$_q_du_thr")
+  [ -n "$_q_du_row" ] || return 0
+  IFS="$(printf '\t')" read -r _q_du_n _q_du_d _q_du_t <<EOF
+$_q_du_row
+EOF
+  # shellcheck disable=SC2059
+  _q_line warn threads "$(printf "$(_q_msg doc_untouched)" "$_q_du_n" "$_q_sd" "$_q_du_d" "$_q_du_t")"
+}
+
 _q_mem_find() {
   # Locate one narrative memory file in vault $1: name $3 (current, i.e. the
   # vault language's spelling) then $4 (legacy spelling) inside the vault
@@ -1514,6 +1652,16 @@ _q_doctor() {
         _q_line ok "$(_q_msg doc_profile)" "$_q_prof"
       fi
     fi
+    # write_approval= row: same rule as profile= (only when the key is present).
+    _q_write_approval "$_q_v"
+    case "$_q_wa_raw" in
+      '') ;;
+      on|off) _q_line ok "$(_q_msg doc_write_approval)" "$_q_wa_raw" ;;
+      *)
+        # shellcheck disable=SC2059
+        _q_line warn "$(_q_msg doc_write_approval)" "$(printf "$(_q_msg doc_write_approval_bad)" "$_q_wa_raw")"
+        ;;
+    esac
     # B-K2: threads-file overflow -- the doc_threads_empty mirror. That row
     # warns when Konular.md/Threads.md is empty; nothing warned when the
     # file silently OVERFLOWS quipu context's own injection budget (the
@@ -1718,6 +1866,7 @@ _q_doctor() {
       _q_line warn threads "$(_q_msg doc_threads_empty)"
     fi
     _q_doctor_stale_topics "$_q_v"
+    _q_doctor_untouched "$_q_v"
     # B5: the facts file. One informational ok row when present, naming the
     # tagged fact-line count -- the vault's semantic layer reporting that it
     # exists. Silence when absent: an old vault without Facts.md is normal,
@@ -3182,6 +3331,8 @@ _q_init_baseline() {
       printf '%s/remembered\n' "$_q_SD"
       printf '%s/nudged\n' "$_q_SD"
       printf '%s/checkpoint_nudged\n' "$_q_SD"
+      printf '%s/reviewed\n' "$_q_SD"
+      printf '%s/needs_review\n' "$_q_SD"
       printf '\n'
       printf '# Folder-icon metadata, rebuilt by repair-hooks --metadata-only.\n'
       printf 'desktop.ini\n'
@@ -5539,21 +5690,23 @@ _q_cmd_context() {
       esac
     fi
     _q_cp_after=${QUIPU_CHECKPOINT_AFTER:-1800}
-    if [ $((_q_now_epoch - _q_cp_nudged)) -lt "$_q_cp_after" ]; then
-      [ "$_q_ag" -eq 0 ] || printf '{"decision":"allow"}\n'
-      exit 0
-    fi
-    if _q_checkpoint_due "$_q_v"; then
+    # One reminder per Stop: a due checkpoint first (throttled by time), else
+    # the review ask (throttled by the .knotlog/reviewed watermark).
+    _q_reason=
+    if [ $((_q_now_epoch - _q_cp_nudged)) -ge "$_q_cp_after" ] && _q_checkpoint_due "$_q_v"; then
       # shellcheck disable=SC2059
       _q_reason=$(printf "$(_q_msg ctx_checkpoint_due)" "$_q_cp_dk")
-      if [ "$_q_ag" -eq 1 ]; then
-        printf '%s' "$_q_reason" | awk -f "$_q_HOME/lib/jsonemit.awk" -f "$_q_HOME/lib/emit_agstop.awk"
-      else
-        printf '%s' "$_q_reason" | awk -f "$_q_HOME/lib/jsonemit.awk" -f "$_q_HOME/lib/emit_hookblock.awk"
-      fi
       printf '%s\n' "$_q_now_epoch" > "$_q_v/$_q_SD/checkpoint_nudged"
+    elif _q_review_due "$_q_v"; then
+      _q_reason=$_q_rv_msg
+      _q_review_mark "$_q_v"
+    fi
+    if [ -z "$_q_reason" ]; then
+      [ "$_q_ag" -eq 0 ] || printf '{"decision":"allow"}\n'
     elif [ "$_q_ag" -eq 1 ]; then
-      printf '{"decision":"allow"}\n'
+      printf '%s' "$_q_reason" | awk -f "$_q_HOME/lib/jsonemit.awk" -f "$_q_HOME/lib/emit_agstop.awk"
+    else
+      printf '%s' "$_q_reason" | awk -f "$_q_HOME/lib/jsonemit.awk" -f "$_q_HOME/lib/emit_hookblock.awk"
     fi
     exit 0
   fi
@@ -5619,6 +5772,14 @@ _q_cmd_context() {
 
   # FAZ 8 (Y-3/Y-4): SessionStart-only reflection prompts.
   if [ -n "$_q_ev" ] && [ "$_q_ev" = SessionStart ]; then
+    # B2: the review ask `remember` left for agents without a Stop channel
+    # (and for the SessionStart after a compaction); shown once, then deleted.
+    if [ -f "$_q_v/$_q_SD/needs_review" ]; then
+      _q_rvask=$(cat "$_q_v/$_q_SD/needs_review")
+      rm -f "$_q_v/$_q_SD/needs_review"
+      _q_text="${_q_rvask}
+${_q_text}"
+    fi
     # Y-3: one-shot missed-reflection notice, placed at the TOP of the
     # context; the flag file is deleted here (single shot).
     if [ -f "$_q_v/$_q_SD/needs_reflection" ]; then
@@ -5921,6 +6082,14 @@ _q_cmd_remember() {
 
   printf '%s\n' "$_q_last" > "$_q_wm"
 
+  # B2: SessionEnd cannot reach the model, so a due review ask waits in
+  # .knotlog/needs_review for the next `context --json SessionStart`; the
+  # watermark moves now, so Stop does not ask for the same events again.
+  if _q_review_due "$_q_v"; then
+    printf '%s\n' "$_q_rv_msg" > "$_q_v/$_q_SD/needs_review"
+    _q_review_mark "$_q_v"
+  fi
+
   # FAZ 8 (Y-3): missed-reflection catcher. When the most recent previous
   # session file's block is empty, a one-line flag (day + event count) is
   # written to .quipu/needs_reflection; the next `context --json SessionStart`
@@ -6093,7 +6262,8 @@ _q_note_thread_write() {
   if [ "$(head -n "$((_q_nt_anchor - 1))" "$_q_nt_tp" | tail -n 1 | tr -d '\n' | tail -c 1 | od -An -c | tr -d ' ')" = '\r' ]; then
     _q_nt_crs=$_q_nt_cr
   fi
-  _q_nt_now=$(date +%H:%M)
+  # Dated (C1): doctor ages active lines by their newest YYYY-MM-DD.
+  _q_nt_now=$(date '+%Y-%m-%d %H:%M')
   printf '%s %s %s%s\n' '-' "$_q_nt_now" "$_q_nt_text" "$_q_nt_crs" > "$_q_nt_line"
   if ! {
     head -n "$((_q_nt_anchor - 1))" "$_q_nt_tp"
@@ -6148,11 +6318,29 @@ _q_cmd_note() {
   if [ -z "$_q_v" ]; then
     _q_die err_no_vault
   fi
+  _q_admit "$_q_note_text"
+  case "$_q_ad_rc" in
+    4) _q_admit_say 4 ;;
+    5)
+      _q_note_kind=note
+      [ "$_q_note_thread" = 0 ] || _q_note_kind=thread
+      _q_pending_add "$_q_note_kind" "$_q_note_text"
+      ;;
+  esac
   if [ "$_q_note_thread" = 1 ]; then
     _q_note_thread_write "$_q_v" "$_q_note_text"
     return 0
   fi
+  _q_note_plain_write "$_q_v" "$_q_note_text"
+}
 
+_q_note_plain_write() {
+  # _q_note_plain_write VAULT TEXT -- plain `note`: one line into today's
+  # reflection block. Shared by `note` and `pending --approve`; the remember
+  # lock it takes is released by its EXIT trap, so a caller may still append
+  # under it after this returns.
+  _q_v=$1
+  _q_note_text=$2
   _q_tab=$(printf '\t')
   _q_layout=
   if [ -f "$_q_v/$_q_SD/config" ]; then
@@ -6398,6 +6586,185 @@ _q_cmd_distill() {
   [ "$_q_ds_apply" = 1 ] || return 0
   # shellcheck disable=SC2059
   printf "$(_q_msg distill_summary)\n" "$_q_ds_n1" "$_q_ds_n2"
+}
+
+# ---- admission + write approval ---------------------------------------------
+
+_q_admit() {
+  # _q_admit TEXT [KIND] -- the admission gate in front of every note. Leaves
+  # $_q_ad_rc (0 remembered, 4 refused, 5 pending_review) and $_q_ad_why
+  # (the reason code). The secret check always runs; the instruction and
+  # relative-time checks, and the review queue itself, only with
+  # write_approval=on. Vault: $_q_v.
+  _q_ad_rc=0
+  _q_ad_why=
+  # One source for the secret pattern: the pre-commit hook's own _pat= line.
+  # shortcut: a missing hooks/pre-commit skips the check (broken install), upgrade if installs ever drop hooks/.
+  _q_sp=
+  if [ -f "$_q_HOME/hooks/pre-commit" ]; then
+    eval "$(sed -n 's/^_pat=/_q_sp=/p' "$_q_HOME/hooks/pre-commit")"
+  fi
+  if [ -n "$_q_sp" ] && printf '%s\n' "$1" | LC_ALL=C grep -Eiq -- "$_q_sp"; then
+    _q_ad_rc=4
+    _q_ad_why=secret_pattern
+    return 0
+  fi
+  _q_write_approval "$_q_v"
+  [ "$_q_wa" = on ] || return 0
+  # A skill proposal is a workflow, imperative by nature: no instruction check.
+  if [ "${2:-}" != skill ] && _q_admit_hit admit_inject_marks "$1"; then
+    _q_ad_rc=4
+    _q_ad_why=instruction_shaped
+  elif _q_admit_hit admit_reltime_words "$1"; then
+    _q_ad_rc=5
+    _q_ad_why=relative_time
+  else
+    _q_ad_rc=5
+    _q_ad_why=policy_review_first
+  fi
+}
+
+_q_admit_hit() {
+  # _q_admit_hit KEY TEXT -- does TEXT match the ERE list KEY of the active
+  # language, or of English (agents often write English in any vault)?
+  _q_ah_p=$(_q_msg "$1")
+  if [ "$(_q_lang)" != en ]; then
+    _q_ah_p="($_q_ah_p)|($(_q_msg_lang=en; _q_msg "$1"))"
+  fi
+  printf '%s\n' "$2" | LC_ALL=C grep -Eiq -- "$_q_ah_p"
+}
+
+_q_admit_say() {
+  # _q_admit_say CODE [ID] -- one status<TAB>reason<TAB>detail line for the
+  # gate's result in $_q_ad_why, then exit CODE (refusals go to stderr). The
+  # text itself is never echoed: it may be the secret.
+  case "$_q_ad_why" in
+    secret_pattern) _q_as_k=admit_secret ;;
+    instruction_shaped) _q_as_k=admit_instruction ;;
+    relative_time) _q_as_k=admit_relative ;;
+    *) _q_as_k=admit_review ;;
+  esac
+  # shellcheck disable=SC2059
+  _q_as_d=$(printf "$(_q_msg "$_q_as_k")" "${2:-}")
+  if [ "$1" -eq 4 ]; then
+    printf '%s\t%s\t%s\n' refused "$_q_ad_why" "$_q_as_d" >&2
+  else
+    printf '%s\t%s\t%s\n' pending_review "$_q_ad_why" "$_q_as_d"
+  fi
+  [ "${QUIPU_HOOK:-0}" != 1 ] || exit 0
+  exit "$1"
+}
+
+_q_pending_lock() {
+  # The remember lock guards .knotlog/pending too (ids are max + 1).
+  _q_pl_lock="$_q_v/$_q_SD/remember.lock"
+  _q_remember_lock_acquire "$_q_pl_lock" note_busy || exit 1
+  printf '%s\n' "$$" > "$_q_pl_lock/pid"
+  trap 'rm -f "$_q_pl_lock/pid"; rmdir "$_q_pl_lock" 2>/dev/null || true' EXIT HUP INT TERM
+}
+
+_q_pending_add() {
+  # _q_pending_add KIND TEXT -- append one proposal to .knotlog/pending
+  # (P<TAB>id<TAB>YYYY-MM-DD HH:MM<TAB>kind<TAB>reason<TAB>text) and exit 5.
+  # The file is append-only: decisions are A/R lines, nothing is rewritten.
+  case "$2" in
+    *"$(printf '\t')"*) _q_die err_pending_tab 2 ;;
+  esac
+  _q_pa_f="$_q_v/$_q_SD/pending"
+  _q_pending_lock
+  _q_pa_id=1
+  if [ -f "$_q_pa_f" ]; then
+    _q_pa_id=$(awk -F"$(printf '\t')" '$2 + 0 > m { m = $2 + 0 } END { print m + 1 }' "$_q_pa_f")
+  fi
+  printf 'P\t%s\t%s\t%s\t%s\t%s\n' "$_q_pa_id" "$(date '+%Y-%m-%d %H:%M')" "$1" "$_q_ad_why" "$2" >> "$_q_pa_f" ||
+    _q_die err_note_write 1 "$_q_SD/pending"
+  _q_admit_say 5 "$_q_pa_id"
+}
+
+_q_cmd_propose() {
+  # knotlog propose --kind lesson|skill|fix "<text>" -- the agent's answer to
+  # the review ask. Always queued in .knotlog/pending (setting on or off) after
+  # the admission gate; a human approves it with `knotlog pending`.
+  if [ "$#" -ne 3 ] || [ "$1" != --kind ]; then _q_die err_propose_args 2; fi
+  case "$2" in lesson | skill | fix) ;; *) _q_die err_propose_kind 2 "$2" ;; esac
+  [ -n "$3" ] || _q_die err_propose_args 2
+  _q_lf=$(printf '\nx')
+  _q_lf=${_q_lf%x}
+  case "$3" in *"$_q_lf"* | *"$(printf '\r')"*) _q_die err_note_newline 2 ;; esac
+  _q_v=$(_q_vault)
+  [ -n "$_q_v" ] || _q_die err_no_vault
+  _q_admit "$3" "$2"
+  [ "$_q_ad_rc" -ne 4 ] || _q_admit_say 4
+  [ -n "$_q_ad_why" ] || _q_ad_why=policy_review_first
+  _q_pending_add "$2" "$3"
+}
+
+_q_pending_open() {
+  # _q_pending_open FILE -- the open proposals (P lines with no A/R line), oldest first.
+  [ -f "$1" ] || return 0
+  awk -F"$(printf '\t')" '
+    $1 == "P" { n++; id[n] = $2; ln[n] = $0 }
+    $1 == "A" || $1 == "R" { done[$2] = 1 }
+    END { for (i = 1; i <= n; i++) if (!(id[i] in done)) print ln[i] }' "$1"
+}
+
+_q_cmd_pending() {
+  # knotlog pending [--approve N | --reject N] -- the write-approval queue.
+  # A list row is the P line without its leading "P<TAB>".
+  case "$#:${1:-}" in
+    0:) _q_pd_op=list ;;
+    2:--approve | 2:--reject)
+      _q_pd_op=${1#--}
+      case "$2" in
+        '' | *[!0-9]* | 0*) _q_die err_pending_args 2 ;;
+      esac
+      _q_pd_id=$2
+      ;;
+    *) _q_die err_pending_args 2 ;;
+  esac
+  _q_v=$(_q_vault)
+  [ -n "$_q_v" ] || _q_die err_no_vault
+  _q_pd_f="$_q_v/$_q_SD/pending"
+  if [ "$_q_pd_op" = list ]; then
+    _q_pd_rows=$(_q_pending_open "$_q_pd_f")
+    if [ -z "$_q_pd_rows" ]; then
+      _q_msg pending_none
+    else
+      printf '%s\n' "$_q_pd_rows" | sed 's/^P.//'
+    fi
+    return 0
+  fi
+  _q_pd_rec() {
+    _q_pending_open "$_q_pd_f" | awk -F"$(printf '\t')" -v id="$_q_pd_id" '$2 == id { print; exit }'
+  }
+  _q_pd_ts=$(date '+%Y-%m-%d %H:%M')
+  if [ "$_q_pd_op" = reject ]; then
+    _q_pending_lock
+    [ -n "$(_q_pd_rec)" ] || _q_die err_pending_closed 2 "$_q_pd_id"
+    printf 'R\t%s\t%s\n' "$_q_pd_id" "$_q_pd_ts" >> "$_q_pd_f" || _q_die err_note_write 1 "$_q_SD/pending"
+    # shellcheck disable=SC2059
+    printf "$(_q_msg pending_rejected)\n" "$_q_pd_id"
+    return 0
+  fi
+  # shortcut: the open check runs before the write takes the remember lock, so two
+  # concurrent approvals of one id can both write; upgrade if approvals ever run in parallel.
+  _q_pd_line=$(_q_pd_rec)
+  [ -n "$_q_pd_line" ] || _q_die err_pending_closed 2 "$_q_pd_id"
+  _q_pd_kind=$(printf '%s\n' "$_q_pd_line" | awk -F"$(printf '\t')" '{ print $4 }')
+  _q_pd_text=$(printf '%s\n' "$_q_pd_line" | awk -F"$(printf '\t')" '{ print $6 }')
+  # The queue file is state, not trust: approval runs the refusing checks again.
+  _q_admit "$_q_pd_text" "$_q_pd_kind"
+  [ "$_q_ad_rc" -ne 4 ] || _q_admit_say 4
+  case "$_q_pd_kind" in
+    note) _q_note_plain_write "$_q_v" "$_q_pd_text" ;;
+    thread) _q_note_thread_write "$_q_v" "$_q_pd_text" ;;
+    lesson) _q_note_plain_write "$_q_v" "[lesson] $_q_pd_text" ;;
+    fix) _q_note_plain_write "$_q_v" "[fix] $_q_pd_text" ;;
+    skill) _q_note_plain_write "$_q_v" "[skill candidate] $_q_pd_text" ;;
+    *) _q_die err_pending_kind 1 "$_q_pd_id" "$_q_pd_kind" ;;
+  esac
+  # Still under the writer's remember lock; a failed write exited above, so no A line.
+  printf 'A\t%s\t%s\n' "$_q_pd_id" "$_q_pd_ts" >> "$_q_pd_f" || _q_die err_note_write 1 "$_q_SD/pending"
 }
 
 # ---- compile ---------------------------------------------------------------
@@ -8117,6 +8484,8 @@ case "$_q_cmd" in
   remember) shift; _q_cmd_remember "$@" ;;
   mcp) shift; _q_cmd_mcp "$@" ;;
   note) shift; _q_cmd_note "$@" ;;
+  pending) shift; _q_cmd_pending "$@" ;;
+  propose) shift; _q_cmd_propose "$@" ;;
   digest) shift; _q_cmd_digest "$@" ;;
   import) shift; _q_cmd_import "$@" ;;
   search) shift; _q_cmd_search "$@" ;;

@@ -11,11 +11,15 @@ usage_install=  install   <kullanıcı>'nın Knotlog kasasını kur ve checkout'
 usage_uninstall=  uninstall `knotlog` komutunu PATH'ten kaldır; kasasına asla dokunmaz (--dry-run: önizleme)
 usage_context=  context   ajan için oturum hafızası bağlamını bas
 help_profile=            config: profile=normal|economical|manual hook bağlamını kısar (bkz. REFERENCE)
+help_write_approval=            config: write_approval=on, note / note --thread yazılarını onaya bekletir (knotlog pending; bkz. REFERENCE)
+help_review=            config: review=off oturum inceleme isteğini kapatır; KNOTLOG_REVIEW_AFTER=N eşiği belirler (varsayılan 40 etkinlik)
 usage_remember=  remember  activity.log'dan mekanik özeti yaz (salt-eklemeli)
 usage_mcp=  mcp       MCP sunucusunu stdin/stdout üzerinde çalıştır (JSON-RPC, satır başına bir mesaj)
 usage_note=  note      bugünün oturum yansıma bloğuna tek satır ekle (note "metin")
 usage_digest=  digest    tek bir tarihin etkinliklerini özetle (--date YYYY-MM-DD) ya da aralık (--since YYYY-MM-DD [--until YYYY-MM-DD]); --dry-run, --limit N
 usage_note_thread=  note --thread  açık konular bölümüne tek satır ekle (note --thread "metin")
+usage_pending=  pending   onay bekleyen notları listeler (write_approval=on); --approve N birini yazar, --reject N düşürür
+usage_propose=  propose   inceleme bulgusunu onaya sıraya koyar (propose --kind lesson|skill|fix "metin"; knotlog pending)
 usage_import=  import    yerel JSON sohbet dışa aktarımını oturum notuna çevir (DOSYA, --date YYYY-MM-DD)
 usage_plan=  plan      proje planını <Projeler>/<Proje>/<Planlar>/ altında frontmatter'lı şablonla açar (--proje <Proje>)
 usage_tone=  tone      etkin üslup setini gösterir/ayarlar (--list ile listele; çıplak bir slug config'e tone= yazar)
@@ -33,6 +37,12 @@ err_thread_nofile=konu dosyası yok: %s; önce knotlog init veya knotlog remembe
 err_thread_nosection=konu bloğunda aktif konular bölümü yok (knotlog:threads:start/end ve aktif başlık); hiçbir şey yazılmadı
 err_thread_pinned=aktif bölümün sonu pin bloğunun içine düşüyor; hiçbir şey yazılmadı
 err_budget_full=%s dosyası %d bayt olacaktı, context bütçesi %d bayt bırakıyor: önce %d bayt yer aç — `knotlog compact --apply` (eski kapanmış konular) ya da `knotlog archive "<başlık>"` (`archive --list` başlıkları gösterir) ya da `ctx_max` değerini yükselt; hiçbir şey yazılmadı
+err_pending_args=pending argümansız, --approve N ya da --reject N ile çalışır
+err_pending_closed=#%s açık bir öneri değil (knotlog pending listeler)
+err_pending_tab=onaya bekleyen not sekme içeremez; kuyruğa bir şey eklenmedi
+err_pending_kind=#%s bilinmeyen tür taşıyor: %s; hiçbir şey yazılmadı
+err_propose_args=propose --kind lesson|skill|fix ve tırnak içinde tek bir metin argümanı alır
+err_propose_kind=bilinmeyen tür %s: lesson, skill ya da fix kullan
 err_help_args=help argüman kabul etmez; yalnızca gönderilen bir dilin --<kod> bayrağı kullanılabilir (örn. --en, --tr)
 # doctor
 doc_head=knotlog doctor - ortam denetimi
@@ -77,8 +87,12 @@ doc_ctx_max_config=config: %s
 doc_ctx_max_default=varsayılan: %s
 doc_ctx_max_bad=config ctx_max=%s pozitif tamsayı değil, yok sayıldı (%s kullanılıyor)
 doc_ctx_max_profile=profil: %s
+doc_untouched=%d aktif konu satırına %d günden uzun süredir dokunulmadı (en eskisi: %s, %s)
+doc_stale_days_bad=config stale_days=%s pozitif tamsayı değil, yok sayıldı (%s kullanılıyor)
 doc_profile=profil
 doc_profile_bad=config profile=%s normal, economical ya da manual değil, normal kullanılıyor
+doc_write_approval=write_approval
+doc_write_approval_bad=config write_approval=%s on ya da off değil, off kullanılıyor
 doc_threads_overflow=%s %d bayt, context bütçesi %d bayt — her oturumda içeriğin %%%d kadarı düşüyor
 doc_pin_oversize=sabit (pin) blok (<!-- knotlog:pin:start/end -->) %d bayt ama ctx_max %d bayt — yapılandırılan bütçeyi aşmadan asla sığmaz; bloğu küçült ya da ctx_max'ı büyüt
 doc_identity=kimlik
@@ -277,6 +291,7 @@ ctx_truncated=… (kırpıldı)
 ctx_threads_dropped=(konu dosyasının %d baytı bu bağlama hiç girmedi — bkz: knotlog compact)
 ctx_precompact=Bağlam sıkışabilir: hafızanı şimdi yaz — bugünkü oturum dosyasındaki (%s) yansıma bloğunu doldur ve Konular.md'yi güncelle.
 ctx_checkpoint_due=Ara kayıt: oturum notu %s dk önce yazıldı, o zamandan beri kasada iş var — oturum notuna kısa bir madde yaz (ne yapıldı, yarım, sıradaki).
+ctx_review_ask=İnceleme: son incelemeden beri %s etkinlik (en çok dokunulan: %s). Bu işten kalıcı bir ders, skill olmaya değer tekrar eden bir iş akışı ya da düzeltilmiş bir yanlış çıktı mı? Varsa her birini tek satırla öner: knotlog propose --kind lesson|skill|fix "<metin>" (knotlog pending'de kullanıcının onayını bekler; hafızaya henüz bir şey yazılmaz). Yoksa bir şey yapma.
 # remember
 remember_ok=yazıldı: %s
 remember_empty=hatırlanacak yeni satır yok
@@ -286,6 +301,14 @@ remember_events=olay
 note_busy=note atlandı: başka bir işlem 5 saniye sonunda hâlâ kilidi tutuyor; hiçbir şey yazılmadı
 note_ok=yazıldı: %s
 thread_ok=aktif konulara yazıldı: %s
+pending_none=onay bekleyen not yok
+pending_rejected=#%s reddedildi; hiçbir şey yazılmadı
+admit_secret=sır gibi görünüyor (anahtar, token ya da parola); hiçbir şey yazılmadı — sırları hafızaya koyma
+admit_instruction=ajana verilmiş bir talimat gibi okunuyor; hiçbir şey yazılmadı — bir gözlem olarak yeniden yaz
+admit_relative=#%s onay bekliyor (knotlog pending) — göreli zamanı kesin tarihle (YYYY-MM-DD) yeniden yaz
+admit_review=#%s (knotlog pending)
+admit_inject_marks=önceki (tüm )?talimatları (yok say|unut|görmezden gel)|(^|[^A-Za-z])(bundan sonra|sen|her zaman) [^.]*(malısın|melisin|malısınız|melisiniz)
+admit_reltime_words=(^|[^A-Za-z])(bugün|yarın|dün|bu akşam|(geçen|gelecek|önümüzdeki|bu) hafta|haftaya|[0-9]+ (gün|hafta) (sonra|önce))([^A-Za-zçğıöşüÇĞİÖŞÜ]|$)
 digest_range=Aralık: %s → %s (%d olay)
 digest_tools=Araçlar: %s
 digest_title=Etkinlik özeti: %s

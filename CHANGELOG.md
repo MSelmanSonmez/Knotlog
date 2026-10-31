@@ -3,6 +3,18 @@
 All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+- `knotlog note --thread` writes the line as `- YYYY-MM-DD HH:MM <text>` (was `- HH:MM <text>`), so `doctor` can age it. Existing lines are not touched.
+- **Behaviour change: secret-shaped notes are refused.** `knotlog note`, `note --thread` and MCP `knotlog_note` now check the text against the secret pattern of the shipped pre-commit hook (the one source for both) and refuse a match with exit 4 and `refused<TAB>secret_pattern`, without echoing it; earlier versions wrote it. Any other text is written exactly as before.
+
+### Added
+- Freshness: `doctor` warns once when list lines of the active threads section carry no ISO date (`YYYY-MM-DD`) newer than `stale_days=` days (`.knotlog/config`, default 30; an invalid value falls back to 30 and is reported). The row names the count and the oldest line. A line's age is its newest date; undated lines, the closed section and the pin block are not counted. Read-only and not part of `context`; the exit code is unchanged.
+- Review loop: once more than `KNOTLOG_REVIEW_AFTER` (default 40) activity events follow the `.knotlog/reviewed` watermark, `context --json Stop` asks the agent once whether the work left a lesson, a workflow worth a skill, or a corrected mistake (a due checkpoint goes first; `stop_hook_active`, `profile=economical|manual` and `review=off` keep it silent). `remember` leaves the same ask in `.knotlog/needs_review` for agents without a Stop channel, and the next `context --json SessionStart` shows it once. New `knotlog propose --kind lesson|skill|fix "<text>"`: the agent's answer, always queued in `.knotlog/pending` (exit 5) for `knotlog pending --approve N`; no vault or skill file is written. New vaults' seeded `.gitignore` lists `reviewed` and `needs_review`. The Claude Code Stop route was live-verified (2026-10-31, Claude Code 2.1.312); `docs/REFERENCE.md` notes that only Edit, Write, NotebookEdit and Read events count and that Claude Code labels the ask "Stop hook error".
+- Write approval: with `write_approval=on` in `.knotlog/config`, `note` and `note --thread` do not write; the line waits in the append-only `.knotlog/pending` (exit 5, `pending_review`). `knotlog pending` lists the open proposals, `--approve N` writes one through the normal path (a budget refusal keeps it open), `--reject N` drops it; neither rewrites the file. With the setting on, a text that reads as an instruction to the agent is refused (exit 4, `instruction_shaped`) and one with a relative date ("tomorrow", "yarın") is queued as `relative_time`. The word lists are in `i18n/*.txt`. `doctor` shows the setting when it is set.
+- MCP `knotlog_note`: exit 5 (queued) is a normal result, not `isError`.
+
 ## [1.3.0] - 2026-10-31
 
 ### Added

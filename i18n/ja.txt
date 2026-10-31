@@ -11,11 +11,15 @@ usage_install=  install   <user> の Knotlog ボールトを作成し、この�
 usage_uninstall=  uninstall PATH から `knotlog` コマンドを削除。ボールトには一切触れません (--dry-run: プレビュー)
 usage_context=  context   エージェント向けにセッションのメモリコンテキストを出力
 help_profile=            config: profile=normal|economical|manual でフックのコンテキストを調整 (REFERENCE を参照)
+help_write_approval=            config: write_approval=on で note / note --thread をレビュー待ちにする (knotlog pending、REFERENCE 参照)
+help_review=            config: review=off でセッションのレビュー依頼を止める。KNOTLOG_REVIEW_AFTER=N でしきい値を設定 (既定 40 イベント)
 usage_remember=  remember  activity.log から機械的なダイジェストを書き込み (追記のみ)
 usage_mcp=  mcp       標準入出力で MCP サーバーを実行 (JSON-RPC、1 行 1 メッセージ)
 usage_note=  note      今日のセッションの振り返りブロックに 1 行追加 (note "テキスト")
 usage_digest=  digest    1 日分の活動 (--date YYYY-MM-DD) または期間 (--since YYYY-MM-DD [--until YYYY-MM-DD]) を要約; --dry-run, --limit N
 usage_note_thread=  note --thread  進行中スレッドのセクションに 1 行追加 (note --thread "テキスト")
+usage_pending=  pending   レビュー待ちのノートを一覧 (write_approval=on)、--approve N で書き込み、--reject N で破棄
+usage_propose=  propose   レビューで得た知見を承認待ちに入れる (propose --kind lesson|skill|fix "テキスト"、knotlog pending)
 usage_import=  import    ローカルの JSON 会話エクスポートをセッションノートに変換 (FILE, --date YYYY-MM-DD)
 usage_plan=  plan      フロントマター付きテンプレートから <Projects>/<Project>/<Plans>/ にプロジェクト計画を作成 (--proje <Project>)
 usage_tone=  tone      有効なトーンプリセットを表示/設定 (--list: 一覧; スラッグだけ指定すると config に tone= を書き込み)
@@ -33,6 +37,12 @@ err_thread_nofile=スレッドファイルがありません: %s; 先に knotlog
 err_thread_nosection=スレッドブロックに進行中のセクションがありません (進行中の見出しを持つ knotlog:threads:start/end); 何も書き込みませんでした
 err_thread_pinned=進行中のセクションがピンブロックの内側で終わっています; 何も書き込みませんでした
 err_budget_full=%s は %d バイトになりますが、コンテキスト予算の残りは %d バイトです: 先に %d バイト空けてください — `knotlog compact --apply`（古い完了スレッド）または `knotlog archive "<見出し>"`（`archive --list` で見出しを表示）、または `ctx_max` を上げてください; 何も書き込みませんでした
+err_pending_args=pending は引数なし、または --approve N か --reject N を取ります
+err_pending_closed=#%s は未決の提案ではありません (knotlog pending で一覧)
+err_pending_tab=レビュー待ちのノートにタブは使えません。キューには何も追加していません
+err_pending_kind=#%s の種類 %s は不明です。何も書き込んでいません
+err_propose_args=propose は --kind lesson|skill|fix と引用符で囲んだテキスト引数 1 つを取ります
+err_propose_kind=不明な種類 %s: lesson、skill、fix のいずれかを使ってください
 err_help_args=help は引数なし、または同梱言語の --<コード> のみ指定できます (例: --en, --tr)
 # doctor
 doc_head=knotlog doctor - 環境チェック
@@ -77,8 +87,12 @@ doc_ctx_max_config=config: %s
 doc_ctx_max_default=既定値: %s
 doc_ctx_max_bad=config の ctx_max=%s は正の整数ではないため無視します (%s を使用)
 doc_ctx_max_profile=プロファイル: %s
+doc_untouched=進行中のスレッドの %d 行が %d 日以上更新されていません (最も古い行: %s, %s)
+doc_stale_days_bad=config の stale_days=%s は正の整数ではないため無視します (%s を使用)
 doc_profile=プロファイル
 doc_profile_bad=config の profile=%s は normal、economical、manual のいずれでもないため normal を使用します
+doc_write_approval=write_approval
+doc_write_approval_bad=config の write_approval=%s は on でも off でもないため off を使います
 doc_threads_overflow=%s は %d バイトで、コンテキスト予算は %d バイトです — 毎セッションおよそ %d%% が切り捨てられます
 doc_pin_oversize=ピンブロック (<!-- knotlog:pin:start/end -->) は %d バイトですが ctx_max は %d バイトです — 設定された予算を超えずに収まることはありません; ピンブロックを縮めるか ctx_max を上げてください
 doc_identity=アイデンティティ
@@ -277,6 +291,7 @@ ctx_truncated=… (切り捨て)
 ctx_threads_dropped=(スレッドファイルの %d バイトはこのコンテキストに入りませんでした — 参照: knotlog compact)
 ctx_precompact=コンテキストが圧縮される可能性があります: 今すぐメモリを書き込んでください — 今日のセッションファイル (%s) の振り返りブロックを埋め、Threads.md を更新してください。
 ctx_checkpoint_due=チェックポイント: セッションノートは %s 分前に書かれましたが、それ以降ボールトで作業がありました — セッションノートに短い箇条書き (実施内容、保留、次の一手) を書いてください。
+ctx_review_ask=レビュー: 前回のレビュー以降 %s 件のイベント (よく触れたファイル: %s)。この作業から、残すべき教訓、skill にする価値のある繰り返し手順、修正した誤りはありますか? あれば 1 行ずつ提案してください: knotlog propose --kind lesson|skill|fix "<テキスト>" (knotlog pending でユーザーの承認を待ち、まだ記憶には書き込まれません)。なければ何もしないでください。
 # remember
 remember_ok=書き込み: %s
 remember_empty=記憶する新しい行はありません
@@ -286,6 +301,14 @@ remember_events=イベント
 note_busy=note をスキップしました: 5 秒経っても別のプロセスがロックを保持しています; 何も書き込みませんでした
 note_ok=書き込み: %s
 thread_ok=進行中スレッドに書き込みました: %s
+pending_none=レビュー待ちのノートはありません
+pending_rejected=#%s を却下しました。何も書き込んでいません
+admit_secret=秘密情報 (キー、トークン、パスワード) のようです。何も書き込んでいません — 秘密はメモリに入れないでください
+admit_instruction=エージェントへの指示のように読めます。何も書き込んでいません — 観察として書き直してください
+admit_relative=#%s はレビュー待ちです (knotlog pending) — 絶対日付 (YYYY-MM-DD) で書き直してください
+admit_review=#%s (knotlog pending)
+admit_inject_marks=(以前|前|これまで|上記)の(すべての)?指示を無視|今後は常に|これからは常に|しなければならない
+admit_reltime_words=今日|明日|昨日|今夜|来週|先週|今週|来月|先月|[0-9]+日後|[0-9]+日前
 digest_range=範囲: %s → %s (%d 件のイベント)
 digest_tools=ツール: %s
 digest_title=活動ダイジェスト: %s

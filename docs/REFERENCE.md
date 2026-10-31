@@ -200,9 +200,11 @@ left it says so and changes nothing.
 | `knotlog links` | print a note's outgoing/incoming `[[wikilinks]]` |
 | `knotlog context` | recent-session context; `--json EVENT` emits the hook envelope; `--cursor` (with `--json`) emits Cursor's `additional_context` shape instead; `--antigravity` (with `--json SessionStart` or `Stop`) emits Antigravity's shapes; `--bridge` writes it to AGENTS.md |
 | `knotlog remember` | mechanical digest: `activity.log` → `<sessions>/YYYY-MM-DD.md` + a pointer block in the session file doctor reads (`Last-Session.md`, `Son-Oturum.md` in a Turkish vault) (`--dry-run`/`--git`/`--limit`) |
-| `knotlog note "<text>"` | appends one line (`- HH:MM <text>`) to today's session reflection block, after the existing lines of the first heading; never rewrites other lines; shares `remember`'s lock; the session note never enters context, so no budget check applies |
+| `knotlog note "<text>"` | appends one line (`- HH:MM <text>`) to today's session reflection block, after the existing lines of the first heading; never rewrites other lines; shares `remember`'s lock; the session note never enters context, so no budget check applies; a secret-shaped text is refused (exit 4) and, with `write_approval=on`, the line is queued instead (see Admission, Write approval) |
 | `knotlog digest` | write/refresh a deterministic date-scoped digest under the layout's dump folder (`--date YYYY-MM-DD`, `--dry-run`, `--limit`; or `--since YYYY-MM-DD [--until YYYY-MM-DD]` to print a range to stdout) |
-| `knotlog note --thread "<text>"` | appends one line (`- HH:MM <text>`) to the end of the active threads section (`Threads.md` / `Konular.md`) inside the threads block; never inside the pin block; exits 1 and writes nothing when the file or the active section is missing; exits 3 and writes nothing when the new line would push the file past the context budget (see Large vaults); shares `remember`'s lock |
+| `knotlog note --thread "<text>"` | appends one line (`- YYYY-MM-DD HH:MM <text>`) to the end of the active threads section (`Threads.md` / `Konular.md`) inside the threads block; never inside the pin block; exits 1 and writes nothing when the file or the active section is missing; exits 3 and writes nothing when the new line would push the file past the context budget (see Large vaults); shares `remember`'s lock; admission and write approval as for `note` |
+| `knotlog pending [--approve N\|--reject N]` | list the notes and proposals waiting for review (notes queue when `write_approval=on`; `propose` always queues), write one through the normal note path, or drop one; see Write approval and Review loop |
+| `knotlog propose --kind lesson\|skill\|fix "<text>"` | the agent's answer to the review ask: queue one finding in `.knotlog/pending` for the user's approval, whatever `write_approval` says; writes no vault file; see Review loop |
 | `knotlog import FILE` | convert a local JSON export with role/content messages (Claude transcript, ChatGPT export, or JSONL) into a session note (`--date YYYY-MM-DD`) |
 | `knotlog plan <name> --proje <Project>` | open a plan note under `<projects>/<Project>/<Plans>/` from the localized front-matter template; a missing project folder is an error, never auto-created |
 | `knotlog tone [--list\|<slug>]` | show which tone is active and why (preset or companion.md); `--list` browses the nine shipped presets; `<slug>` writes `tone=` to `.knotlog/config` (never touches companion.md) |
@@ -222,9 +224,9 @@ The `adapters/claude-code.json` adapter wires Knotlog into Claude Code's local h
 - **Restart Claude Code after editing `settings.json`** — hook configuration is not loaded into a running session.
 - On Windows, Git for Windows puts only `cmd/` on `PATH` — if a hook reports `Executable not found in $PATH: bash`, add `C:\Program Files\Git\bin` to `PATH` (or write the absolute bash path in the `shell` field).
 - `knotlog remember --git` auto-commits the vault (`--git` is opt-in; the adapter never commits by itself).
-- **Profiles.** `profile=` in `.knotlog/config` bundles how much context the hooks inject. `normal` (the default, also for an absent or unknown value; `doctor` warns on an unknown one) changes nothing. `economical` caps the session-start context at 4000 bytes and silences the per-turn output (the prompt nudge and the Stop reminder); `manual` injects nothing at session start or per turn. In both, `capture`, `remember` and `index` still run, and `knotlog context` run by hand prints normally. Precedence for the size cap: `KNOTLOG_CTX_MAX` (env) > `ctx_max=` > `economical` (4000) > default (4096). `doctor` prints a `profile` row only when the key is set.
+- **Profiles.** `profile=` in `.knotlog/config` bundles how much context the hooks inject. `normal` (the default, also for an absent or unknown value; `doctor` warns on an unknown one) changes nothing. `economical` caps the session-start context at 4000 bytes and silences the per-turn output (the prompt nudge, the Stop reminder and the review ask); `manual` injects nothing at session start or per turn. In both, `capture`, `remember` and `index` still run, and `knotlog context` run by hand prints normally. Precedence for the size cap: `KNOTLOG_CTX_MAX` (env) > `ctx_max=` > `economical` (4000) > default (4096). `doctor` prints a `profile` row only when the key is set.
 - Languages: the supported set is the set of `i18n/<code>.txt` files; nothing else lists languages. Codes are lowercase file names — `en`, `tr`, `pt-br`, `zh-cn` — and `--lang`, `lang=`, `KNOTLOG_LANG` and `LANG` accept any case and `_` for `-` (`pt_BR.UTF-8` and `PT-BR` both mean `pt-br`; a region with no file of its own, such as `en_US`, means its language). An unsupported code works as English. The install wizard accepts the same spellings. Per-language assets (`persona/`, `templates/`, `tone/`, `layout/<code>.txt`, `layout/scope-<code>.txt`) are optional and fall back to English. The fold profile follows the language: `tr` → `tr`, `es`/`pt-br` → `latin`, every other language → `default`.
-- Env knobs: `KNOTLOG_CTX_MAX`, `KNOTLOG_NUDGE_AFTER`, `KNOTLOG_CHECKPOINT_AFTER`, `KNOTLOG_LOG_MAX`, `KNOTLOG_HOOK`. `KNOTLOG_CTX_MAX` also has a vault-local fallback — `.knotlog/config`'s `ctx_max=` — so the setting survives moving the vault to another machine, where an env var would not; `doctor` reports which one is in effect. Each `KNOTLOG_*` setting (and `KNOTLOG_VAULT`, `KNOTLOG_LANG`, `KNOTLOG_HOME`) also answers to its pre-rename `QUIPU_*` name; when both are set, `KNOTLOG_*` wins.
+- Env knobs: `KNOTLOG_CTX_MAX`, `KNOTLOG_NUDGE_AFTER`, `KNOTLOG_CHECKPOINT_AFTER`, `KNOTLOG_REVIEW_AFTER`, `KNOTLOG_LOG_MAX`, `KNOTLOG_HOOK`. `KNOTLOG_CTX_MAX` also has a vault-local fallback — `.knotlog/config`'s `ctx_max=` — so the setting survives moving the vault to another machine, where an env var would not; `doctor` reports which one is in effect. Each `KNOTLOG_*` setting (and `KNOTLOG_VAULT`, `KNOTLOG_LANG`, `KNOTLOG_HOME`) also answers to its pre-rename `QUIPU_*` name; when both are set, `KNOTLOG_*` wins.
 
 ## Handoff cards (parallel sessions, two machines)
 
@@ -237,11 +239,11 @@ When `remember` runs from a hook, it reads the hook payload on stdin and writes 
 When agents work across multiple turns without writing a session note, memory can be lost if a session ends abruptly. Knotlog includes a git-aware checkpoint signal:
 - **Condition:** If the session note (`<sessions>/<today>.md` or `<yesterday>.md`) is older than `KNOTLOG_CHECKPOINT_AFTER` seconds (default: 1800s / 30 minutes) and there is work in the vault since the note was touched (a newer commit or a modified tracked file), a checkpoint is due. If the vault is not a git repository or git is unavailable, the signal remains silently inactive.
 - **Nudge (`context --json UserPromptSubmit`):** When due, appends a localized reminder (`ctx_checkpoint_due`) asking the model to write a short note bullet. Rate-limited by `.knotlog/checkpoint_nudged` so it triggers at most once every `KNOTLOG_CHECKPOINT_AFTER` seconds.
-- **Block (`context --json Stop`):** Intercepts turn completion. If stdin does not contain `"stop_hook_active": true` and a checkpoint is due (and not already nudged within the threshold), outputs `{"decision":"block","reason":"<checkpoint text>"}` to trigger a continuation turn, and updates `.knotlog/checkpoint_nudged`.
+- **Block (`context --json Stop`):** Intercepts turn completion. If stdin does not contain `"stop_hook_active": true` and a checkpoint is due (and not already nudged within the threshold), outputs `{"decision":"block","reason":"<checkpoint text>"}` to trigger a continuation turn, and updates `.knotlog/checkpoint_nudged`. When no checkpoint is due, the same Stop can carry the [review ask](#review-loop) instead; never both at once.
 - **Adapters:**
   - **Claude Code:** `Stop` hook blocks turn once; `UserPromptSubmit` nudges.
   - **Codex:** `Stop` hook blocks turn once; `UserPromptSubmit` nudges.
-  - **omp:** `agent_end` hook calls `context --json Stop` and injects only the checkpoint reason.
+  - **omp:** `agent_end` hook calls `context --json Stop` and injects only the reason (the checkpoint or the review ask).
   - **Hook-less:** invoke `knotlog context --json Stop` or `UserPromptSubmit` programmatically.
 
 ## Codex
@@ -270,7 +272,7 @@ When agents work across multiple turns without writing a session note, memory ca
 
 - **`SessionStart`** (timeout 30 s) runs `knotlog remember`, then `knotlog context --json SessionStart --antigravity`. The context is returned as `{"injectSteps":[{"systemMessage":{"systemMessage":"<context>"}}]}`, so Antigravity injects it as a system message step.
 - **`Stop`** (timeout 10 s) runs `knotlog context --json Stop --antigravity`, the [checkpoint signal](#checkpoint-signal-mid-session-memory-guard) as a save guard. Antigravity wants a decision every time, so the hook always answers one:
-  - `{"decision":"continue","reason":"<checkpoint text>"}` when a checkpoint is due: the turn re-enters the loop so the model can write its note. At most once per `KNOTLOG_CHECKPOINT_AFTER` seconds (default 1800).
+  - `{"decision":"continue","reason":"<checkpoint text>"}` when a checkpoint is due: the turn re-enters the loop so the model can write its note. At most once per `KNOTLOG_CHECKPOINT_AFTER` seconds (default 1800). With no checkpoint due, the [review ask](#review-loop) uses the same `continue` envelope.
   - `{"decision":"allow"}` otherwise: inside that window, nothing to save, or when the payload says `"fullyIdle":false`.
 - Any other event with `--antigravity` answers `{}`. There is no `stop_hook_active` field here; the 1800 s throttle is the loop guard.
 - `knotlog migrate` also rewrites a pre-rename `.agents/hooks.json`.
@@ -326,7 +328,7 @@ Methods: `initialize`, `ping`, `server/discover`, `tools/list`, `tools/call`. No
 
 **Search budget.** `knotlog_search` always passes `--max-bytes` with the same `ctx_max` the opening context uses (`KNOTLOG_CTX_MAX`, then `ctx_max=` in `.knotlog/config`, then the profile default, 4096 otherwise), so one tool call cannot return more than the session start does. The value is read when the server starts; changing `ctx_max` needs a restart of the MCP server. The budget is measured on the result text before it is escaped into JSON. When the search was cut, the omitted-results line (`search: N more result(s) not shown (--max-bytes B)`) is appended to the returned text after the results, outside the budget.
 
-A wrong argument shape or an unknown tool is a protocol error (`-32602`). A tool that ran and failed is a normal result with `isError: true` and the command's message as text.
+A wrong argument shape or an unknown tool is a protocol error (`-32602`). A tool that ran and failed is a normal result with `isError: true` and the command's message as text. A note that was queued for review (`knotlog note` exit 5, see Write approval) is not a failure: `isError: false`, with the `pending_review` line as text. A refused one (exit 4) and a budget refusal (exit 3) are errors.
 
 **The vault.** Tool calls run `knotlog` itself, so the vault is found the usual way: the nearest ancestor of the server's working directory holding `.knotlog/config`, or `KNOTLOG_VAULT`. Register the server from inside the vault, or set `KNOTLOG_VAULT`. With no vault, tools return the "vault not found" message as an error result.
 
@@ -555,7 +557,90 @@ Fifty snippets cost a fraction of fifty files, and choosing between them is exac
 
 **Write-time budget.** Every line in a persistent block costs context on every turn; what happened in a past session is not written to memory, it is found with `knotlog search`. So `knotlog note --thread` refuses a line that would make `context` crop the threads section: before the file is replaced it measures the new file the same way `doctor`'s threads-overflow warning does (the threads budget left after the fixed parts, with the pin block counted once, in the fixed part), at the moment of writing. If the file would no longer fit, nothing is written, the exit code is 3 and the message names the new size, the budget, the bytes to free and the commands that free them: `knotlog compact --apply` (old closed threads), `knotlog archive "<heading>"` (`archive --list` shows headings), or a larger `ctx_max`. A file exactly at the budget is accepted. A plain `knotlog note` (and the MCP `knotlog_note` tool, which runs it) writes the session note, which never enters context, so it is not checked.
 
-**Exit codes** of `knotlog note`: 0 written, 1 error, 2 usage, 3 no space (`--thread` only: the write-time budget above).
+**Exit codes** of `knotlog note`: see [Write approval](#write-approval).
+
+## Admission
+
+Every `knotlog note` and `knotlog note --thread` text is a candidate, checked before anything is written. The first check that matches decides; the result is one line, `status<TAB>reason<TAB>detail`, and the text itself is never echoed.
+
+| Check | Runs | Result | Exit |
+|---|---|---|---|
+| Secret pattern: the `_pat=` line of `hooks/pre-commit` (AWS `AKIA…`, `sk-…`, `ghp_…`, `github_pat_…`, `xox?-…`, `AIza…`, `PRIVATE KEY` blocks, `api_key/secret/token/password = …`), case-insensitive | always | `refused` `secret_pattern` (stderr) | 4 |
+| Instruction to the agent: `admit_inject_marks` in `i18n/<lang>.txt` ("ignore previous instructions", "you must", "you should", "from now on", a line starting `system:`/`assistant:`; Turkish "bundan sonra … yapmalısın", …). A plain imperative such as "run the tests before the release" does not match; a quoted one ("the user said: you must …") does, restate it as an observation | `write_approval=on` | `refused` `instruction_shaped` (stderr) | 4 |
+| Relative time: `admit_reltime_words` ("today", "tomorrow", "next week", "in 3 days"; Turkish "yarın", "geçen hafta", …) | `write_approval=on` | `pending_review` `relative_time`: queued, restate it with an absolute date | 5 |
+
+Both word lists are extended regular expressions; the active language's list is checked together with the English one. The secret pattern has one source: `knotlog` reads the pattern from the pre-commit hook it ships, so the commit gate and the note gate cannot drift apart. With the setting off (the default) a text without a secret is written exactly as before, byte for byte; a text with one, which earlier versions wrote, is refused.
+
+## Write approval
+
+`write_approval=on` in `.knotlog/config` turns on review before writing. A note that passes the checks above is not written to the vault: it is appended to `.knotlog/pending` and `note` prints `pending_review<TAB>policy_review_first<TAB>#N (knotlog pending)` with exit 5. Only `note` and `note --thread` (and so the MCP `knotlog_note` tool) are queued, plus `knotlog propose`, which is always queued (see Review loop); `remember`, `capture`, `index`, `archive` and `compact` are not. Any other value, or no key, means off; `doctor` shows the row only when the key is present and warns on a value that is neither `on` nor `off`.
+
+```
+knotlog pending              # list open proposals: id, stamp, kind, reason, text (TAB-separated)
+knotlog pending --approve 3  # write #3 through the normal note path, then mark it approved
+knotlog pending --reject 3   # mark #3 rejected; no vault file is touched
+```
+
+`.knotlog/pending` is append-only, one TAB-separated line per event, never rewritten: `P<TAB>id<TAB>YYYY-MM-DD HH:MM<TAB>kind<TAB>reason<TAB>text` for a proposal, `A<TAB>id<TAB>YYYY-MM-DD HH:MM` for an approval, `R<TAB>id<TAB>YYYY-MM-DD HH:MM` for a rejection. A proposal is open while it has no `A` or `R` line; ids are the largest id so far plus one, taken under `remember`'s lock. A queued text may not contain a tab (exit 2). Kinds are `note` and `thread`, and `lesson`, `fix` and `skill` from `knotlog propose`; those three are approved as a plain note line prefixed `[lesson] `, `[fix] ` or `[skill candidate] ` (no skill file is ever written). The file lives in the state folder: it never enters `context` and costs no budget.
+
+`--approve` checks the text for a secret again (and for an instruction, when the setting is on), writes it, and only then appends `A`. If the write fails, for example because `note --thread` would push the threads file past the context budget (exit 3), no `A` line is written and the proposal stays open. Deciding an id that is not open, or that does not exist, exits 2.
+
+**Exit codes** of `knotlog note`, `knotlog propose` and `knotlog pending`:
+
+| Code | Status | Meaning |
+|---|---|---|
+| 0 | `remembered` | written (or listed, rejected) |
+| 1 | `error` | could not write; the file is unchanged |
+| 2 | | usage: bad arguments, a tab in a queued text, an id that is not open |
+| 3 | `no_space` | `--thread` (or approving one) would push the threads file past the context budget (see Large vaults) |
+| 4 | `refused` | `secret_pattern` or `instruction_shaped`; nothing written |
+| 5 | `pending_review` | queued in `.knotlog/pending` (`policy_review_first` or `relative_time`) |
+
+## Review loop
+
+Knotlog never calls a model; the agent that already runs the session does the reviewing. When more than `KNOTLOG_REVIEW_AFTER` activity events (default 40, from `.knotlog/activity.log`) have piled up since the last ask, Knotlog asks the agent once (`ctx_review_ask`, under 600 bytes, in the vault's language, naming the event count and the three most touched paths): is there a lasting lesson, a repeated workflow worth a skill, or a corrected mistake? If so, the agent answers with:
+
+```
+knotlog propose --kind lesson "<text>"   # also: --kind skill, --kind fix
+```
+
+`propose` always queues: it runs the [Admission](#admission) checks (the instruction check skips `--kind skill`, since a workflow is imperative by nature), then appends one `P` line to `.knotlog/pending` and exits 5 with `pending_review<TAB>policy_review_first<TAB>#N (knotlog pending)`, whether `write_approval` is on or off. It writes no vault file and never a skill file; `knotlog pending --approve N` turns an approved finding into one line of today's session note (`[lesson] …`, `[fix] …`, `[skill candidate] …`). A kind other than `lesson`, `skill` or `fix`, a missing text or a text with a line break exits 2; a secret is refused with exit 4.
+
+**When the ask comes.** The watermark `.knotlog/reviewed` holds the last log line at the previous ask; only the events after it count, so the ask comes at most once per batch. Two routes:
+
+- **Stop (first choice):** `context --json Stop` returns the ask in the same envelope as the [checkpoint signal](#checkpoint-signal-mid-session-memory-guard) (`decision:block` + `reason`; Antigravity `decision:continue`). A due checkpoint goes first; the ask waits for the next Stop. `stop_hook_active`, `profile=economical|manual` and `review=off` keep Stop silent and leave the watermark where it is.
+- **Next SessionStart (fallback):** `remember` (SessionEnd, and the first step of every SessionStart hook) writes `.knotlog/needs_review` when the ask is due and moves the watermark; the next `context --json SessionStart` puts the ask at the top of the context once and deletes the file. Agents without a Stop channel get the ask this way, and so does the SessionStart that follows a compaction.
+
+`review=off` in `.knotlog/config` turns both routes off (any other value, or no key, is on). Under `profile=economical` or `manual` `remember` writes no flag either.
+
+Only Edit, Write, NotebookEdit and Read events count toward the threshold; work done through shell commands adds nothing. Claude Code shows the Stop ask under a "Stop hook error" label; it is not an error.
+
+**Trigger points** (after the "dreaming" triggers of oh-my-hermes, which also only remind and never call a model):
+
+| Trigger | Knotlog | |
+|---|---|---|
+| every N turns | Stop, once more than `KNOTLOG_REVIEW_AFTER` events follow the watermark; no separate turn counter | Stop route |
+| before compaction | not used; the SessionStart after compaction (`source: "compact"`) shows the flag `remember` left | fallback route |
+| end of a session | Stop | Stop route |
+| shutdown | SessionEnd → `remember` → `.knotlog/needs_review`, for the next session | fallback route |
+| a session that ended without a review | that next SessionStart, once | fallback route |
+
+PreCompact is not used: in Claude Code it can only block the compaction (its `systemMessage` and `continue` are dropped and it has no `additionalContext`), and blocking an automatic compaction can fail the request at the context limit.
+
+**Agents** (hook documentation read 2026-10-30/31; "not live-verified" means no one has run a live session for that route yet; the Claude Code Stop route has been run live):
+
+| Agent | Stop route | Fallback route | Before compaction | Source |
+|---|---|---|---|---|
+| Claude Code | `Stop` → `decision:block` + `reason`; covered by tests; live-verified (2026-10-31, Fedora Linux, Claude Code 2.1.312) | `SessionStart` (no matcher, so it also runs after compaction); the compaction case not live-verified | `PreCompact` can only block; not used | [hooks](https://code.claude.com/docs/en/hooks) |
+| Codex | `Stop` → `decision:block` + `reason`; the docs say it "creates a new continuation prompt"; not live-verified | `SessionStart`; the docs list `source: "compact"` | `PreCompact` (can only stop compaction) and `PostCompact`; not used | [hooks](https://developers.openai.com/codex/hooks) |
+| omp | `agent_end` → `context --json Stop`; the adapter forwards the reason with `pi.sendMessage(…, {triggerTurn:false})`, which the docs say appends the message without starting a turn; that the model reads it is not live-verified | `session_start` | `session_before_compact` can cancel or replace; `session.compacting` can add context (docs); not used | [extensions](https://github.com/can1357/oh-my-pi/blob/main/docs/extensions.md), [hooks](https://github.com/can1357/oh-my-pi/blob/main/docs/skills/authoring-hooks.md) |
+| Antigravity | `Stop --antigravity` → `decision:continue` + `reason`; covered by tests, not live-verified | `SessionStart` | not checked | adapter, this file |
+| Gemini CLI | none in this release (the adapter binds no end-of-turn event; Gemini's `AfterAgent` can send a reason back as a new prompt per its docs, not wired) | `SessionStart`; not live-verified | `PreCompress` is advisory, a `systemMessage` for the user only | [hooks reference](https://geminicli.com/docs/hooks/reference/) |
+| Cursor | none in this release (Cursor's `stop` can return a `followup_message` submitted as the next user message per its docs, not wired) | `sessionStart`; not live-verified | `preCompact` is observational, a `user_message` for the user only | [hooks](https://cursor.com/docs/agent/hooks) |
+| Windsurf / Devin Desktop | not supported yet: the docs do not say that hook output reaches the model | — | not documented | [hooks](https://docs.devin.ai/desktop/cascade/hooks) |
+| OpenCode | not supported yet: the plugin docs do not document sending a prompt into the session | — | `experimental.session.compacting` can add context (docs) | [plugins](https://opencode.ai/docs/plugins/) |
+
+Windsurf and OpenCode run `remember` from their own hooks, so a due flag they leave is shown by the next SessionStart of another agent on the same vault.
 
 ## Session reflection
 
@@ -564,7 +649,7 @@ Knotlog keeps the mechanical ledger; the meaning comes from the model. `remember
 - Every session file gets a `<!-- knotlog:reflect:start -->` / `<!-- knotlog:reflect:end -->` block ("What changed in this session?", "Where did the work happen?", "Threads touched or continued"), appended **only when absent** — a second `remember` the same day cannot overwrite what the model wrote.
 - `context --json SessionStart` asks the model to fill today's block while it is empty, naming the file and marker; if yesterday's block was left empty, the next `SessionStart` says so once and drops it. Both checks read the block's **contents**, never `mtime` — a touched file cannot fake a reflection.
 - `Threads.md` gets the same treatment on the first `remember` in a vault: a scaffolded block ("Active threads" / "Closed threads") is **prepended** to the top, because `context`'s `KNOTLOG_CTX_MAX` budget drops whatever falls off the *bottom* of an overgrown `Threads.md` — putting the block first keeps it inside the budget longer. Pre-existing free-hand text survives unchanged, right after the block.
-- `doctor` reports informationally when `Threads.md` (or a session reflection) is missing, unscaffolded, or scaffolded-but-empty; a filled block earns no line at all. It also warns when the file is larger than the context budget and says how much of it is dropped every session. When today's `activity.log` holds more events than `note_nudge_events=` in `.knotlog/config` (default 50; `0` turns the check off; a non-number falls back to 50) and today's reflection block is still empty, it adds one row pointing at `knotlog note "<what changed>"`; below the threshold it stays silent.
+- `doctor` reports informationally when `Threads.md` (or a session reflection) is missing, unscaffolded, or scaffolded-but-empty; a filled block earns no line at all. It also warns when the file is larger than the context budget and says how much of it is dropped every session. It warns once, too, when list lines of the active section carry no ISO date (`YYYY-MM-DD`) newer than `stale_days=` days (`.knotlog/config`, default 30; a value that is not a positive integer falls back to 30 and `doctor` says so): the row names the count and the oldest line (its date and first 40 characters). A line's age is its newest date; undated lines, the closed section and the pin block never count, and sequences like `v2026-10-01` or `1.2.0` are not dates. Read-only, never in `context`, and the exit code stays as it was. When today's `activity.log` holds more events than `note_nudge_events=` in `.knotlog/config` (default 50; `0` turns the check off; a non-number falls back to 50) and today's reflection block is still empty, it adds one row pointing at `knotlog note "<what changed>"`; below the threshold it stays silent.
 - When `context` does crop `Threads.md` it no longer does so silently: after the `… (truncated)` marker it adds one line with the number of bytes that never entered the context. A section that fits prints exactly what it printed before; when the budget is too small to spare the note (fewer bytes left for content than the note itself), only the plain marker appears.
 - **`knotlog compact` — the one deliberate exception to "Knotlog never rewrites what you wrote".** It moves the oldest entries of the `Closed threads` section (inside the scaffolded block) into the same archive file `knotlog archive` uses. An entry is a list item at column 0 (`- ` or `* `) or a deeper heading, plus the lines under it up to the next entry; entries are assumed to be appended, so the first ones are the oldest. The newest `--keep N` (default 20) stay. It never runs from a hook or a timer and never commits. Without `--apply` it is a dry run: it prints what would move, how many bytes, and where to, and touches no file. `--apply` appends to the archive first (existing archive bytes are kept, a marker line precedes the entries), verifies the appended bytes against the source byte for byte, and only then cuts the entries out of `Threads.md` through a temp file and `mv`. If any step before the cut fails the source stays untouched and the exit code is non-zero. The `Active threads` section, the skeleton, the markers, the pin block and free text outside the section are never moved. To undo, copy the entries back from the archive by hand; they are stored verbatim.
 - **Companion size limit.** The last-session file (`Last-Session.md`, `Son-Oturum.md` in a Turkish vault) and the journal only grow. `knotlog doctor` prints one warning when either is larger than `companion_max=` bytes (`.knotlog/config`, default 40000; a non-numeric value falls back to the default) and stays silent below it. `knotlog compact` also handles the last-session file: session blocks are `## ` sections appended at the bottom, so the first ones are the oldest. The newest 5 stay (`--keep N` sets both this and the threads count); older blocks move verbatim and in order to `Last-Session-Archive.md` (`Son-Oturum-Arsivi.md`) beside the threads archive, with the same dry run, append-verify-cut sequence and marker line. A file with 5 blocks or fewer is untouched. The journal is warned about but never rewritten.

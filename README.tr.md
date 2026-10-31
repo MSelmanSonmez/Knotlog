@@ -144,6 +144,7 @@ Gerçekten elle yazacakların; tam tablo [docs/REFERENCE.md](docs/REFERENCE.md#c
 | `knotlog doctor` | kurulumu denetler: araçlar, ajanlar, kırık linkler, commit'lenmemiş hafıza |
 | `knotlog search <terimler>` | not bulur (BM25, aksan katlamalı; `--tag`/`--status` süzgeçleri) |
 | `knotlog note "<metin>"` | bugünkü oturum yansımasına tek satır ekler |
+| `knotlog pending` | kuyruktaki not ve önerileri yazılmadan önce onaylar (notlar `write_approval=on` iken kuyruğa girer; `propose` her zaman kuyruğa alır; `--approve N`, `--reject N`) |
 | `knotlog context` | ajanın oturum açılışında gördüğünü yazdırır |
 | `knotlog tui` | en yeni oturum notlarına terminalde göz atar |
 | `knotlog plan <ad> --proje <Proje>` | bir projenin içinde plan notu açar |

@@ -189,8 +189,9 @@ function mc_call(id, s, r,   p, name, args, qtok, ltok, query, lim, a, ttok, tex
     mc_run("note " mc_sq(text))
   } else { mc_err(id, -32602, "Unknown tool: " name); return }
   # A search that was cut says so on stderr; the model must see that line, so it
-  # follows the results (outside the byte budget).
-  if (mc_rc == 0) mc_tool_result(id, r, (name == "knotlog_search" ? mc_out mc_msg : mc_out), 0)
+  # follows the results (outside the byte budget). 5 (pending_review) and 6
+  # (already_remembered) are outcomes, not failures.
+  if (mc_rc == 0 || mc_rc == 5 || mc_rc == 6) mc_tool_result(id, r, (name == "knotlog_search" ? mc_out mc_msg : mc_out), 0)
   else mc_tool_result(id, r, (mc_msg != "" ? mc_msg : "knotlog exited with status " mc_rc), 1)
 }
 

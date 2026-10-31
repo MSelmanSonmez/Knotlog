@@ -265,6 +265,25 @@ many bytes to free and how (`knotlog compact --apply`, `knotlog archive`, or a
 larger `ctx_max`). What happened in a past session does not belong here; it
 stays in the session notes, where `knotlog search` finds it.
 
+The new line starts with today's date and time (`- YYYY-MM-DD HH:MM`), so
+`doctor` can tell how old it is: when active lines carry no date newer than
+`stale_days=` days (`.knotlog/config`, default 30), it prints one warning with
+the count and the oldest line. Undated lines are not counted.
+
+Both forms of `note` refuse a text that looks like a secret (an API key, a
+token, a private key) with exit 4. If you want to see every line before it
+lands, set `write_approval=on` in `.knotlog/config`: notes then wait in
+`.knotlog/pending` until you run `knotlog pending --approve N` (or
+`--reject N`); a line that reads as an order to the agent ("from now on you
+must …") is refused, and one with "tomorrow" waits so you can give it a date.
+
+After a busy stretch (more than 40 logged events), Knotlog asks the agent once,
+at the end of a turn or at the next session start, whether the work left a
+lesson, a workflow worth a skill, or a corrected mistake. The agent answers
+with `knotlog propose --kind lesson|skill|fix "<text>"`; the finding waits in
+`knotlog pending` for your `--approve N` and is never written on its own (no
+skill file either). `review=off` in `.knotlog/config` turns the ask off.
+
 ### The rules file
 
 `init` seeds **`Rules.md`** (`Kurallar.md` in a Turkish vault) at the vault
@@ -469,7 +488,7 @@ outside the vault, set `KNOTLOG_VAULT` to the vault folder. Details:
 ## 9. Knobs
 
 Vault settings live in `.knotlog/config` as plain `key=value` lines: `layout`,
-`lang`, `fold`, `user`, `companion`, `purpose`, `tone`, `flair`, `ctx_max`. Changing
+`lang`, `fold`, `user`, `companion`, `purpose`, `tone`, `flair`, `ctx_max`, `stale_days`, `write_approval`. Changing
 `fold` requires `knotlog index --full` afterwards; the others take effect on
 the next command. `ctx_max` is never written by `init` — it already has a
 working default (4096), so add the line by hand only if you want to override
