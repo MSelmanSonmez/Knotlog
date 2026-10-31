@@ -146,6 +146,19 @@ $ knotlog import /tmp/chat.jsonl --date 2026-08-29
 wrote: 📆 Sessions/2026-08-29-import-chat.jsonl.md
 ```
 
+**`knotlog import claude`** — turn your old Claude Code sessions into session
+notes, one note per transcript, from the folder Claude Code keeps for this
+vault (`~/.claude/projects/<vault path>`; `--project DIR` picks another). It
+is a dry run until you add `--apply`, keeps only what you and the assistant
+wrote (no tool calls, tool output or thinking), masks secret-shaped lines and
+paths outside the vault, and skips a session it already imported.
+
+```
+$ knotlog import claude
+would import	📆 Sessions/2026-10-01-claude-0f3a9c2e.md	4	2	0f3a9c2e-….jsonl
+$ knotlog import claude --apply
+```
+
 **`knotlog plan <name> --proje <Project>`** — open a plan note where plans
 belong: `<projects>/<Project>/<Plans>/<name>.md`, seeded from the localized
 front-matter template and opened in `$EDITOR` when set. Plans are memory —

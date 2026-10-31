@@ -147,6 +147,19 @@ $ knotlog import /tmp/chat.jsonl --date 2026-08-29
 yazıldı: 📆 Oturumlar/2026-08-29-import-chat.jsonl.md
 ```
 
+**`knotlog import claude`** — eski Claude Code oturumlarını oturum notuna
+çevirir: Claude Code'un bu kasa için tuttuğu klasördeki (`~/.claude/projects/<kasa yolu>`;
+`--project DİZİN` başkasını seçer) her döküm için bir not. `--apply` eklenene
+kadar kuru çalışır; yalnız senin ve asistanın yazdığını alır (araç çağrısı,
+araç çıktısı ve düşünce yok), sır biçimli satırları ve kasa dışı yolları
+maskeler, daha önce aktarılmış oturumu atlar.
+
+```
+$ knotlog import claude
+aktarılacak	📆 Oturumlar/2026-10-01-claude-0f3a9c2e.md	4	2	0f3a9c2e-….jsonl
+$ knotlog import claude --apply
+```
+
 **`knotlog plan <ad> --proje <Proje>`** — plan notunu ait olduğu yerde açar:
 `<Projeler>/<Proje>/<Planlar>/<ad>.md`, yerelleştirilmiş frontmatter'lı
 şablondan doğar, `$EDITOR` tanımlıysa içinde açılır. Planlar hafızadır —

@@ -27,7 +27,7 @@
   <!-- badge counts are re-measured at the release commit: tests = `sh tests/run.sh` -> "# pass N"; scripts = `git ls-files | grep -cE '^(knotlog|lib/.*\.awk|fold/.*\.sed)$'`; LongMemEval-S = `tests/bench/longmemeval.sh` -->
   <img src="https://img.shields.io/badge/tests-1939%20passing-brightgreen" alt="1939 件のテストが成功">
   <img src="https://img.shields.io/badge/agents-8-blue" alt="対応エージェント 8 種">
-  <img src="https://img.shields.io/badge/scripts-27-lightgrey" alt="配布スクリプト 27 本">
+  <img src="https://img.shields.io/badge/scripts-28-lightgrey" alt="配布スクリプト 28 本">
   <img src="https://img.shields.io/badge/LongMemEval--S-recall__any%405%2060.4%25-blue" alt="LongMemEval-S recall_any@5 60.4%">
 </p>
 

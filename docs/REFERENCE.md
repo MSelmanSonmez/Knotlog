@@ -205,7 +205,7 @@ left it says so and changes nothing.
 | `knotlog note --thread "<text>"` | appends one line (`- YYYY-MM-DD HH:MM <text>`) to the end of the active threads section (`Threads.md` / `Konular.md`) inside the threads block; never inside the pin block; exits 1 and writes nothing when the file or the active section is missing; exits 3 and writes nothing when the new line would push the file past the context budget (see Large vaults); shares `remember`'s lock; admission and write approval as for `note` |
 | `knotlog pending [--approve N\|--reject N]` | list the notes and proposals waiting for review (notes queue when `write_approval=on`; `propose` always queues), write one through the normal note path, or drop one; see Write approval and Review loop |
 | `knotlog propose --kind lesson\|skill\|fix "<text>"` | the agent's answer to the review ask: queue one finding in `.knotlog/pending` for the user's approval, whatever `write_approval` says; writes no vault file; see Review loop |
-| `knotlog import FILE` | convert a local JSON export with role/content messages (Claude transcript, ChatGPT export, or JSONL) into a session note (`--date YYYY-MM-DD`) |
+| `knotlog import FILE` | convert a local JSON export with role/content messages (Claude transcript, ChatGPT export, or JSONL) into a session note (`--date YYYY-MM-DD`); `import claude [--project DIR] [--apply]` turns Claude Code transcripts into session notes (dry run unless `--apply`) |
 | `knotlog plan <name> --proje <Project>` | open a plan note under `<projects>/<Project>/<Plans>/` from the localized front-matter template; a missing project folder is an error, never auto-created |
 | `knotlog tone [--list\|<slug>]` | show which tone is active and why (preset or companion.md); `--list` browses the nine shipped presets; `<slug>` writes `tone=` to `.knotlog/config` (never touches companion.md) |
 | `knotlog flair [--list\|none\|kaomoji\|emoji]` | show or set the reply flair (`flair=` in `.knotlog/config`), independent of the tone; `init --flair` and `install --flair` set it too (never touches companion.md) |
@@ -402,6 +402,13 @@ defaults to today). Days are chosen by file name, not by activity; a day with no
 `knotlog import FILE --date YYYY-MM-DD` parses a local Claude, ChatGPT, or
 JSONL role/content export (including ChatGPT's `author.role` and
 `content.parts`) and writes a Markdown session note under `<sessions>`.
+
+`knotlog import claude [--project DIR] [--apply]` reads Claude Code's own transcripts (`DIR/*.jsonl`, one event per line) and writes one session note per transcript, `<sessions>/YYYY-MM-DD-claude-<first 8 of the session id>.md`, dated by its first message. Without `--project` the folder is `${CLAUDE_CONFIG_DIR:-~/.claude}/projects/<vault path with every character other than a letter or digit turned into a dash>` (on Windows the path in its `C:\…` form); a missing folder exits 2.
+
+- Dry run by default: one row per transcript, `status<TAB>note<TAB>messages<TAB>masked lines<TAB>transcript`, nothing written. `--apply` writes and ends with `N session(s) imported, M skipped`.
+- Kept: the text of user and assistant messages, each under `### user|assistant (YYYY-MM-DD HH:MM UTC)` (times are the transcript's, in UTC). Left out: thinking, `tool_use`, any turn carrying a `tool_result`, `isMeta` and `isSidechain` events, text that opens with a harness tag (`<system-reminder>`, `<command-name>`, …) and every non-message event. The title is the session's last `custom-title`, or `Claude Code session <id>`.
+- Masked: a line matching the secret pattern of the pre-commit hook and the note gate becomes `[masked: secret-shaped line]`; an absolute path outside the vault (`/a/b`, `~/…`, `C:/…`, `C:\…`) becomes `<path outside the vault>`. The masked count in the row is lines touched.
+- Never twice: the session id is kept as `claude_session:` in the note's front matter, and a transcript whose id is already in a note of the sessions folder is skipped. A note is never overwritten (a taken name gets `-1`, `-2`). A transcript that is a link is skipped; the folder is only read.
 
 **Repairing moved vaults.** Each installed vault includes `repair-hooks`
 and `repair-hooks.ps1`. If the vault is renamed/moved or the Knotlog checkout
