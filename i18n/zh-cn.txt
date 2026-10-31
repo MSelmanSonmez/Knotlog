@@ -20,7 +20,7 @@ usage_digest=  digest    汇总某一天的活动（--date YYYY-MM-DD）或一�
 usage_note_thread=  note --thread  向活跃线索部分添加一行（note --thread "文本"）
 usage_pending=  pending   列出等待审核的笔记（write_approval=on）；--approve N 写入一条，--reject N 丢弃
 usage_propose=  propose   把一条审查发现放入待批准队列（propose --kind lesson|skill|fix "文本"；knotlog pending）
-usage_import=  import    将本地 JSON 对话导出转换为会话笔记（FILE、--date YYYY-MM-DD）
+usage_import=  import    将本地 JSON 对话导出转换为会话笔记（FILE、--date YYYY-MM-DD；claude [--project DIR] [--apply]：Claude Code 记录）
 usage_plan=  plan      根据 front-matter 模板在 <Projects>/<Project>/<Plans>/ 下创建项目计划（--proje <Project>）
 usage_tone=  tone      显示/设置当前语气预设（--list 浏览；直接给出 slug 会把 tone= 写入配置）
 usage_archive=  archive   将已关闭的标题从 Threads.md 移入归档（--list：显示标题；--dry-run：仅预览）
@@ -327,6 +327,16 @@ err_import_date=日期无效：%s（请使用 YYYY-MM-DD）
 err_digest_conflict=--date 不能与 --since 或 --until 同时使用
 err_digest_until_alone=--until 需要配合 --since
 err_import_format=对话导出不受支持或为空：%s
+import_claude_would=将导入
+import_claude_done=已导入
+import_claude_dup=已跳过（已导入）
+import_claude_empty=已跳过（无消息）
+import_claude_link=已跳过（链接）
+import_claude_summary=已导入 %d 个会话，跳过 %d 个
+import_claude_path=<保管库外的路径>
+import_claude_secret=[已遮盖：形似密钥的行]
+import_claude_untitled=Claude Code 会话 %s
+err_import_claude_dir=没有 Claude Code 记录文件夹：%s（请使用 --project DIR）
 err_limit=限制值无效：%s（请使用正整数）
 # bridge
 bridge_run=运行：knotlog context

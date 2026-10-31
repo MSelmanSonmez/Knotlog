@@ -20,7 +20,7 @@ usage_digest=  digest    tek bir tarihin etkinliklerini özetle (--date YYYY-MM-
 usage_note_thread=  note --thread  açık konular bölümüne tek satır ekle (note --thread "metin")
 usage_pending=  pending   onay bekleyen notları listeler (write_approval=on); --approve N birini yazar, --reject N düşürür
 usage_propose=  propose   inceleme bulgusunu onaya sıraya koyar (propose --kind lesson|skill|fix "metin"; knotlog pending)
-usage_import=  import    yerel JSON sohbet dışa aktarımını oturum notuna çevir (DOSYA, --date YYYY-MM-DD)
+usage_import=  import    yerel JSON sohbet dışa aktarımını oturum notuna çevir (DOSYA, --date YYYY-MM-DD; claude [--project DİZİN] [--apply]: Claude Code dökümleri)
 usage_plan=  plan      proje planını <Projeler>/<Proje>/<Planlar>/ altında frontmatter'lı şablonla açar (--proje <Proje>)
 usage_tone=  tone      etkin üslup setini gösterir/ayarlar (--list ile listele; çıplak bir slug config'e tone= yazar)
 usage_archive=  archive   Konular.md'den kapanmış bir başlığı arşive taşır (--list: başlıkları göster; --dry-run: uygulamadan önizle)
@@ -326,6 +326,16 @@ err_import_date=geçersiz tarih: %s (YYYY-MM-DD kullanın)
 err_digest_conflict=--date, --since ve --until ile birlikte kullanılamaz
 err_digest_until_alone=--until için --since gerekli
 err_import_format=desteklenmeyen veya boş sohbet dışa aktarımı: %s
+import_claude_would=aktarılacak
+import_claude_done=aktarıldı
+import_claude_dup=atlandı (zaten aktarılmış)
+import_claude_empty=atlandı (mesaj yok)
+import_claude_link=atlandı (bağ)
+import_claude_summary=%d oturum aktarıldı, %d atlandı
+import_claude_path=<kasa dışı yol>
+import_claude_secret=[maskelendi: sır biçimli satır]
+import_claude_untitled=Claude Code oturumu %s
+err_import_claude_dir=Claude Code döküm klasörü yok: %s (--project DİZİN kullan)
 err_limit=geçersiz sınır: %s (pozitif bir tamsayı kullanın)
 digest_files=Dokunulan dosyalar (en çok %d):
 # bridge

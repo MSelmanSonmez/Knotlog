@@ -20,7 +20,7 @@ usage_digest=  digest    resume la actividad de una fecha (--date YYYY-MM-DD) o 
 usage_note_thread=  note --thread  añade una línea a la sección de hilos activos (note --thread "texto")
 usage_pending=  pending   lista las notas en espera de revisión (write_approval=on); --approve N escribe una, --reject N la descarta
 usage_propose=  propose   pone en espera de aprobación un hallazgo de revisión (propose --kind lesson|skill|fix "texto"; knotlog pending)
-usage_import=  import    convierte una exportación JSON local de una conversación en una nota de sesión (FILE, --date YYYY-MM-DD)
+usage_import=  import    convierte una exportación JSON local de una conversación en una nota de sesión (FILE, --date YYYY-MM-DD; claude [--project DIR] [--apply]: transcripciones de Claude Code)
 usage_plan=  plan      abre un plan de proyecto en <Projects>/<Project>/<Plans>/ a partir de la plantilla con front matter (--proje <Project>)
 usage_tone=  tone      muestra o fija el preset de tono activo (--list para verlos; un slug solo escribe tone= en la configuración)
 usage_archive=  archive   mueve un encabezado cerrado de Threads.md al archivo (--list: muestra los encabezados; --dry-run: solo previsualiza)
@@ -327,6 +327,16 @@ err_import_date=fecha no válida: %s (usa YYYY-MM-DD)
 err_digest_conflict=--date no se puede combinar con --since ni con --until
 err_digest_until_alone=--until necesita --since
 err_import_format=exportación de conversación no compatible o vacía: %s
+import_claude_would=se importaría
+import_claude_done=importado
+import_claude_dup=omitido (ya importado)
+import_claude_empty=omitido (sin mensajes)
+import_claude_link=omitido (enlace)
+import_claude_summary=%d sesión(es) importada(s), %d omitida(s)
+import_claude_path=<ruta fuera de la bóveda>
+import_claude_secret=[enmascarado: línea con forma de secreto]
+import_claude_untitled=sesión de Claude Code %s
+err_import_claude_dir=no hay carpeta de transcripciones de Claude Code: %s (usa --project DIR)
 err_limit=límite no válido: %s (usa un entero positivo)
 # bridge
 bridge_run=Ejecuta: knotlog context

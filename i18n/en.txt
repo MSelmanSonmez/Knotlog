@@ -20,7 +20,7 @@ usage_digest=  digest    summarize one date's activity (--date YYYY-MM-DD) or a 
 usage_note_thread=  note --thread  add one line to the active threads section (note --thread "text")
 usage_pending=  pending   list notes waiting for review (write_approval=on); --approve N writes one, --reject N drops it
 usage_propose=  propose   queue a review finding for approval (propose --kind lesson|skill|fix "text"; knotlog pending)
-usage_import=  import    convert a local JSON conversation export into a session note (FILE, --date YYYY-MM-DD)
+usage_import=  import    convert a local JSON conversation export into a session note (FILE, --date YYYY-MM-DD; claude [--project DIR] [--apply]: Claude Code transcripts)
 usage_plan=  plan      open a project plan under <Projects>/<Project>/<Plans>/ from the front-matter template (--proje <Project>)
 usage_tone=  tone      show/set the active tone preset (--list to browse; a bare slug writes tone= to config)
 usage_archive=  archive   move a closed heading out of Threads.md into the archive (--list: show headings; --dry-run: preview only)
@@ -327,6 +327,16 @@ err_import_date=invalid date: %s (use YYYY-MM-DD)
 err_digest_conflict=--date cannot be combined with --since or --until
 err_digest_until_alone=--until needs --since
 err_import_format=unsupported or empty conversation export: %s
+import_claude_would=would import
+import_claude_done=imported
+import_claude_dup=skipped (already imported)
+import_claude_empty=skipped (no messages)
+import_claude_link=skipped (link)
+import_claude_summary=%d session(s) imported, %d skipped
+import_claude_path=<path outside the vault>
+import_claude_secret=[masked: secret-shaped line]
+import_claude_untitled=Claude Code session %s
+err_import_claude_dir=no Claude Code transcripts folder: %s (use --project DIR)
 err_limit=invalid limit: %s (use a positive integer)
 # bridge
 bridge_run=Run: knotlog context

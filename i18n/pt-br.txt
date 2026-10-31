@@ -20,7 +20,7 @@ usage_digest=  digest    resume a atividade de uma data (--date YYYY-MM-DD) ou d
 usage_note_thread=  note --thread  acrescenta uma linha à seção de threads ativas (note --thread "texto")
 usage_pending=  pending   lista as notas aguardando revisão (write_approval=on); --approve N grava uma, --reject N descarta
 usage_propose=  propose   deixa um achado da revisão aguardando aprovação (propose --kind lesson|skill|fix "texto"; knotlog pending)
-usage_import=  import    converte uma exportação local de conversa em JSON em uma nota de sessão (FILE, --date YYYY-MM-DD)
+usage_import=  import    converte uma exportação local de conversa em JSON em uma nota de sessão (FILE, --date YYYY-MM-DD; claude [--project DIR] [--apply]: transcrições do Claude Code)
 usage_plan=  plan      abre um plano de projeto em <Projects>/<Project>/<Plans>/ a partir do modelo com front matter (--proje <Project>)
 usage_tone=  tone      mostra/define o preset de tom ativo (--list para ver os disponíveis; um slug sozinho grava tone= na config)
 usage_archive=  archive   move um título encerrado do Threads.md para o arquivo (--list: mostra os títulos; --dry-run: só simula)
@@ -327,6 +327,16 @@ err_import_date=data inválida: %s (use YYYY-MM-DD)
 err_digest_conflict=--date não pode ser combinado com --since nem --until
 err_digest_until_alone=--until precisa de --since
 err_import_format=exportação de conversa não compatível ou vazia: %s
+import_claude_would=seria importado
+import_claude_done=importado
+import_claude_dup=ignorado (já importado)
+import_claude_empty=ignorado (sem mensagens)
+import_claude_link=ignorado (link)
+import_claude_summary=%d sessão(ões) importada(s), %d ignorada(s)
+import_claude_path=<caminho fora do cofre>
+import_claude_secret=[mascarado: linha com formato de segredo]
+import_claude_untitled=sessão do Claude Code %s
+err_import_claude_dir=sem pasta de transcrições do Claude Code: %s (use --project DIR)
 err_limit=limite inválido: %s (use um inteiro positivo)
 # bridge
 bridge_run=Execute: knotlog context

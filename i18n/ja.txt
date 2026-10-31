@@ -20,7 +20,7 @@ usage_digest=  digest    1 日分の活動 (--date YYYY-MM-DD) または期間 (
 usage_note_thread=  note --thread  進行中スレッドのセクションに 1 行追加 (note --thread "テキスト")
 usage_pending=  pending   レビュー待ちのノートを一覧 (write_approval=on)、--approve N で書き込み、--reject N で破棄
 usage_propose=  propose   レビューで得た知見を承認待ちに入れる (propose --kind lesson|skill|fix "テキスト"、knotlog pending)
-usage_import=  import    ローカルの JSON 会話エクスポートをセッションノートに変換 (FILE, --date YYYY-MM-DD)
+usage_import=  import    ローカルの JSON 会話エクスポートをセッションノートに変換 (FILE, --date YYYY-MM-DD; claude [--project DIR] [--apply]: Claude Code のトランスクリプト)
 usage_plan=  plan      フロントマター付きテンプレートから <Projects>/<Project>/<Plans>/ にプロジェクト計画を作成 (--proje <Project>)
 usage_tone=  tone      有効なトーンプリセットを表示/設定 (--list: 一覧; スラッグだけ指定すると config に tone= を書き込み)
 usage_archive=  archive   完了した見出しを Threads.md からアーカイブへ移動 (--list: 見出しを表示; --dry-run: プレビューのみ)
@@ -327,6 +327,16 @@ err_import_date=無効な日付: %s (YYYY-MM-DD 形式で指定)
 err_digest_conflict=--date は --since や --until と併用できません
 err_digest_until_alone=--until には --since が必要です
 err_import_format=未対応または空の会話エクスポートです: %s
+import_claude_would=インポート予定
+import_claude_done=インポート済み
+import_claude_dup=スキップ（インポート済み）
+import_claude_empty=スキップ（メッセージなし）
+import_claude_link=スキップ（リンク）
+import_claude_summary=%d 件のセッションをインポート、%d 件をスキップ
+import_claude_path=<保管庫外のパス>
+import_claude_secret=[マスク済み: 秘密情報の形をした行]
+import_claude_untitled=Claude Code セッション %s
+err_import_claude_dir=Claude Code のトランスクリプトフォルダがありません: %s（--project DIR を使ってください）
 err_limit=無効な上限: %s (正の整数を指定)
 # bridge
 bridge_run=実行: knotlog context
