@@ -13137,6 +13137,9 @@ t; assert_eq "T-1126: a cut MCP search ends with the omitted-results line" 'yes'
 dsv s127; printf -- '- Decision: perm [core]\n' >> "$TMP/s127/Facts.md"; chmod 600 "$TMP/s127/$DSC"
 # shellcheck disable=SC2012,SC2010
 I127=$(ls -i "$TMP/s127/$DSC" | cut -d' ' -f1)
+# NTFS ignores chmod 600 (Git Bash shows -rw-r--r--): expect the mode the file had, not a literal 600.
+# shellcheck disable=SC2012,SC2010
+B127=$(ls -l "$TMP/s127/$DSC" | cut -c1-10)
 dsl s127 --apply >/dev/null
 # shellcheck disable=SC2012,SC2010
 N127=$([ "$(ls -i "$TMP/s127/$DSC" | cut -d' ' -f1)" != "$I127" ] && printf new || printf same)
@@ -13144,17 +13147,20 @@ N127=$([ "$(ls -i "$TMP/s127/$DSC" | cut -d' ' -f1)" != "$I127" ] && printf new 
 M127=$(ls -l "$TMP/s127/$DSC" | cut -c1-10)
 # shellcheck disable=SC2012,SC2010
 L127=$(ls "$TMP/s127/850-Companion" | grep -c 'distill-tmp')
-t; assert_eq "T-1127: companion.md is replaced by rename (new inode), keeps mode 600, no .distill-tmp left" 'new -rw------- 0' "$N127 $M127 $L127"
+t; assert_eq "T-1127: companion.md is replaced by rename (new inode), keeps its mode (600 where honoured), no .distill-tmp left" "new $B127 0" "$N127 $M127 $L127"
 # T-1128: an empty facts file gets no leading blank line.
 dsv s128; : > "$TMP/s128/Facts.md"; dsl s128 --apply >/dev/null
 t; assert_eq "T-1128: first byte of a formerly empty Facts.md is the dash of the first fact" '-' "$(head -c 1 "$TMP/s128/Facts.md")"
 # T-1129: CRLF files get CRLF on the new lines (facts and companion).
-dsv s129; printf -- '- Decision: crlf up [core]\r\n' >> "$TMP/s129/Facts.md"
+dsv s129; printf -- '- Decision: crlf up [core]\n' >> "$TMP/s129/Facts.md"
 sed 's/$/\r/' "$TMP/s129/$DSC" > "$TMP/s129.c"; cat "$TMP/s129.c" > "$TMP/s129/$DSC"
 sed 's/$/\r/' "$TMP/s129/Facts.md" > "$TMP/s129.f"; cat "$TMP/s129.f" > "$TMP/s129/Facts.md"
 dsl s129 --apply >/dev/null
-t; assert_eq "T-1129: new lines end with CR LF in Facts.md and in the core block" 'yes yes' \
-  "$(grep 'first (source' "$TMP/s129/Facts.md" | od -An -c | grep -q '\\r' && printf yes || printf no) $(grep 'crlf up (source' "$TMP/s129/$DSC" | od -An -c | grep -q '\\r' && printf yes || printf no)"
+# Count CRs against lines, not grep | od: Git Bash grep drops the CR on output, and the old companion
+# rewrite there turned every line to LF. "yes" = the new line is present and every line ends in CR LF.
+crlf_all() { [ "$(grep -c "$2" "$1")" -ge 1 ] && [ "$(wc -l < "$1")" -eq "$(tr -cd '\r' < "$1" | wc -c)" ] && printf yes || printf no; }
+t; assert_eq "T-1129: Facts.md and companion.md get the new lines and stay CR LF on every line" 'yes yes' \
+  "$(crlf_all "$TMP/s129/Facts.md" 'first (source') $(crlf_all "$TMP/s129/$DSC" 'crlf up (source')"
 # T-1130: a linked facts file in a dry run says so (not "no facts file").
 if [ "$TRUE_SYMLINKS" -eq 1 ]; then
   dsv s130; printf '# out\n' > "$SO/t130.md"; rm "$TMP/s130/Facts.md"; sec_slink "$SO/t130.md" "$TMP/s130/Facts.md"
