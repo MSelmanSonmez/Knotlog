@@ -3,7 +3,7 @@
 All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.2.1] - 2026-10-31
 
 ### Fixed
 - `context --json UserPromptSubmit` (and Gemini's `BeforeAgent`) re-sent the whole session context on every prompt, about as large as the session start (up to `ctx_max`, 4 KB by default). It now carries only the `now:` line plus the memory and checkpoint reminders when they are due, as the guide already described; the full context stays a `SessionStart` job. The README's "zero token cost" line is replaced with what the hooks actually add.
