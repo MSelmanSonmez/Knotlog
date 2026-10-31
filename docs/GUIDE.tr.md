@@ -267,6 +267,13 @@ context` bu dosyayı her oturuma geri besler — bu yüzden kasadaki en yüksek
 kaldıraçlı dosya odur, ve çürümeye bırakması en ucuz dosya da odur. Kısa tut;
 kapanan bir konu yukarıda durmasın, aşağı insin.
 
+`knotlog note --thread "<metin>"` aktif bölüme satır ekler, ama yalnız dosya
+context bütçesine sığdığı sürece: `context`'in bölümü kırpmasına yol açacak satır
+reddedilir (çıkış kodu 3, hiçbir şey yazılmaz) ve mesaj kaç bayt yer açılması
+gerektiğini ve nasıl açılacağını söyler (`knotlog compact --apply`, `knotlog
+archive` ya da daha büyük bir `ctx_max`). Geçmiş bir oturumda olan şey buraya
+girmez; oturum notlarında kalır, `knotlog search` onu bulur.
+
 ### Kurallar dosyası
 
 `init`, kasanın köküne **`Kurallar.md`** (İngilizce kasada `Rules.md`)

@@ -258,6 +258,13 @@ it back into every session, which makes it the highest-leverage file in the
 vault — and the cheapest one to let rot. Keep it short; a thread that closed
 should move down, not stay at the top.
 
+`knotlog note --thread "<text>"` adds a line to the active section, but only
+while the file still fits the context budget: a line that would make `context`
+crop the section is refused (exit 3, nothing written), and the message says how
+many bytes to free and how (`knotlog compact --apply`, `knotlog archive`, or a
+larger `ctx_max`). What happened in a past session does not belong here; it
+stays in the session notes, where `knotlog search` finds it.
+
 ### The rules file
 
 `init` seeds **`Rules.md`** (`Kurallar.md` in a Turkish vault) at the vault

@@ -9,6 +9,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `knotlog search --max-bytes N` caps the output at N bytes (works with `--paths` and `--brief`; the omitted count goes to stderr). The MCP `knotlog_search` tool always applies the `ctx_max` budget.
 - `knotlog distill [--apply]` moves lines you mark up a layer: `[fact]` lines of session notes to the facts file, `[core]` lines of the facts file to the core block of `companion.md`. Dry run by default; no model, no duplicates, source lines never edited.
 - `distill` remembers what it moved in `.knotlog/distilled`, so a line removed from its target does not come back. The MCP `knotlog_search` result ends with the omitted-results line when it was cut.
+- Write-time budget: `knotlog note --thread` refuses a line that would push the threads file past the context budget, so `context` never has to crop it. It exits 3, writes nothing, and says how many bytes to free and how (`knotlog compact --apply`, `knotlog archive`, or a larger `ctx_max`). The check uses the same formula as `doctor`'s threads-overflow warning, so the warning and the refusal start at the same byte. Plain `note` (and MCP `knotlog_note`) writes the session note, which never enters context, and is not checked.
 
 ## [1.2.1] - 2026-10-31
 
