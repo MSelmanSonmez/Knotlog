@@ -14238,6 +14238,200 @@ printf 'P\t1\t2026-10-01 10:00\tlesson\tx\tbefore\rINJECTED after\nA\t1\t2026-10
 t; assert_eq "T-1376: a control character inside a stored lesson becomes a space and never a line break" '1' \
   "$(ls_body lsl | grep -c '^- 2026-10-01 \[lesson\] before INJECTED after$')"
 
+# ---- approve into a chosen target: pending --approve N --to note|facts|thread [--dry-run], /learn (T-1377..T-1394) ----
+# `--to` picks where an approved proposal lands. No --to (or note) is the old path;
+# facts reuses distill's tag check, folded dedupe, ledger and facts budget; thread is
+# `note --thread`; --dry-run names the target and the line and writes no file at all.
+p2_all() { # name -> one checksum over every file of the vault, .knotlog/ included
+  (cd "$TMP/$1" && find . -type f -print | LC_ALL=C sort |
+    while IFS= read -r _p2_f; do printf '%s ' "$_p2_f"; cksum < "$_p2_f"; done) | cksum
+}
+p2_mk() { # name [config line...] -> en vault with Threads.md and a Facts.md holding one fact
+  b3_mk "$@"
+  printf '%s\n' '# Facts' '- Decision: old fact' > "$TMP/$1/Facts.md"
+}
+p2_q() { # name kind text -> queue one proposal with propose
+  b3_run "$1" propose --kind "$2" "$3"
+}
+P2_NOTE="📆 700-Sessions/$(date +%Y-%m-%d).md"
+
+p2_mk p2d
+p2_q p2d lesson "p2 lesson text"; p2_q p2d fix "p2 fix text"; p2_q p2d skill "p2 skill text"
+R1377=
+for _p2_i in 1 2 3; do b3_run p2d pending --approve "$_p2_i"; R1377="$R1377$B3RC"; done
+t; assert_eq "T-1377: without --to, lesson/fix/skill land as prefixed lines in today's note, exit 0, A lines appended" '000 yes yes yes 3' \
+  "$R1377 $(b3_has p2d '[lesson] p2 lesson text') $(b3_has p2d '[fix] p2 fix text') $(b3_has p2d '[skill candidate] p2 skill text') $(grep -c "^A${TAB}" "$TMP/p2d/.knotlog/pending")"
+t; assert_eq "T-1377: without --to the output is note_ok and the facts file is untouched" 'yes yes' \
+  "$([ "$(cat "$TMP/p2d.out")" = "$(memfmt en note_ok "$P2_NOTE")" ] && printf yes || printf no) $([ "$(cksum < "$TMP/p2d/Facts.md")" = "$(printf '# Facts\n- Decision: old fact\n' | cksum)" ] && printf yes || printf no)"
+
+p2_mk p2n; p2_mk p2n0
+p2_q p2n lesson "p2 same bytes"; p2_q p2n0 lesson "p2 same bytes"
+b3_run p2n pending --approve 1 --to note; R1378=$B3RC
+b3_run p2n0 pending --approve 1; R1378B=$B3RC
+t; assert_eq "T-1378: --to note and no --to write the same line (only the clock may differ) and print the same message" "0 0 yes yes" \
+  "$R1378 $R1378B $([ "$(sed 's/^- [0-9][0-9]:[0-9][0-9] /- /' "$TMP/p2n/$P2_NOTE" | cksum)" = "$(sed 's/^- [0-9][0-9]:[0-9][0-9] /- /' "$TMP/p2n0/$P2_NOTE" | cksum)" ] && printf yes || printf no) $([ "$(cksum < "$TMP/p2n.out")" = "$(cksum < "$TMP/p2n0.out")" ] && printf yes || printf no)"
+
+p2_mk p2f
+p2_q p2f lesson "Decision: p2 use the fact path"; p2_q p2f lesson "Preference: p2 second fact"
+b3_run p2f pending --approve 1 --to facts; R1379=$B3RC
+t; assert_eq "T-1379: --to facts on a tagged text exits 0, appends '- <text> (source: pending #N)' to Facts.md and prints pending_facts_ok" "0 - Decision: p2 use the fact path (source: pending #1) yes" \
+  "$R1379 $(tail -n 1 "$TMP/p2f/Facts.md") $([ "$(cat "$TMP/p2f.out")" = "$(memfmt en pending_facts_ok Facts.md)" ] && printf yes || printf no)"
+t; assert_eq "T-1379: the ledger gets 'facts<TAB>folded text', an A line closes #1, no session note is written, the [lesson] prefix is not in Facts.md" "facts${TAB}decision: p2 use the fact path A${TAB}1 no no" \
+  "$(cat "$TMP/p2f/.knotlog/distilled") $(tail -n 1 "$TMP/p2f/.knotlog/pending" | cut -f 1-2) $(b3_yn test -e "$TMP/p2f/$P2_NOTE") $(b3_yn grep -qF '[lesson]' "$TMP/p2f/Facts.md")"
+b3_run p2f pending --approve 2 --to facts
+t; assert_eq "T-1379: a second tagged proposal is appended after the first, old fact kept" '0 3 - Decision: old fact' \
+  "$B3RC $(grep -c '^- ' "$TMP/p2f/Facts.md") $(sed -n 2p "$TMP/p2f/Facts.md")"
+
+p2_mk p2u
+p2_q p2u lesson "an untagged observation"; p2_q p2u lesson "Decisions: not a tag"
+A1380=$(p2_all p2u); R1380=
+for _p2_i in 1 2; do b3_run p2u pending --approve "$_p2_i" --to facts; R1380="$R1380$B3RC"; done
+t; assert_eq "T-1380: --to facts on an untagged text (or a tag without the colon) exits 2 and changes no file, the proposals stay open" '22 yes 2' \
+  "$R1380 $([ "$(p2_all p2u)" = "$A1380" ] && printf yes || printf no) $(QUIPU_LANG=en QUIPU_VAULT="$TMP/p2u" sh "$ROOT/knotlog" pending </dev/null | wc -l | tr -d ' ')"
+b3_run p2u pending --approve 1 --to facts
+t; assert_eq "T-1380: the refusal names the proposal and the tags" 'yes yes' \
+  "$(b3_yn grep -qF '#1' "$TMP/p2u.err") $(b3_yn grep -qF 'Preference|Decision|Convention' "$TMP/p2u.err")"
+
+p2_mk p2x
+p2_q p2x lesson "Decision: OLD fact"; p2_q p2x lesson "Decision: p2 once"; p2_q p2x lesson "decision: P2 ONCE"
+A1381=$(p2_all p2x); b3_run p2x pending --approve 1 --to facts; R1381=$B3RC
+t; assert_eq "T-1381: a text already in Facts.md (case-folded) exits 2, writes nothing, the proposal stays open" '2 yes' \
+  "$R1381 $([ "$(p2_all p2x)" = "$A1381" ] && printf yes || printf no)"
+b3_run p2x pending --approve 2 --to facts; b3_run p2x pending --approve 3 --to facts; R1381B=$B3RC
+t; assert_eq "T-1381: the same text twice adds one line: the second approval exits 2 and the ledger holds one row" '2 1 1' \
+  "$R1381B $(grep -c 'p2 once' "$TMP/p2x/Facts.md") $(wc -l < "$TMP/p2x/.knotlog/distilled" | tr -d ' ')"
+
+p2_mk p2b ctx_max=600
+printf '%s\n' '# Facts' "- Decision: $(b3_x 120)" "- Decision: $(b3_x 120)y" > "$TMP/p2b/Facts.md"
+p2_q p2b lesson "Decision: p2 one line too many $(b3_x 100)"
+A1382=$(p2_all p2b); b3_run p2b pending --approve 1 --to facts; R1382=$B3RC
+t; assert_eq "T-1382: --to facts past the facts budget exits 3, says so, writes nothing, no ledger, no lock, the proposal stays open" '3 yes no no' \
+  "$R1382 $([ "$(p2_all p2b)" = "$A1382" ] && printf yes || printf no) $(b3_yn test -e "$TMP/p2b/.knotlog/distilled") $(b3_yn test -e "$TMP/p2b/.knotlog/remember.lock")"
+t; assert_eq "T-1382: the budget message is err_facts_budget" 'yes' \
+  "$(b3_yn grep -qF 'the facts section of Facts.md would be' "$TMP/p2b.err")"
+printf 'ctx_max=100000\nlang=en\n' > "$TMP/p2b/.knotlog/config"
+b3_run p2b pending --approve 1 --to facts
+t; assert_eq "T-1382: the same approval fits once the budget is wide (so the budget was the only reason)" '0' "$B3RC"
+
+p2_mk p2m; rm "$TMP/p2m/Facts.md"; p2_q p2m lesson "Decision: p2 no file"
+A1383=$(p2_all p2m); b3_run p2m pending --approve 1 --to facts
+t; assert_eq "T-1383: --to facts without a facts file exits 1, creates nothing, the proposal stays open" '1 yes' \
+  "$B3RC $([ "$(p2_all p2m)" = "$A1383" ] && printf yes || printf no)"
+if [ "$TRUE_SYMLINKS" -eq 1 ]; then
+  p2_mk p2l; rm "$TMP/p2l/Facts.md"; printf '# out\n' > "$SO/p2l.md"; sec_slink "$SO/p2l.md" "$TMP/p2l/Facts.md"
+  p2_q p2l lesson "Decision: p2 through a link"; C1383=$(cksum < "$SO/p2l.md")
+  b3_run p2l pending --approve 1 --to facts
+  t; assert_eq "T-1383: a facts file that is a link is refused (exit 1), the outside file is untouched, no ledger" '1 yes no' \
+    "$B3RC $([ "$(cksum < "$SO/p2l.md")" = "$C1383" ] && printf yes || printf no) $(b3_yn test -e "$TMP/p2l/.knotlog/distilled")"
+else
+  t; skip "T-1383: linked facts file" "no native symlinks on this host"
+fi
+
+p2_mk p2t
+p2_q p2t lesson "p2 to the threads list"
+b3_run p2t pending --approve 1 --to thread; R1385=$B3RC
+t; assert_eq "T-1385: --to thread writes the bare text as a dated line in the active threads section, prints thread_ok, closes #1" "0 1 yes A${TAB}1 no" \
+  "$R1385 $(grep -c -- '^- [0-9-]* [0-9:]* p2 to the threads list$' "$TMP/p2t/Threads.md") $([ "$(cat "$TMP/p2t.out")" = "$(memfmt en thread_ok Threads.md)" ] && printf yes || printf no) $(tail -n 1 "$TMP/p2t/.knotlog/pending" | cut -f 1-2) $(b3_yn test -e "$TMP/p2t/$P2_NOTE")"
+p2_mk p2tb ctx_max=600
+printf '%s\n' '# Threads' '<!-- knotlog:threads:start -->' '### Active threads' '- a' '### Closed threads' "- $(b3_x 2000)" '<!-- knotlog:threads:end -->' > "$TMP/p2tb/Threads.md"
+p2_q p2tb lesson "p2 over the threads budget"; A1385=$(p2_all p2tb)
+b3_run p2tb pending --approve 1 --to thread
+t; assert_eq "T-1385: --to thread past the threads budget exits 3, writes nothing, no A line, the proposal stays open" '3 yes' \
+  "$B3RC $([ "$(p2_all p2tb)" = "$A1385" ] && printf yes || printf no)"
+
+p2_mk p2r
+p2_q p2r lesson "Decision: p2 dry facts"; p2_q p2r fix "p2 dry note"; p2_q p2r lesson "p2 dry thread"; p2_q p2r lesson "p2 untagged dry"
+A1386=$(p2_all p2r); R1386=; O1386=
+b3_run p2r pending --approve 1 --to facts --dry-run; R1386="$B3RC"; O1386="$(cat "$TMP/p2r.out")"
+b3_run p2r pending --approve 2 --dry-run; R1386="$R1386$B3RC"; O1386="$O1386|$(cat "$TMP/p2r.out")"
+b3_run p2r pending --approve 3 --to thread --dry-run; R1386="$R1386$B3RC"; O1386="$O1386|$(cat "$TMP/p2r.out")"
+b3_run p2r pending --approve 2 --dry-run --to note; R1386="$R1386$B3RC"
+t; assert_eq "T-1386: --dry-run exits 0 for facts, note, thread and writes no file at all (every vault file, .knotlog/ included, keeps its bytes)" '0000 yes' \
+  "$R1386 $([ "$(p2_all p2r)" = "$A1386" ] && printf yes || printf no)"
+t; assert_eq "T-1386: --dry-run prints the target path and the exact line for each target" "$(memfmt en pending_dry Facts.md)
+- Decision: p2 dry facts (source: pending #1)|$(memfmt en pending_dry "$P2_NOTE")
+- HH:MM [fix] p2 dry note|$(memfmt en pending_dry Threads.md)
+- YYYY-MM-DD HH:MM p2 dry thread" \
+  "$(printf '%s' "$O1386" | sed 's/^- [0-9][0-9]:[0-9][0-9] /- HH:MM /; s/^- [0-9-]* [0-9][0-9]:[0-9][0-9] /- YYYY-MM-DD HH:MM /; s/|- [0-9][0-9]:[0-9][0-9] /|- HH:MM /')"
+b3_run p2r pending --approve 4 --to facts --dry-run; R1386B=$B3RC
+t; assert_eq "T-1386: --dry-run still reports a refusal with its exit code (untagged -> 2) and writes nothing" '2 yes' \
+  "$R1386B $([ "$(p2_all p2r)" = "$A1386" ] && printf yes || printf no)"
+b3_run p2r pending --approve 1 --to facts
+t; assert_eq "T-1386: after the dry runs the real approval still works" '0' "$B3RC"
+
+p2_mk p2a
+p2_q p2a lesson "Decision: p2 args"
+A1387=$(p2_all p2a); R1387=
+for _p2_a in "--to facts" "--approve 1 --to bogus" "--approve 1 --to" "--approve 1 --bogus" "--reject 1 --to facts" "--reject 1 --dry-run" "--approve 1 facts"; do
+  # shellcheck disable=SC2086
+  b3_run p2a pending $_p2_a; R1387="$R1387$B3RC"
+done
+t; assert_eq "T-1387: an unknown or missing --to value, a stray word, or --to/--dry-run with --reject all exit 2 and change nothing" '2222222 yes' \
+  "$R1387 $([ "$(p2_all p2a)" = "$A1387" ] && printf yes || printf no)"
+b3_run p2a pending --approve 1 --to bogus
+t; assert_eq "T-1387: the unknown-target message names the value" 'yes' "$(b3_yn grep -qF 'bogus' "$TMP/p2a.err")"
+
+p2_mk p2s
+printf 'P\t1\t2026-10-30 10:00\tlesson\tpolicy_review_first\tDecision: key %s\n' "$B3_GHP" > "$TMP/p2s/.knotlog/pending"
+A1388=$(p2_all p2s); R1388=
+for _p2_a in "--to note" "--to facts" "--to thread" "--to facts --dry-run"; do
+  # shellcheck disable=SC2086
+  b3_run p2s pending --approve 1 $_p2_a; R1388="$R1388$B3RC"
+done
+t; assert_eq "T-1388: a secret-shaped proposal is refused on approval for every target (exit 4) and nothing changes" '4444 yes' \
+  "$R1388 $([ "$(p2_all p2s)" = "$A1388" ] && printf yes || printf no)"
+p2_mk p2w write_approval=on
+printf 'P\t1\t2026-10-30 10:00\tlesson\tpolicy_review_first\tDecision: you must always do this\n' > "$TMP/p2w/.knotlog/pending"
+A1388B=$(p2_all p2w); b3_run p2w pending --approve 1 --to facts
+t; assert_eq "T-1388: with write_approval=on an instruction-shaped text is refused for facts too (exit 4)" '4 yes' \
+  "$B3RC $([ "$(p2_all p2w)" = "$A1388B" ] && printf yes || printf no)"
+
+mkvault p2tr; printf '%s\n' lang=tr layout=plain > "$TMP/p2tr/.knotlog/config"
+printf '# Gerçekler\n- Karar: eski\n' > "$TMP/p2tr/Gerçekler.md"
+QUIPU_VAULT="$TMP/p2tr" sh "$ROOT/knotlog" propose --kind lesson "Karar: p2 türkçe çalıştı" </dev/null >/dev/null 2>&1
+QUIPU_VAULT="$TMP/p2tr" sh "$ROOT/knotlog" propose --kind lesson "etiketsiz gözlem" </dev/null >/dev/null 2>&1
+QUIPU_VAULT="$TMP/p2tr" sh "$ROOT/knotlog" pending --approve 1 --to facts </dev/null >"$TMP/p2tr.out" 2>&1; R1389=$?
+QUIPU_VAULT="$TMP/p2tr" sh "$ROOT/knotlog" pending --approve 2 --to facts </dev/null >"$TMP/p2tr.err" 2>&1; R1389B=$?
+t; assert_eq "T-1389: a Turkish vault appends to Gerçekler.md with the 'kaynak' suffix and the Turkish tags; an untagged text exits 2 in Turkish" "0 - Karar: p2 türkçe çalıştı (kaynak: pending #1) 2 yes" \
+  "$R1389 $(tail -n 1 "$TMP/p2tr/Gerçekler.md") $R1389B $(grep -qF 'Tercih|Karar|Konvansiyon' "$TMP/p2tr.err" && printf yes || printf no)"
+
+# T-1390: setup claude also places the /learn command; the same never-overwrite rule as the hook file.
+LEARN_SRC="$ROOT/adapters/claude-code-learn.md"
+mkvault p2su; (cd "$TMP/p2su" && QUIPU_LANG=en sh "$ROOT/knotlog" setup claude >"$TMP/p2su.out" 2>&1 </dev/null)
+t; assert_eq "T-1390: setup claude writes .claude/commands/learn.md byte-identical to the shipped command and reports it; settings.json is still the adapter" 'yes yes 2' \
+  "$(cmp -s "$LEARN_SRC" "$TMP/p2su/.claude/commands/learn.md" && printf yes || printf no) $(cmp -s "$ROOT/adapters/claude-code.json" "$TMP/p2su/.claude/settings.json" && printf yes || printf no) $(grep -c 'written to' "$TMP/p2su.out")"
+touch_at 1000000000 "$TMP/p2su/.claude/commands/learn.md" "$TMP/p2su/.claude/settings.json"
+M1390=$(mtime "$TMP/p2su/.claude/commands/learn.md"); M1390S=$(mtime "$TMP/p2su/.claude/settings.json")
+(cd "$TMP/p2su" && QUIPU_LANG=en sh "$ROOT/knotlog" setup claude >"$TMP/p2su2.out" 2>&1 </dev/null)
+t; assert_eq "T-1390: a second run is up to date for both files and touches neither (mtime unchanged)" '2 yes yes' \
+  "$(grep -c 'already up to date' "$TMP/p2su2.out") $([ "$(mtime "$TMP/p2su/.claude/commands/learn.md")" = "$M1390" ] && printf yes || printf no) $([ "$(mtime "$TMP/p2su/.claude/settings.json")" = "$M1390S" ] && printf yes || printf no)"
+printf 'my own learn command\n' > "$TMP/p2su/.claude/commands/learn.md"; C1390=$(cksum < "$TMP/p2su/.claude/commands/learn.md")
+(cd "$TMP/p2su" && QUIPU_LANG=en sh "$ROOT/knotlog" setup claude >"$TMP/p2su3.out" 2>&1 </dev/null)
+t; assert_eq "T-1390: a differing learn.md is not overwritten and the output says preserved, naming the shipped file" 'yes yes yes' \
+  "$([ "$(cksum < "$TMP/p2su/.claude/commands/learn.md")" = "$C1390" ] && printf yes || printf no) $(b3_yn grep -qF 'preserved' "$TMP/p2su3.out") $(b3_yn grep -qF 'claude-code-learn.md' "$TMP/p2su3.out")"
+mkvault p2sd; (cd "$TMP/p2sd" && QUIPU_LANG=en sh "$ROOT/knotlog" setup claude --dry-run >"$TMP/p2sd.out" 2>&1 </dev/null)
+t; assert_eq "T-1390: setup claude --dry-run mentions learn.md and creates no .claude folder" '1 no' \
+  "$(grep -c 'commands.learn.md' "$TMP/p2sd.out") $(b3_yn test -e "$TMP/p2sd/.claude")"
+mkvault p2sc; (cd "$TMP/p2sc" && QUIPU_LANG=en sh "$ROOT/knotlog" setup codex >/dev/null 2>&1 </dev/null)
+t; assert_eq "T-1390: other agents get no learn.md" 'no' "$(b3_yn test -e "$TMP/p2sc/.claude")"
+t; assert_eq "T-1391: the shipped /learn command queues with knotlog propose --kind lesson, shows the three --to targets, never approves itself and honours off the record" 'yes yes yes yes yes yes yes' \
+  "$(b3_yn grep -qF 'knotlog propose --kind lesson' "$LEARN_SRC") $(b3_yn grep -qF 'knotlog pending --approve N --to note' "$LEARN_SRC") $(b3_yn grep -qF 'knotlog pending --approve N --to facts' "$LEARN_SRC") $(b3_yn grep -qF 'knotlog pending --approve N --to thread' "$LEARN_SRC") $(b3_yn grep -qF 'Do not approve it yourself' "$LEARN_SRC") $(b3_yn grep -qF 'off the record' "$LEARN_SRC") $(b3_yn grep -q '^description: ' "$LEARN_SRC")"
+
+# T-1392: the review ask tells the agent to stay silent about off-the-record talk, in every language, and stays under 600 bytes filled in.
+P2_OFF=; P2_LEN=
+for _p2_l in en:'off the record' tr:'kayıt dışı' es:'fuera de registro' pt-br:'fora do registro' ja:'オフレコ' zh-cn:'不记录'; do
+  _p2_c=${_p2_l%%:*}; _p2_w=${_p2_l#*:}
+  mi18n "$_p2_c" ctx_review_ask | grep -qF -- "$_p2_w" || P2_OFF="$P2_OFF $_p2_c"
+  _p2_n=$(memfmt "$_p2_c" ctx_review_ask 123 'src/a.md, src/b.md, src/c.md' | LC_ALL=C wc -c | tr -d ' ')
+  [ "$_p2_n" -lt 600 ] || P2_LEN="$P2_LEN $_p2_c=$_p2_n"
+done
+t; assert_eq "T-1392: ctx_review_ask carries the off-the-record sentence in all six languages" '' "$P2_OFF"
+t; assert_eq "T-1392: ctx_review_ask, filled with a 3-digit count and three 12-byte paths, stays under 600 bytes in all six languages" '' "$P2_LEN"
+t; assert_eq "T-1393: the new pending keys exist in all six language files" '6 6 6 6 6 6' \
+  "$(for _p2_k in err_pending_to err_pending_untagged err_pending_dup err_pending_nofacts pending_dry pending_facts_ok; do grep -l "^$_p2_k=." "$ROOT"/i18n/*.txt | wc -l | tr -d ' '; done | paste -sd' ' -)"
+t; assert_eq "T-1394: usage_pending and err_pending_args name --to and --dry-run in all six language files" '' \
+  "$(for _p2_f in "$ROOT"/i18n/*.txt; do grep '^usage_pending=' "$_p2_f" | grep -qF -- '--to note|facts|thread' && grep '^err_pending_args=' "$_p2_f" | grep -qF -- '--dry-run' || printf '%s ' "${_p2_f##*/}"; done)"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
