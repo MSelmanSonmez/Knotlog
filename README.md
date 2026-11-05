@@ -145,7 +145,7 @@ The ones you will actually type; the full table is in [docs/REFERENCE.md](docs/R
 | `knotlog doctor` | check the setup: tools, agents, broken links, uncommitted memory |
 | `knotlog search <terms>` | find notes (BM25, accent-folded; `--tag`/`--status` filters) |
 | `knotlog note "<text>"` | add one line to today's session reflection |
-| `knotlog pending` | review queued notes and proposals before they are written (notes queue when `write_approval=on`; `propose` always queues; `--approve N`, `--reject N`) |
+| `knotlog pending` | review queued notes and proposals before they are written (notes queue when `write_approval=on`; `propose` always queues; `--approve N`, `--reject N`; `--approve N --to note\|facts\|thread [--dry-run]` picks the target; `/learn` in Claude Code queues a lesson) |
 | `knotlog context` | print what the agent sees at session start |
 | `knotlog tui` | browse the newest session notes in the terminal |
 | `knotlog plan <name> --proje <Project>` | open a plan note inside a project |

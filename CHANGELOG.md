@@ -7,6 +7,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Approved lessons come back at session start: `knotlog context` lists the newest `lessons=N` (default 5, `0` = off) approved `lesson`/`fix`/`skill` proposals of `.knotlog/pending` as one short line each, inside the `ctx_max` budget (dropped lines are counted in one note). Instruction-shaped text is skipped, `note`/`thread` proposals never enter, and a vault with no approved lesson prints exactly what it printed before. `doctor` warns when approved lessons exist but none fits the budget.
+- `knotlog pending --approve N [--to note|facts|thread] [--dry-run]`: choose where an approved proposal lands. No `--to` (or `note`) is the old path, byte for byte. `facts` appends `- <text> (source: pending #N)` to the facts file under distill's own rules: the text must open with a `distill_tags` tag and a colon, a duplicate or a ledger hit is refused, the facts budget holds (exit 3), the folded text goes into `.knotlog/distilled`; a refusal exits 2 (1 for a missing or linked facts file) and leaves the proposal open. `thread` is `note --thread` (budget refusal exits 3, proposal stays open). `--dry-run` prints the target and the exact line and writes no file. An unknown `--to` exits 2. Admission (secret, instruction) runs again for every target.
+- `knotlog setup claude` also writes `.claude/commands/learn.md` (`adapters/claude-code-learn.md`): a `/learn` slash command that queues one lasting lesson with `knotlog propose --kind lesson` and lists the `--to` choices; it never approves itself. Same rule as the hook file: written only when absent, an identical file is untouched, a different one is preserved with a warning.
+- The review ask (`ctx_review_ask`, all six languages) now tells the agent to propose nothing from a conversation the user called off the record; still under 600 bytes.
 
 ## [1.5.0] - 2026-10-31
 
