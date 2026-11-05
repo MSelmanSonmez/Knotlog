@@ -3,6 +3,11 @@
 All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- Approved lessons come back at session start: `knotlog context` lists the newest `lessons=N` (default 5, `0` = off) approved `lesson`/`fix`/`skill` proposals of `.knotlog/pending` as one short line each, inside the `ctx_max` budget (dropped lines are counted in one note). Instruction-shaped text is skipped, `note`/`thread` proposals never enter, and a vault with no approved lesson prints exactly what it printed before. `doctor` warns when approved lessons exist but none fits the budget.
+
 ## [1.5.0] - 2026-10-31
 
 ### Added
