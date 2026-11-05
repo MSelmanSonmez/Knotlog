@@ -6430,6 +6430,13 @@ _q_note_thread_write() {
   if [ "$_q_thr_crop" -gt "$_q_thr_bud" ]; then
     _q_die err_budget_full 3 "${_q_nt_tp#"$_q_nt_v"/}" "$_q_thr_crop" "$_q_thr_bud" "$((_q_thr_crop - _q_thr_bud))"
   fi
+  # `pending --approve --dry-run`: every check above ran; show the line, write nothing.
+  if [ "${_q_nt_dry:-0}" = 1 ]; then
+    # shellcheck disable=SC2059
+    printf "$(_q_msg pending_dry)\n" "${_q_nt_tp#"$_q_nt_v"/}"
+    cat "$_q_nt_line"
+    return 0
+  fi
   mv -f "$_q_nt_tmp" "$_q_nt_tp" || _q_die err_note_write 1 "${_q_nt_tp#"$_q_nt_v"/}"
 
   # shellcheck disable=SC2059
@@ -6504,6 +6511,15 @@ _q_note_plain_write() {
   _q_rel="$_q_sessions/$_q_day.md"
   _q_now=$(date +%H:%M)
   _q_note_file="$_q_v/$_q_rel"
+
+  # `pending --approve --dry-run`: name the target and the line, take no lock, write nothing.
+  if [ "${_q_np_dry:-0}" = 1 ]; then
+    _q_safe_target "$_q_v" "$_q_note_file" || _q_die err_unsafe_write 1 "$_q_rel"
+    # shellcheck disable=SC2059
+    printf "$(_q_msg pending_dry)\n" "$_q_rel"
+    printf '%s %s %s\n' '-' "$_q_now" "$_q_note_text"
+    return 0
+  fi
 
   # Same lock as remember: the two commands edit the same session file.
   _q_lock="$_q_v/$_q_SD/remember.lock"
@@ -6884,20 +6900,95 @@ _q_pending_open() {
     END { for (i = 1; i <= n; i++) if (!(id[i] in done)) print ln[i] }' "$1"
 }
 
-_q_cmd_pending() {
-  # knotlog pending [--approve N | --reject N] -- the write-approval queue.
-  # A list row is the P line without its leading "P<TAB>".
-  case "$#:${1:-}" in
-    0:) _q_pd_op=list ;;
-    2:--approve | 2:--reject)
-      _q_pd_op=${1#--}
-      case "$2" in
-        '' | *[!0-9]* | 0*) _q_die err_pending_args 2 ;;
-      esac
-      _q_pd_id=$2
-      ;;
-    *) _q_die err_pending_args 2 ;;
+_q_pending_facts() {
+  # _q_pending_facts ID TEXT DRY -- `pending --approve N --to facts`: one line
+  # at the end of the facts file, planned by distill's own machinery (tag
+  # check, folded dedupe, .knotlog/distilled ledger, facts budget). Nothing
+  # is written unless every check passes; the caller appends A afterwards.
+  _q_pf_id=$1
+  _q_pf_text=$2
+  _q_pf_dry=$3
+  _q_tab=$(printf '\t')
+  _q_ds_prof=$(_q_fold_prof "$_q_v")
+  _q_ds_srcw=$(_q_msg distill_source)
+  _q_ds_facts=$(_q_facts_path "$_q_v")
+  _q_ds_led="$_q_v/$_q_SD/distilled"
+  _q_pf_rel=${_q_ds_facts#"$_q_v"/}
+  [ -f "$_q_ds_facts" ] || _q_die err_pending_nofacts 1 "$_q_pf_rel"
+  _q_guard "$_q_v" "$_q_ds_facts"
+  _q_ds_t=$(mktemp -d "${TMPDIR:-/tmp}/knotlog-pending-XXXXXX") || exit 1
+  trap 'rm -rf "$_q_ds_t"' EXIT HUP INT TERM
+  if [ "$_q_pf_dry" = 0 ]; then
+    _q_pending_lock
+    trap 'rm -rf "$_q_ds_t"; rm -f "$_q_pl_lock/pid"; rmdir "$_q_pl_lock" 2>/dev/null || true' EXIT HUP INT TERM
+  fi
+  export DS_FACT DS_CORE DS_TAGS DS_SRC DS_PRE DS_MARK DS_ADD DS_LABEL DS_TIME DS_COUNT
+  DS_FACT=$(_q_msg distill_fact_mark)
+  DS_CORE=$(_q_msg distill_core_mark)
+  DS_TAGS=$(_q_msg distill_tags)
+  DS_SRC=$_q_ds_srcw
+  DS_PRE="$_q_v/"
+  printf -- '- %s\n' "$_q_pf_text" > "$_q_ds_t/txt"
+  _q_pf_clean=$(awk -v mode=key -f "$_q_HOME/lib/distill.awk" "$_q_ds_t/txt" </dev/null)
+  printf 'pending #%s\t%s\n' "$_q_pf_id" "$_q_pf_clean" > "$_q_ds_t/c1"
+  awk -v mode=key -f "$_q_HOME/lib/distill.awk" "$_q_ds_facts" </dev/null > "$_q_ds_t/k1"
+  _q_ds_plan 1 "$_q_ds_t/k1" "$_q_ds_t/c1" "$_q_ds_t/p1" facts
+  case $(cut -f1 "$_q_ds_t/p1") in
+    ADD) ;;
+    DUP) _q_die err_pending_dup 2 "$_q_pf_id" "$_q_pf_rel" ;;
+    *) _q_die err_pending_untagged 2 "$_q_pf_id" "$DS_TAGS" ;;
   esac
+  awk -F"$_q_tab" -v s="$_q_ds_srcw" '{ print "- " $3 " (" s ": " $2 ")" }' "$_q_ds_t/p1" > "$_q_ds_t/a1"
+  awk -F"$_q_tab" -v OFS="$_q_tab" '{ print "facts", $4 }' "$_q_ds_t/p1" > "$_q_ds_t/l1"
+  _q_ds_n1=1
+  # shellcheck disable=SC2086 # $_q_ds_over is three numbers, split on purpose
+  _q_ds_fits || _q_die err_facts_budget 3 "$_q_pf_rel" $_q_ds_over
+  if [ "$_q_pf_dry" = 1 ]; then
+    # shellcheck disable=SC2059
+    printf "$(_q_msg pending_dry)\n" "$_q_pf_rel"
+    cat "$_q_ds_t/a1"
+    return 0
+  fi
+  _q_ds_append "$_q_ds_facts" || _q_die err_note_write 1 "$_q_pf_rel"
+  _q_guard "$_q_v" "$_q_ds_led"
+  cat "$_q_ds_t/l1" >> "$_q_ds_led" || _q_die err_note_write 1 "$_q_SD/distilled"
+  # shellcheck disable=SC2059
+  printf "$(_q_msg pending_facts_ok)\n" "$_q_pf_rel"
+}
+
+_q_cmd_pending() {
+  # knotlog pending [--approve N [--to note|facts|thread] [--dry-run] | --reject N]
+  # -- the write-approval queue. A list row is the P line without its leading "P<TAB>".
+  _q_pd_to=
+  _q_pd_dry=0
+  if [ "$#" -eq 0 ]; then
+    _q_pd_op=list
+  else
+    case "$1" in --approve | --reject) ;; *) _q_die err_pending_args 2 ;; esac
+    [ "$#" -ge 2 ] || _q_die err_pending_args 2
+    _q_pd_op=${1#--}
+    case "$2" in
+      '' | *[!0-9]* | 0*) _q_die err_pending_args 2 ;;
+    esac
+    _q_pd_id=$2
+    shift 2
+    [ "$_q_pd_op" = approve ] || [ "$#" -eq 0 ] || _q_die err_pending_args 2
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --dry-run) _q_pd_dry=1 ;;
+        --to)
+          [ "$#" -ge 2 ] || _q_die err_pending_args 2
+          case "$2" in
+            note | facts | thread) _q_pd_to=$2 ;;
+            *) _q_die err_pending_to 2 "$2" ;;
+          esac
+          shift
+          ;;
+        *) _q_die err_pending_args 2 ;;
+      esac
+      shift
+    done
+  fi
   _q_v=$(_q_vault)
   [ -n "$_q_v" ] || _q_die err_no_vault
   _q_pd_f="$_q_v/$_q_SD/pending"
@@ -6931,14 +7022,28 @@ _q_cmd_pending() {
   # The queue file is state, not trust: approval runs the refusing checks again.
   _q_admit "$_q_pd_text" "$_q_pd_kind"
   [ "$_q_ad_rc" -ne 4 ] || _q_admit_say 4
+  _q_pd_pre=
   case "$_q_pd_kind" in
-    note) _q_note_plain_write "$_q_v" "$_q_pd_text" ;;
-    thread) _q_note_thread_write "$_q_v" "$_q_pd_text" ;;
-    lesson) _q_note_plain_write "$_q_v" "[lesson] $_q_pd_text" ;;
-    fix) _q_note_plain_write "$_q_v" "[fix] $_q_pd_text" ;;
-    skill) _q_note_plain_write "$_q_v" "[skill candidate] $_q_pd_text" ;;
+    note | thread) ;;
+    lesson) _q_pd_pre='[lesson] ' ;;
+    fix) _q_pd_pre='[fix] ' ;;
+    skill) _q_pd_pre='[skill candidate] ' ;;
     *) _q_die err_pending_kind 1 "$_q_pd_id" "$_q_pd_kind" ;;
   esac
+  # No --to: the proposal's own kind decides, as it always did. An explicit --to wins.
+  _q_pd_tgt=$_q_pd_to
+  if [ -z "$_q_pd_tgt" ]; then
+    _q_pd_tgt=note
+    [ "$_q_pd_kind" != thread ] || _q_pd_tgt=thread
+  fi
+  _q_np_dry=$_q_pd_dry
+  _q_nt_dry=$_q_pd_dry
+  case "$_q_pd_tgt" in
+    facts) _q_pending_facts "$_q_pd_id" "$_q_pd_text" "$_q_pd_dry" ;;
+    thread) _q_note_thread_write "$_q_v" "$_q_pd_text" ;;
+    *) _q_note_plain_write "$_q_v" "$_q_pd_pre$_q_pd_text" ;;
+  esac
+  [ "$_q_pd_dry" = 0 ] || return 0
   # Still under the writer's remember lock; a failed write exited above, so no A line.
   printf 'A\t%s\t%s\n' "$_q_pd_id" "$_q_pd_ts" >> "$_q_pd_f" || _q_die err_note_write 1 "$_q_SD/pending"
 }
@@ -8514,6 +8619,14 @@ _q_cmd_setup() {
     _q_msg setup_dry_run
   fi
   _q_setup_place "$_q_st_source" "$_q_st_vault/$_q_st_rel" "$_q_st_dry" "$_q_st_agent"
+  if [ "$_q_st_agent" = claude ]; then
+    # The /learn slash command rides along, placed by the same never-overwrite rule.
+    _q_st_source="$_q_HOME/adapters/claude-code-learn.md"
+    if [ ! -f "$_q_st_source" ] || [ ! -r "$_q_st_source" ]; then
+      _q_die err_install_asset_source 2 "$_q_st_source"
+    fi
+    _q_setup_place "$_q_st_source" "$_q_st_vault/.claude/commands/learn.md" "$_q_st_dry" "$_q_st_agent"
+  fi
 }
 
 # ---- migrate: bring a pre-rename (Quipu) vault over to Knotlog -------------
