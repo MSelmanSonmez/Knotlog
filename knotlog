@@ -1714,6 +1714,14 @@ _q_doctor() {
         fi
       fi
     fi
+    # Approved lessons exist but the lessons section has no room at all.
+    _q_ls_fit=$( (_q_limit=10; _q_ctx_text; printf '%s %s' "$_q_lsn_tot" "$_q_lsn_k") 2>/dev/null || true)
+    case "$_q_ls_fit" in
+      [1-9]*" 0")
+        # shellcheck disable=SC2059
+        _q_line warn lessons "$(printf "$(_q_msg doc_lessons_nofit)" "${_q_ls_fit% *}" "$_q_cm")"
+        ;;
+    esac
     # FAZ 9 V-5: identity — user= or companion= absent -> warn (exit stays 0).
     # Mirror of the doc_layout_missing pattern above.
     _q_idu=$(awk -F= -v k=user '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_v/$_q_SD/config" 2>/dev/null || true)
@@ -5540,11 +5548,15 @@ $_q_fts_h
     fi
   fi
 
+  # Variable part 4 (lessons): approved lesson/fix/skill proposals, last of the
+  # variable sections so it only rides the slack the others leave.
+  _q_lessons_build
+
   if [ -n "$_q_thr" ]; then
     _q_text="$_q_now$_q_id$_q_purp$_q_tone$_q_act$_q_thr
-$_q_rul$_q_fts$_q_idx"
+$_q_rul$_q_fts$_q_lsn$_q_idx"
   else
-    _q_text="$_q_now$_q_id$_q_purp$_q_tone$_q_act$_q_rul$_q_fts$_q_idx"
+    _q_text="$_q_now$_q_id$_q_purp$_q_tone$_q_act$_q_rul$_q_fts$_q_lsn$_q_idx"
   fi
 }
 
@@ -6188,6 +6200,117 @@ _q_thr_fit() {
   _q_thr_bud=$_q_budget
   if [ "$_q_thr_bud" -lt 0 ]; then
     _q_thr_bud=0
+  fi
+}
+
+_q_lessons_n() {
+  # lessons= (vault config, default 5, 0 = off): how many approved lessons
+  # the opening context lists. Same positive-integer read as stale_days=; any
+  # other value falls back to 5. Sets $_q_ln. $1 = vault path.
+  _q_ln=5
+  _q_ln_cfg=
+  if [ -f "$1/$_q_SD/config" ]; then
+    _q_ln_cfg=$(awk -F= -v k=lessons '$1==k{sub(/^[^=]*=/,"");print;exit}' "$1/$_q_SD/config" 2>/dev/null || true)
+  fi
+  case "$_q_ln_cfg" in
+    ''|*[!0-9]*|0?*|??????????*) ;;
+    *) _q_ln=$_q_ln_cfg ;;
+  esac
+}
+
+_q_lessons_build() {
+  # Global setter: the "lessons" context section -- the newest N approved
+  # (A line, no R line) lesson/fix/skill proposals of .knotlog/pending, newest
+  # first. Reads _q_ctx_text's globals ($_q_max, $_q_fixed, $_q_thr, $_q_rul,
+  # $_q_fts). Sets $_q_lsn (the section, empty when nothing is shown),
+  # $_q_lsn_tot (lines that qualified) and $_q_lsn_k (lines that fit). Rides
+  # the slack threads, rules and facts leave: lines that do not fit are dropped
+  # and one note counts them; the section is never cut mid-line.
+  _q_lsn=
+  _q_lsn_tot=0
+  _q_lsn_k=0
+  _q_lessons_n "$_q_v"
+  [ "$_q_ln" -gt 0 ] || return 0
+  _q_ln_f="$_q_v/$_q_SD/pending"
+  _q_safe_target "$_q_v" "$_q_ln_f" || return 0
+  [ -f "$_q_ln_f" ] || return 0
+  _q_ln_all=$(LC_ALL=C awk '
+    BEGIN {
+      FS = "\t"
+      for (i = 1; i < 256; i++) ord[sprintf("%c", i)] = i
+      lab["lesson"] = "lesson"; lab["fix"] = "fix"; lab["skill"] = "skill candidate"
+    }
+    $1 == "P" { n++; id[n] = $2; kd[n] = $4; ts[n] = substr($3, 1, 10); t = $0
+      for (j = 0; j < 5; j++) sub(/^[^\t]*\t/, "", t); tx[n] = t }
+    $1 == "A" { ok[$2] = 1 }
+    $1 == "R" { no[$2] = 1 }
+    END {
+      for (i = n; i >= 1; i--) {
+        if (!(kd[i] in lab) || !(id[i] in ok) || (id[i] in no)) continue
+        t = tx[i]; gsub(/[[:cntrl:]]/, " ", t); sub(/^ +/, "", t); sub(/ +$/, "", t)
+        if (t == "") continue
+        if (length(t) > 100) {
+          # Cut at 100 bytes, never inside a UTF-8 character.
+          s = substr(t, 1, 100)
+          if (ord[substr(t, 101, 1)] >= 128 && ord[substr(t, 101, 1)] < 192) {
+            while (length(s) > 0 && ord[substr(s, length(s), 1)] < 192) s = substr(s, 1, length(s) - 1)
+            s = substr(s, 1, length(s) - 1)
+          }
+          t = s "..."
+        }
+        print ts[i] "\t" lab[kd[i]] "\t" t
+      }
+    }' "$_q_ln_f" 2>/dev/null || true)
+  [ -n "$_q_ln_all" ] || return 0
+  _q_ln_rows=
+  _q_ln_tab=$(printf '\t')
+  while IFS= read -r _q_ln_l; do
+    [ -n "$_q_ln_l" ] || continue
+    _q_ln_t=${_q_ln_l#*"$_q_ln_tab"}
+    _q_ln_t=${_q_ln_t#*"$_q_ln_tab"}
+    # Instruction-shaped text never enters the index, whatever write_approval says.
+    ! _q_admit_hit admit_inject_marks "$_q_ln_t" || continue
+    _q_ln_d=${_q_ln_l%%"$_q_ln_tab"*}
+    _q_ln_r=${_q_ln_l#*"$_q_ln_tab"}
+    _q_ln_r=${_q_ln_r%%"$_q_ln_tab"*}
+    _q_ln_rows="$_q_ln_rows- $_q_ln_d [$_q_ln_r] $_q_ln_t
+"
+    _q_lsn_tot=$((_q_lsn_tot + 1))
+    [ "$_q_lsn_tot" -lt "$_q_ln" ] || break
+  done <<LSNIN
+$_q_ln_all
+LSNIN
+  [ "$_q_lsn_tot" -gt 0 ] || return 0
+  _q_ln_hdr=$(_q_msg ctx_lessons)
+  _q_ln_nfmt=$(_q_msg ctx_lessons_dropped)
+  _q_ln_bud=$((_q_max - _q_fixed))
+  if [ -n "$_q_thr" ]; then
+    _q_ln_bud=$((_q_ln_bud - $(printf '%s\n' "$_q_thr" | LC_ALL=C wc -c | tr -d ' ')))
+  fi
+  if [ -n "$_q_rul" ]; then
+    _q_ln_bud=$((_q_ln_bud - $(printf '%s\n' "$_q_rul" | LC_ALL=C wc -c | tr -d ' ')))
+  fi
+  if [ -n "$_q_fts" ]; then
+    _q_ln_bud=$((_q_ln_bud - $(printf '%s\n' "$_q_fts" | LC_ALL=C wc -c | tr -d ' ')))
+  fi
+  _q_ln_hl=$(printf '%s\n' "$_q_ln_hdr" | LC_ALL=C wc -c | tr -d ' ')
+  _q_ln_nl=$(printf '%s\n' "$_q_ln_nfmt" | LC_ALL=C wc -c | tr -d ' ')
+  # Largest k whose lines (plus the drop note when k < total) fit the slack;
+  # the note reserve over-counts its digits, so ctx_max stays the hard cap.
+  _q_lsn_k=$(printf '%s' "$_q_ln_rows" | LC_ALL=C awk -v bud="$_q_ln_bud" -v h="$_q_ln_hl" -v nl="$((_q_ln_nl + 3))" '
+    { s[NR] = length($0) + 1 }
+    END { for (k = NR; k >= 1; k--) { sum = h; for (i = 1; i <= k; i++) sum += s[i]
+            if (k < NR) sum += nl
+            if (sum <= bud) { print k; exit } }
+          if (k < 1) print 0 }')
+  [ "$_q_lsn_k" -gt 0 ] || return 0
+  _q_lsn="$_q_ln_hdr
+$(printf '%s' "$_q_ln_rows" | head -n "$_q_lsn_k")
+"
+  if [ "$_q_lsn_k" -lt "$_q_lsn_tot" ]; then
+    # shellcheck disable=SC2059
+    _q_lsn="$_q_lsn$(printf "$_q_ln_nfmt" "$((_q_lsn_tot - _q_lsn_k))")
+"
   fi
 }
 
