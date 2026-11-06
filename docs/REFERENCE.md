@@ -212,6 +212,7 @@ left it says so and changes nothing.
 | `knotlog flair [--list\|none\|kaomoji\|emoji]` | show or set the reply flair (`flair=` in `.knotlog/config`), independent of the tone; `init --flair` and `install --flair` set it too (never touches companion.md) |
 | `knotlog compact [--keep N] [--apply]` | move old `Closed threads` entries of `Threads.md` into the archive, losslessly; dry run unless `--apply`; the newest `--keep N` (default 20) stay; also trims the last-session file (newest 5 `## ` blocks stay, or `--keep N`); see Session reflection |
 | `knotlog distill [--apply]` | move marked lines up: session note `[fact]` to the facts file, facts-file `[core]` to the core block of `companion.md`; dry run unless `--apply`; see Distill |
+| `knotlog similar [--min X]` | list line pairs that may be the same topic (facts lines, active thread lines, approved proposals); read only, merges nothing; see Similar |
 | `knotlog update --check` | compare this checkout's version against the latest GitHub release; network read only, touches no file |
 | `knotlog update --apply [--no-verify]` | update this checkout in place (tarball checkout: download, SHA-256 check, atomic swap; git-clone checkout: `git fetch` + checkout `<tag>`); bare `knotlog update` errors on purpose |
 | `knotlog rollback` | undo the last `update --apply`, restoring the checkout from its newest backup (`.knotlog-previous`); repeat to step back through up to three |
@@ -715,6 +716,22 @@ Knotlog enforces the format, not the meaning.
 - Writing: the plan is made without the lock; `--apply` takes the lock only when there is something to add, plans again under it, then writes. The facts file is appended to (an empty file gets no leading blank line, a missing final newline is added, a CRLF file gets CRLF lines). `companion.md` is rewritten beside itself and renamed over the original, so an interruption leaves the old file, with its permissions; the lines added there end with CR when the end marker's line does. The summary counts the lines actually written.
 - **Facts budget.** Before it writes layer 1, `--apply` builds the facts file with the new lines in a temp copy and measures its section the way `context` does (what is left of `ctx_max` after the fixed parts, threads and rules; past it `context` drops the whole section). If it would not fit, nothing is written, the exit code is 3 and `err_facts_budget` names the section size, the budget and the bytes to free. A dry run prints the same line on stderr and still lists the rows, exit 0. Layer 2 (`companion.md`) is not checked.
 - Without `--apply` the command writes nothing and prints one row per candidate: status, layer (`facts` or `core`), source, text. `--apply` takes the same lock as `remember` and `note`, skips session notes that are links or leave the vault, and ends with `N fact(s), M core line(s) added`. Source lines are never edited. An unknown flag exits 2.
+
+## Similar
+
+`knotlog similar [--min X]` answers one question: which two lines might say the same thing? It only reports. It writes no file (the state folder included), takes no lock, merges nothing and never enters `context`; what to merge, if anything, is yours to decide.
+
+**What is scanned.** The `- ` lines of the facts file; the list lines of the active section of the threads file (the pin block and the closed section are left out); the approved, not rejected `lesson`/`fix`/`skill` proposals of `.knotlog/pending`. Session notes are not scanned. A file that is a link or resolves outside the vault is skipped.
+
+**How lines are compared.** Each line loses a trailing `(source: ...)` / `(kaynak: ...)` suffix, a leading `[lesson]`-style bracket and a leading distill tag (`Decision:`, `Karar:` ...), is folded with the vault's fold profile (the one `search` uses), and is split into words. Words under three bytes and plain numbers are dropped, and each word is cut to its first five characters, a crude stem that lets `etiketi` meet `etiketini` and `yeşil` meet `yeşilken`. The score is the Jaccard index of the two word sets: shared words divided by all words of either line.
+
+**Output.** One tab-separated row per pair, best score first: `score` (two decimals), `pathA:line`, `pathB:line`, `origin`, then the first 60 bytes of each text. `origin` is `knotlog/user`, `user/user` and so on, per side: `knotlog` means Knotlog wrote the line (a `(source: ...)` suffix, a key in `.knotlog/distilled`, or an approved proposal), `user` anything else. A proposal approved into the facts file is not paired with the fact that cites it. The last line is a summary with the pair count. No pair is exit 0 with the summary alone.
+
+**Threshold.** `--min X` takes a number from 0 to 1 (`0`, `.5`, `0.4`, `1`); anything else exits 2. The default is 0.4. On a measured set (three real duplicates, written as Turkish and English rewordings, and three look-alike lines that share words but not meaning) 0.4 finds all three and none of the look-alikes, whose best score was 0.33; the duplicates scored 0.50 to 0.73. Lower the value to see weaker neighbours, raise it for near-copies only.
+
+**Cost.** Pairs are found through a word index, so only lines that share a word are compared; the worst case is still quadratic in the number of lines. Measured on a Windows laptop with Git Bash: 500 facts lines took about 2.6 s at the default threshold (4.9 s at `--min 0` with 105 727 pairs printed). `doctor` shows one row, `N possible duplicate pair(s): knotlog similar`, when the default scan finds a pair; it does not change `doctor`'s exit code and it skips the scan silently when there are more than 500 candidate lines.
+
+Limits: the stem is a plain five-character cut, so it helps agglutinative and inflected languages but is blind to synonyms; a text in Japanese or Chinese has no spaces to split on and is compared as a few long words.
 
 ## Honest limits
 
