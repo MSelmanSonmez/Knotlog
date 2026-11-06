@@ -8,6 +8,7 @@
 # Candidate row: kind TAB path TAB line TAB source TAB ref TAB text [TAB folded]
 BEGIN {
   TAB = sprintf("%c", 9); CR = sprintf("%c", 13)
+  BUL = "^[ " TAB "]*[-*+] "; HEADF = "^[^" TAB "]*" TAB
   REL = ENVIRON["SM_REL"]
   for (i = 1; i < 256; i++) ord[sprintf("%c", i)] = i
   nw = split(ENVIRON["SM_WORDS"], wd, "|")
@@ -45,17 +46,17 @@ function emit(kind, ln, ref, s,   t) {
 }
 mode == "facts" && /^- / { t = $0; sub(/^- /, "", t); emit("f", FNR, "", t) }
 mode == "threads" {
-  t = $0; sub(/\r$/, "", t)
+  t = $0; sub(CR "$", "", t)
   if (!blk) { if (index(t, "knotlog:threads:start") || index(t, "quipu:threads:start")) blk = 1; next }
   if (index(t, "knotlog:threads:end") || index(t, "quipu:threads:end")) exit
   if (index(t, "knotlog:pin:start") || index(t, "quipu:pin:start")) { pin = 1; next }
   if (pin) { if (index(t, "knotlog:pin:end") || index(t, "quipu:pin:end")) pin = 0; next }
   if (t == ENVIRON["SM_HEAD"]) { act = 1; next }
   if (t ~ /^#/) { act = 0; next }
-  if (act && t ~ /^[ \t]*[-*+] /) { sub(/^[ \t]*[-*+] /, "", t); emit("t", FNR, "", t) }
+  if (act && t ~ BUL) { sub(BUL, "", t); emit("t", FNR, "", t) }
 }
 mode == "pending" {
-  if ($1 == "P") { n++; id[n] = $2; kd[n] = $4; ln[n] = NR; t = $0; for (j = 0; j < 5; j++) sub(/^[^\t]*\t/, "", t); tx[n] = t }
+  if ($1 == "P") { n++; id[n] = $2; kd[n] = $4; ln[n] = NR; t = $0; for (j = 0; j < 5; j++) sub(HEADF, "", t); tx[n] = t }
   else if ($1 == "A") ok[$2] = 1
   else if ($1 == "R") no[$2] = 1
 }
@@ -128,7 +129,7 @@ END {
       # A proposal approved into the facts file is the same item as the fact that cites it.
       dupe = (ref[j] != "" && src[i] == ref[j]) || (ref[i] != "" && src[j] == ref[i])
       if (sc >= min && !dupe)
-        printf "%.6f\t%.2f\t%s:%s\t%s:%s\t%s/%s\t%s\t%s\n", sc, sc, pth[j], lno[j], pth[i], lno[i], org[j], org[i], cut(txt[j], 60), cut(txt[i], 60)
+        printf "%.6f" TAB "%.2f" TAB "%s:%s" TAB "%s:%s" TAB "%s/%s" TAB "%s" TAB "%s" ORS, sc, sc, pth[j], lno[j], pth[i], lno[i], org[j], org[i], cut(txt[j], 60), cut(txt[i], 60)
     }
     delete cnt; delete touched
     for (a = 1; a <= nt[i]; a++) { t = tok[i, a]; post[t, ++pn[t]] = i }
