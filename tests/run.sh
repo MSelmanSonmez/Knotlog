@@ -14551,7 +14551,7 @@ s3_mk s3d; mkvault s3n; printf '%s\n' lang=en > "$TMP/s3n/.knotlog/config"; prin
 mkvault s3big; printf '%s\n' lang=en > "$TMP/s3big/.knotlog/config"
 { printf '# Facts\n'; awk 'function w(n,   s, k) { s = ""; for (k = 0; k < 5; k++) { s = s sprintf("%c", 97 + n % 26); n = int(n / 26) } return s }
   BEGIN { for (i = 1; i <= 500; i++) printf "- Decision: %s %s %s %s\n", w(i), w(i + 1000), w(i + 2000), w(i + 3000) }'; } > "$TMP/s3big/Facts.md"
-sed -n 2p "$TMP/s3big/Facts.md" >> "$TMP/s3big/Facts.md"
+_q_dup=$(sed -n 2p "$TMP/s3big/Facts.md"); echo "$_q_dup" >> "$TMP/s3big/Facts.md"
 QUIPU_LANG=en QUIPU_VAULT="$TMP/s3d" sh "$ROOT/knotlog" doctor </dev/null >"$TMP/s3d.out" 2>&1; R1403=$?
 QUIPU_LANG=en QUIPU_VAULT="$TMP/s3n" sh "$ROOT/knotlog" doctor </dev/null >"$TMP/s3n.out" 2>&1; R1403N=$?
 QUIPU_LANG=en QUIPU_VAULT="$TMP/s3big" sh "$ROOT/knotlog" doctor </dev/null >"$TMP/s3big.out" 2>&1
