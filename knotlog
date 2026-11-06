@@ -1716,6 +1716,7 @@ _q_doctor() {
       fi
     fi
     # Approved lessons exist but the lessons section has no room at all.
+    # shellcheck disable=SC2030 # subshell on purpose: the outer _q_limit must stay unchanged
     _q_ls_fit=$( (_q_limit=10; _q_ctx_text; printf '%s %s' "$_q_lsn_tot" "$_q_lsn_k") 2>/dev/null || true)
     case "$_q_ls_fit" in
       [1-9]*" 0")
@@ -5322,6 +5323,7 @@ _q_ctx_text() {
   }
   _q_add_act "$(_q_msg ctx_activity)"
   if [ -s "$_q_log" ]; then
+    # shellcheck disable=SC2031 # the outer _q_limit; the earlier assignment was in a subshell
     _q_add_act "$(awk -v n="$_q_limit" '{ line[NR] = $0 } END { s = NR - n + 1; if (s < 1) s = 1; for (i = s; i <= NR; i++) print line[i] }' "$_q_log")"
     # $_q_act_head_lines protects everything added so far (header + the
     # already-bounded tail-lines block, at most $_q_limit lines) from the
