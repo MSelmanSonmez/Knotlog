@@ -497,6 +497,7 @@ usage() {
   _q_msg usage_archive
   _q_msg usage_compact
   _q_msg usage_distill
+  _q_msg usage_similar
   _q_msg usage_tui
   _q_msg usage_update
 }
@@ -1886,6 +1887,14 @@ _q_doctor() {
       _q_ffmt=$(_q_msg doc_facts_n)
       # shellcheck disable=SC2059
       _q_line ok facts "$(printf "$_q_ffmt" "$_q_fts_n")"
+    fi
+    # `knotlog similar`: one informational row when possible duplicate pairs
+    # exist. Over 500 candidate lines the scan is skipped without a word
+    # (it is quadratic in the worst case; doctor must stay quick).
+    _q_sm_dn=$(_q_similar_pairs "$_q_v" "$_q_sm_default" 500 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$_q_sm_dn" -gt 0 ]; then
+      # shellcheck disable=SC2059
+      _q_line ok similar "$(printf "$(_q_msg doc_similar)" "$_q_sm_dn")"
     fi
   fi
 
@@ -7098,6 +7107,79 @@ _q_cmd_compile() {
   printf "$_q_fmt\n" "$_q_compile_count"
 }
 
+# ---- similar ----------------------------------------------------------------
+
+_q_sm_default=0.4
+
+_q_similar_pairs() {
+  # _q_similar_pairs VAULT MIN MAXROWS -- print the scored pairs, best first, as
+  # score<TAB>pathA:line<TAB>pathB:line<TAB>origin<TAB>textA<TAB>textB. Read
+  # only: scratch files live under TMPDIR. MAXROWS > 0 gives up (exit 3, no
+  # output) when more candidate lines than that exist.
+  (
+    _q_sm_v=$1
+    _q_sm_t=$(mktemp -d "${TMPDIR:-/tmp}/knotlog-similar-XXXXXX") || exit 1
+    trap 'rm -rf "$_q_sm_t"' EXIT HUP INT TERM
+    : > "$_q_sm_t/rows"
+    export SM_REL SM_WORDS SM_HEAD SM_TAGS SM_STEM SM_MIN
+    SM_WORDS="$(_q_msg distill_source)|source|kaynak"
+    SM_HEAD="### $(_q_msg threads_head_active)"
+    SM_STEM=5
+    SM_MIN=$2
+    _q_sm_prof=$(_q_fold_prof "$_q_sm_v")
+    _q_sm_fold() {
+      # shellcheck disable=SC2018,SC2019
+      sed -f "$_q_HOME/fold/$_q_sm_prof.sed" | tr 'A-Z' 'a-z'
+    }
+    SM_TAGS=$(_q_msg distill_tags | tr '|' '\n' | _q_sm_fold | paste -sd'|' -)
+    _q_sm_add() {
+      # _q_sm_add MODE FILE REL -- candidate rows of one source file.
+      [ -f "$2" ] && _q_safe_target "$_q_sm_v" "$2" || return 0
+      SM_REL=$3 LC_ALL=C awk -v mode="$1" -f "$_q_HOME/lib/similar.awk" "$2" </dev/null >> "$_q_sm_t/rows"
+    }
+    _q_sm_f=$(_q_facts_path "$_q_sm_v")
+    _q_sm_add facts "$_q_sm_f" "${_q_sm_f#"$_q_sm_v"/}"
+    _q_sm_f=$(_q_threads_path "$_q_sm_v")
+    _q_sm_add threads "$_q_sm_f" "${_q_sm_f#"$_q_sm_v"/}"
+    _q_sm_add pending "$_q_sm_v/$_q_SD/pending" "$_q_SD/pending"
+    _q_sm_n=$(wc -l < "$_q_sm_t/rows" | tr -d ' ')
+    if [ "$3" -gt 0 ] && [ "$_q_sm_n" -gt "$3" ]; then exit 3; fi
+    [ "$_q_sm_n" -gt 1 ] || exit 0
+    cut -f6 "$_q_sm_t/rows" | _q_sm_fold > "$_q_sm_t/fold"
+    paste "$_q_sm_t/rows" "$_q_sm_t/fold" > "$_q_sm_t/join"
+    _q_sm_led="$_q_sm_v/$_q_SD/distilled"
+    if [ -f "$_q_sm_led" ] && _q_safe_target "$_q_sm_v" "$_q_sm_led"; then :; else _q_sm_led=/dev/null; fi
+    LC_ALL=C awk -v mode=score -f "$_q_HOME/lib/similar.awk" "$_q_sm_led" "$_q_sm_t/join" </dev/null |
+      LC_ALL=C sort -t "$(printf '\t')" -k1,1nr -k3,3 -k4,4 | cut -f2-
+  )
+}
+
+_q_cmd_similar() {
+  # knotlog similar [--min X] -- read-only report of line pairs that may be the
+  # same topic. Writes nothing, merges nothing.
+  _q_sm_min=$_q_sm_default
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --min)
+        [ "$#" -ge 2 ] || _q_die err_missing_arg 2
+        # A decimal from 0 to 1 (0, 1, 0.4, .4); anything else is refused.
+        printf '%s\n' "$2" | awk '$0 ~ /^([0-9]*[.])?[0-9]+$/ && $0 + 0 <= 1 { ok = 1 } END { exit !ok }' || _q_die err_similar_min 2 "$2"
+        _q_sm_min=$2
+        shift 2
+        ;;
+      *) _q_die err_unknown_flag 2 "$1" ;;
+    esac
+  done
+  _q_v=$(_q_vault)
+  [ -n "$_q_v" ] || _q_die err_no_vault
+  _q_sm_out=$(_q_similar_pairs "$_q_v" "$_q_sm_min" 0) || exit 1
+  [ -z "$_q_sm_out" ] || printf '%s\n' "$_q_sm_out"
+  _q_sm_n=0
+  [ -z "$_q_sm_out" ] || _q_sm_n=$(printf '%s\n' "$_q_sm_out" | wc -l | tr -d ' ')
+  # shellcheck disable=SC2059
+  printf "$(_q_msg similar_summary)\n" "$_q_sm_n"
+}
+
 # ---- index ------------------------------------------------------------------
 
 _q_cmd_index() {
@@ -8905,6 +8987,7 @@ case "$_q_cmd" in
   archive) shift; _q_cmd_archive "$@" ;;
   compact) shift; _q_cmd_compact "$@" ;;
   distill) shift; _q_cmd_distill "$@" ;;
+  similar) shift; _q_cmd_similar "$@" ;;
   tui) shift; _q_cmd_tui "$@" ;;
   help) shift; _q_cmd_help "$@" ;;
   *) usage; exit 2 ;;
