@@ -14432,6 +14432,146 @@ t; assert_eq "T-1393: the new pending keys exist in all six language files" '6 6
 t; assert_eq "T-1394: usage_pending and err_pending_args name --to and --dry-run in all six language files" '' \
   "$(for _p2_f in "$ROOT"/i18n/*.txt; do grep '^usage_pending=' "$_p2_f" | grep -qF -- '--to note|facts|thread' && grep '^err_pending_args=' "$_p2_f" | grep -qF -- '--dry-run' || printf '%s ' "${_p2_f##*/}"; done)"
 
+# ---- similar: possible duplicate pairs, read only (T-1395..T-1406) ----
+s3_rows() { if [ "$1" = -c ]; then grep -Ec "^[01][.][0-9][0-9]$TAB" "$2"; else grep -E "^[01][.][0-9][0-9]$TAB" "$1"; fi; }
+# `knotlog similar [--min X]` scans facts lines, active thread lines and approved
+# lesson/fix/skill proposals, scores pairs (Jaccard on folded 5-character stems)
+# and prints them best first. It writes nothing; doctor adds one row.
+s3_all() { # name -> one checksum over every file of the vault, .knotlog/ included
+  (cd "$TMP/$1" && find . -type f -print | LC_ALL=C sort |
+    while IFS= read -r _s3_f; do printf '%s ' "$_s3_f"; cksum < "$_s3_f"; done) | cksum
+}
+s3_mk() { # name -> en vault: facts with two duplicates and two traps, threads with pin/closed, pending with rejected/open
+  b3_mk "$1"
+  cat > "$TMP/$1/Facts.md" <<'S3EOF'
+# Facts
+- Decision: The tool uses only sh and awk and takes no extra dependencies
+- Decision: Use sh and awk only, the tool takes no dependencies
+- Preference: Keep replies short and warm in Turkish, no filler
+- Decision: The repo stays private until the release, then it goes public
+- Decision: The release notes are written in English and the repo is public already
+- Decision: Run the full test suite once per stage and never in parallel
+- Decision: Run only the new tests for the blind check, not the full test suite
+S3EOF
+  cat > "$TMP/$1/Threads.md" <<'S3EOF'
+# Threads
+<!-- knotlog:threads:start -->
+<!-- knotlog:pin:start -->
+- Pinned: the tool uses only sh and awk and takes no extra dependencies
+<!-- knotlog:pin:end -->
+### Active threads
+- 2026-11-02 Keep answers short and warm in Turkish, no filler
+- 2026-11-01 Write the migration guide for the old vault layout
+### Closed threads
+- 2026-10-01 Use sh and awk only, the tool takes no extra dependencies
+<!-- knotlog:threads:end -->
+S3EOF
+  printf 'P\t1\t2026-11-05 10:00\tlesson\tpolicy_review_first\tWrite the migration guide first for the old vault layout\nA\t1\t2026-11-05 10:01\nP\t2\t2026-11-05 10:00\tfix\tpolicy_review_first\tUse sh and awk only, the tool takes no dependencies\nA\t2\t2026-11-05 10:01\nR\t2\t2026-11-05 10:02\nP\t3\t2026-11-05 10:00\tskill\tpolicy_review_first\tUse sh and awk only, the tool takes no extra dependencies\n' > "$TMP/$1/.knotlog/pending"
+}
+s3_mk s3a
+A1395=$(s3_all s3a); b3_run s3a similar; R1395=$B3RC
+t; assert_eq "T-1395: similar lists the three known pairs best first, one TAB row each (score, A, B, origin, 60-byte texts), exit 0" "0 3 0.89${TAB}Threads.md:8${TAB}.knotlog/pending:1${TAB}user/knotlog${TAB}2026-11-01 Write the migration guide for the old vault layou${TAB}Write the migration guide first for the old vault layout
+0.75${TAB}Facts.md:4${TAB}Threads.md:7${TAB}user/user${TAB}Preference: Keep replies short and warm in Turkish, no fille${TAB}2026-11-02 Keep answers short and warm in Turkish, no filler
+0.70${TAB}Facts.md:2${TAB}Facts.md:3${TAB}user/user${TAB}Decision: The tool uses only sh and awk and takes no extra d${TAB}Decision: Use sh and awk only, the tool takes no dependencie" \
+  "$R1395 $(s3_rows -c "$TMP/s3a.out") $(s3_rows "$TMP/s3a.out")"
+t; assert_eq "T-1395: the last line is the summary: pair count and 'Knotlog never merges'" "$(memfmt en similar_summary 3)" "$(tail -n 1 "$TMP/s3a.out")"
+t; assert_eq "T-1395: the two trap pairs (shared words, different topic) are not listed at the default threshold" 'no no' \
+  "$(b3_yn grep -q "Facts.md:5${TAB}Facts.md:6" "$TMP/s3a.out") $(b3_yn grep -q "Facts.md:7${TAB}Facts.md:8" "$TMP/s3a.out")"
+t; assert_eq "T-1396: similar changes no file in the vault (.knotlog/ included) and leaves no lock" 'yes no' \
+  "$([ "$(s3_all s3a)" = "$A1395" ] && printf yes || printf no) $(b3_yn test -e "$TMP/s3a/.knotlog/remember.lock")"
+b3_run s3a similar --min 0
+t; assert_eq "T-1397: the pin line, the closed-section line, a rejected and an open proposal are never scanned (even at --min 0)" 'no no no no' \
+  "$(b3_yn grep -q 'Threads.md:4' "$TMP/s3a.out") $(b3_yn grep -q 'Threads.md:10' "$TMP/s3a.out") $(b3_yn grep -q 'pending:6' "$TMP/s3a.out") $(b3_yn grep -q 'pending:3' "$TMP/s3a.out")"
+t; assert_eq "T-1397: the heading and marker lines are not scanned either (no Threads.md:1/2/3/5/6/9 on either side)" 'no' \
+  "$(b3_yn grep -Eq 'Threads.md:(1|2|3|5|6|9)([^0-9]|$)' "$TMP/s3a.out")"
+
+mkvault s3o; printf '%s\n' lang=en > "$TMP/s3o/.knotlog/config"
+cat > "$TMP/s3o/Facts.md" <<'S3EOF'
+# Facts
+- Decision: Release tags are set only after CI is green (source: pending #1)
+- Decision: Set the release tag only after the CI is green
+- Decision: Docs live in the docs folder and are written in English
+- Decision: The docs folder holds the docs and they are written in English
+S3EOF
+printf 'facts\tdecision: docs live in the docs folder and are written in english\n' > "$TMP/s3o/.knotlog/distilled"
+printf 'P\t1\t2026-11-05 10:00\tlesson\tpolicy_review_first\tRelease tags are set only after CI is green\nA\t1\t2026-11-05 10:01\n' > "$TMP/s3o/.knotlog/pending"
+b3_run s3o similar --min 0.5
+t; assert_eq "T-1398: origin knotlog when a line carries a (source: ...) suffix, a pending proposal, or a key in the distilled ledger; user otherwise" "Facts.md:2${TAB}Facts.md:3${TAB}knotlog/user Facts.md:3${TAB}.knotlog/pending:1${TAB}user/knotlog Facts.md:4${TAB}Facts.md:5${TAB}knotlog/user" \
+  "$(s3_rows "$TMP/s3o.out" | cut -f2-4 | LC_ALL=C sort | paste -sd' ' -)"
+t; assert_eq "T-1398: a proposal approved into the facts file is not paired with the fact that cites it (source: pending #1)" 'no' \
+  "$(b3_yn grep -q "Facts.md:2${TAB}.knotlog/pending:1" "$TMP/s3o.out")"
+
+b3_run s3a similar --min 0.95; R1399A=$B3RC
+t; assert_eq "T-1399: a high --min leaves only the summary, exit 0" "0 $(memfmt en similar_summary 0)" "$R1399A $(cat "$TMP/s3a.out")"
+R1399=; O1399=
+for _s3_m in abc 1.5 -1 '' 0.4x 1.0001 '.' 0..5 0x1; do
+  b3_run s3a similar --min "$_s3_m"; R1399="$R1399$B3RC"; O1399="$O1399$(wc -c < "$TMP/s3a.out" | tr -d ' ')"
+done
+t; assert_eq "T-1399: a --min that is not a number from 0 to 1 exits 2 with nothing on stdout" '222222222 000000000' "$R1399 $O1399"
+R1399B=
+for _s3_m in 0 1 .5 0.5 1.0 0.25; do b3_run s3a similar --min "$_s3_m"; R1399B="$R1399B$B3RC"; done
+t; assert_eq "T-1399: 0, 1, .5, 0.5, 1.0 and 0.25 are accepted" '000000' "$R1399B"
+b3_run s3a similar --min; R1399C=$B3RC; b3_run s3a similar --bogus; R1399D=$B3RC; b3_run s3a similar extra; R1399E=$B3RC
+t; assert_eq "T-1399: a missing --min value, an unknown flag and a stray word all exit 2" '2 2 2' "$R1399C $R1399D $R1399E"
+b3_run s3a similar --min 0.1
+t; assert_eq "T-1399: a lower --min lists more pairs than the default" 'yes' \
+  "$([ "$(s3_rows -c "$TMP/s3a.out")" -gt 3 ] && printf yes || printf no)"
+
+mkvault s3e; b3_run s3e similar
+t; assert_eq "T-1400: a vault without facts, threads or proposals exits 0 with the summary only" "0 $(memfmt en similar_summary 0)" "$B3RC $(cat "$TMP/s3e.out")"
+
+if [ "$TRUE_SYMLINKS" -eq 1 ]; then
+  mkvault s3l; printf '%s\n' lang=en > "$TMP/s3l/.knotlog/config"
+  printf '# out\n- Decision: Use sh and awk only, the tool takes no dependencies\n- Decision: The tool uses only sh and awk and takes no extra dependencies\n' > "$SO/s3l.md"
+  sec_slink "$SO/s3l.md" "$TMP/s3l/Facts.md"; C1401=$(cksum < "$SO/s3l.md")
+  b3_run s3l similar
+  t; assert_eq "T-1401: a facts file that is a link is skipped (summary only, exit 0) and the outside file is untouched" "0 $(memfmt en similar_summary 0) yes" \
+    "$B3RC $(cat "$TMP/s3l.out") $([ "$(cksum < "$SO/s3l.md")" = "$C1401" ] && printf yes || printf no)"
+else
+  t; skip "T-1401: linked facts file" "no native symlinks on this host"
+fi
+
+mkvault s3t; printf '%s\n' lang=tr layout=plain > "$TMP/s3t/.knotlog/config"
+cat > "$TMP/s3t/Gerçekler.md" <<'S3EOF'
+# Gerçekler
+- Karar: Sürüm etiketi yalnız CI yeşil olduktan sonra atılır
+- Karar: Sürüm etiketini yalnız CI yeşilken atarız
+- Tercih: Cevaplar kısa, sıcak ve Türkçe olsun
+- Tercih: Cevapları kısa ve sıcak yaz, Türkçe konuş
+- Karar: Kasa iki makine arasında gidip gelir
+- Karar: Test süitini ajana bekletme, orkestratör çalıştırır
+S3EOF
+QUIPU_VAULT="$TMP/s3t" sh "$ROOT/knotlog" similar </dev/null >"$TMP/s3t.out" 2>&1; R1402=$?
+t; assert_eq "T-1402: in a Turkish vault the 5-character stems pair word forms (etiketi/etiketini, yeşil/yeşilken, cevaplar/cevapları) and the unrelated lines stay out" "0 Gerçekler.md:2 Gerçekler.md:3 Gerçekler.md:4 Gerçekler.md:5" \
+  "$R1402 $(s3_rows "$TMP/s3t.out" | cut -f2,3 | LC_ALL=C sort | tr '\t\n' '  ' | sed 's/ $//')"
+t; assert_eq "T-1402: the Turkish summary comes from tr.txt" "$(memfmt tr similar_summary 2)" "$(tail -n 1 "$TMP/s3t.out")"
+
+# doctor: one row only when pairs exist; the exit code is the same either way; above 500 candidate lines the scan is skipped.
+s3_mk s3d; mkvault s3n; printf '%s\n' lang=en > "$TMP/s3n/.knotlog/config"; printf '# Facts\n- Decision: Only one line here\n' > "$TMP/s3n/Facts.md"
+mkvault s3big; printf '%s\n' lang=en > "$TMP/s3big/.knotlog/config"
+{ printf '# Facts\n'; awk 'function w(n,   s, k) { s = ""; for (k = 0; k < 5; k++) { s = s sprintf("%c", 97 + n % 26); n = int(n / 26) } return s }
+  BEGIN { for (i = 1; i <= 500; i++) printf "- Decision: %s %s %s %s\n", w(i), w(i + 1000), w(i + 2000), w(i + 3000) }'; } > "$TMP/s3big/Facts.md"
+sed -n 2p "$TMP/s3big/Facts.md" >> "$TMP/s3big/Facts.md"
+QUIPU_LANG=en QUIPU_VAULT="$TMP/s3d" sh "$ROOT/knotlog" doctor </dev/null >"$TMP/s3d.out" 2>&1; R1403=$?
+QUIPU_LANG=en QUIPU_VAULT="$TMP/s3n" sh "$ROOT/knotlog" doctor </dev/null >"$TMP/s3n.out" 2>&1; R1403N=$?
+QUIPU_LANG=en QUIPU_VAULT="$TMP/s3big" sh "$ROOT/knotlog" doctor </dev/null >"$TMP/s3big.out" 2>&1
+t; assert_eq "T-1403: doctor prints one similar row naming the count when pairs exist" "1 $(memfmt en doc_similar 3)" \
+  "$(grep -c 'knotlog similar' "$TMP/s3d.out") $(grep 'knotlog similar' "$TMP/s3d.out" | cut -f3)"
+t; assert_eq "T-1403: doctor prints no similar row when there is no pair, and the exit code is the same either way" '0 yes' \
+  "$(grep -c 'knotlog similar' "$TMP/s3n.out") $([ "$R1403" = "$R1403N" ] && printf yes || printf no)"
+t; assert_eq "T-1403: with more than 500 candidate lines doctor skips the scan and prints no similar row (501 lines, one duplicate)" '0' \
+  "$(grep -c 'knotlog similar' "$TMP/s3big.out")"
+b3_run s3big similar
+t; assert_eq "T-1403: the same 501 lines are scanned by knotlog similar itself (no cap there)" "1 yes" \
+  "$(s3_rows -c "$TMP/s3big.out") $(b3_yn grep -q "Facts.md:2${TAB}Facts.md:502" "$TMP/s3big.out")"
+
+t; assert_eq "T-1404: the similar keys exist in all six language files" '6 6 6 6' \
+  "$(for _s3_k in usage_similar err_similar_min similar_summary doc_similar; do grep -l "^$_s3_k=." "$ROOT"/i18n/*.txt | wc -l | tr -d ' '; done | paste -sd' ' -)"
+t; assert_eq "T-1405: usage names --min in every language file, and the summary keeps %d" '' \
+  "$(for _s3_f in "$ROOT"/i18n/*.txt; do grep '^usage_similar=' "$_s3_f" | grep -qF -- '--min' && grep '^similar_summary=' "$_s3_f" | grep -qF '%d' || printf '%s ' "${_s3_f##*/}"; done)"
+b3_run s3a bogus-command
+t; assert_eq "T-1406: the usage text lists the similar command" 'yes' "$(b3_yn grep -qE '^ +similar ' "$TMP/s3a.err" "$TMP/s3a.out")"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
