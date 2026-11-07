@@ -43,6 +43,7 @@ err_pending_closed=#%s 不是待决的提议（knotlog pending 会列出）
 err_pending_tab=等待审核的笔记不能包含制表符；未加入队列
 err_pending_kind=#%s 的类型 %s 未知；未写入任何内容
 err_pending_to=未知目标 %s：请使用 note、facts 或 thread
+err_pending_human=--approve 和 --reject 由你决定，而不是你的代理：请在你自己的终端里亲自运行该命令（不要通过代理、hook 或脚本）；未做任何更改
 err_pending_untagged=#%s 不是以标签 (%s) 加冒号开头，不算长期事实；未写入任何内容，提案仍保持待处理（请改写，或用 --to note 批准）
 err_pending_dup=#%s 已在 %s 中（或之前已移入其中）；未写入任何内容，提案仍保持待处理
 err_pending_nofacts=%s 不存在；未写入任何内容（请先创建事实文件）

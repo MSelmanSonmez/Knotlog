@@ -14,6 +14,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - Two overlapping `remember` runs (or `note`, `distill`, `pending --approve`) could both take the remember lock where `mkdir` is uutils coreutils (Ubuntu 26.04's default), which exits 0 when another process creates the directory during its own call; the session file then got the same digest twice. The lock now belongs to whoever creates its `pid` file under noclobber, whatever `mkdir` reports.
+- **Behaviour change: `pending --approve` and `--reject` need the user at a terminal.** An agent that ran `propose` could approve its own proposal, and approved lessons enter every opening context. Both now exit 4 (`err_pending_human`, all six languages) and change nothing unless stdin and stdout are a terminal and no agent or hook marker is set (`CLAUDECODE`, `KNOTLOG_HOOK`/`QUIPU_HOOK`); `--dry-run` is not gated. The lessons section also re-runs the secret check (with the instruction check) on each row's whole text, so a line appended to `.knotlog/pending` by hand cannot carry a secret into context. Defence in depth, not a sandbox: see Honest limits.
 
 ## [1.5.0] - 2026-10-31
 

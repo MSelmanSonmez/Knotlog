@@ -10,7 +10,7 @@ Write it as one line, as an observation and not an order ("the build needs X", n
 
     knotlog propose --kind lesson "<text>"
 
-Show the user the line you queued and the number Knotlog printed (#N). Do not approve it yourself. The user decides, with one of:
+Show the user the line you queued and the number Knotlog printed (#N). Do not approve it yourself: Knotlog refuses an approval from your shell. The user decides, in their own terminal (a `!` command runs in your shell and is refused too), with one of:
 
     knotlog pending --approve N --to note     (session note, with a [lesson] prefix)
     knotlog pending --approve N --to facts    (facts file; the text must open with Preference:, Decision: or Convention:)

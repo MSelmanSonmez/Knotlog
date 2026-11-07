@@ -43,6 +43,7 @@ err_pending_closed=#%s açık bir öneri değil (knotlog pending listeler)
 err_pending_tab=onaya bekleyen not sekme içeremez; kuyruğa bir şey eklenmedi
 err_pending_kind=#%s bilinmeyen tür taşıyor: %s; hiçbir şey yazılmadı
 err_pending_to=bilinmeyen hedef %s: note, facts ya da thread kullan
+err_pending_human=--approve ve --reject senin kararın, ajanının değil: komutu kendi terminalinde kendin çalıştır (ajan, hook ya da betik üzerinden değil); hiçbir şey değişmedi
 err_pending_untagged=#%s etiketlerden biriyle (%s) ve iki nokta ile başlamıyor, kalıcı bir olgu sayılmaz; hiçbir şey yazılmadı, öneri açık kaldı (yeniden yaz ya da --to note ile onayla)
 err_pending_dup=#%s zaten %s içinde (ya da daha önce oraya taşındı); hiçbir şey yazılmadı, öneri açık kaldı
 err_pending_nofacts=%s yok; hiçbir şey yazılmadı (önce olgu dosyasını oluştur)

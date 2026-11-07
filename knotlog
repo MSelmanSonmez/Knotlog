@@ -6264,6 +6264,7 @@ _q_lessons_build() {
         if (!(kd[i] in lab) || !(id[i] in ok) || (id[i] in no)) continue
         t = tx[i]; gsub(/[[:cntrl:]]/, " ", t); sub(/^ +/, "", t); sub(/ +$/, "", t)
         if (t == "") continue
+        f = t
         if (length(t) > 100) {
           # Cut at 100 bytes, never inside a UTF-8 character.
           s = substr(t, 1, 100)
@@ -6273,7 +6274,7 @@ _q_lessons_build() {
           }
           t = s "..."
         }
-        print ts[i] "\t" lab[kd[i]] "\t" t
+        print ts[i] "\t" lab[kd[i]] "\t" t "\t" f
       }
     }' "$_q_ln_f" 2>/dev/null || true)
   [ -n "$_q_ln_all" ] || return 0
@@ -6283,8 +6284,12 @@ _q_lessons_build() {
     [ -n "$_q_ln_l" ] || continue
     _q_ln_t=${_q_ln_l#*"$_q_ln_tab"}
     _q_ln_t=${_q_ln_t#*"$_q_ln_tab"}
-    # Instruction-shaped text never enters the index, whatever write_approval says.
-    ! _q_admit_hit admit_inject_marks "$_q_ln_t" || continue
+    _q_ln_full=${_q_ln_t#*"$_q_ln_tab"}
+    _q_ln_t=${_q_ln_t%%"$_q_ln_tab"*}
+    # The pending file is state, not trust (a line can be appended by hand):
+    # secret- and instruction-shaped text never enters, whatever write_approval says.
+    ! _q_secret_hit "$_q_ln_full" || continue
+    ! _q_admit_hit admit_inject_marks "$_q_ln_full" || continue
     _q_ln_d=${_q_ln_l%%"$_q_ln_tab"*}
     _q_ln_r=${_q_ln_l#*"$_q_ln_tab"}
     _q_ln_r=${_q_ln_r%%"$_q_ln_tab"*}
@@ -6802,13 +6807,7 @@ _q_admit() {
   # write_approval=on. Vault: $_q_v.
   _q_ad_rc=0
   _q_ad_why=
-  # One source for the secret pattern: the pre-commit hook's own _pat= line.
-  # shortcut: a missing hooks/pre-commit skips the check (broken install), upgrade if installs ever drop hooks/.
-  _q_sp=
-  if [ -f "$_q_HOME/hooks/pre-commit" ]; then
-    eval "$(sed -n 's/^_pat=/_q_sp=/p' "$_q_HOME/hooks/pre-commit")"
-  fi
-  if [ -n "$_q_sp" ] && printf '%s\n' "$1" | LC_ALL=C grep -Eiq -- "$_q_sp"; then
+  if _q_secret_hit "$1"; then
     _q_ad_rc=4
     _q_ad_why=secret_pattern
     return 0
@@ -6826,6 +6825,20 @@ _q_admit() {
     _q_ad_rc=5
     _q_ad_why=policy_review_first
   fi
+}
+
+_q_secret_hit() {
+  # _q_secret_hit TEXT -- does TEXT match the secret pattern? One source for
+  # it: the pre-commit hook's own _pat= line, read once per run.
+  # shortcut: a missing hooks/pre-commit skips the check (broken install), upgrade if installs ever drop hooks/.
+  if [ -z "${_q_shp_read:-}" ]; then
+    _q_shp=
+    if [ -f "$_q_HOME/hooks/pre-commit" ]; then
+      eval "$(sed -n 's/^_pat=/_q_shp=/p' "$_q_HOME/hooks/pre-commit")"
+    fi
+    _q_shp_read=1
+  fi
+  [ -n "$_q_shp" ] && printf '%s\n' "$1" | LC_ALL=C grep -Eiq -- "$_q_shp"
 }
 
 _q_admit_hit() {
@@ -6999,6 +7012,15 @@ _q_cmd_pending() {
       esac
       shift
     done
+  fi
+  # A decision is the user's: an agent that ran `propose` must not approve its
+  # own proposal. Agent and hook markers refuse even under QUIPU_FORCE_TTY (the
+  # test switch); a dry run decides nothing, so it stays open to agents.
+  if [ "$_q_pd_op" != list ] && [ "$_q_pd_dry" = 0 ]; then
+    if [ "${QUIPU_HOOK:-0}" = 1 ] || [ -n "${CLAUDECODE:-}" ]; then
+      _q_die err_pending_human 4
+    fi
+    { [ -t 0 ] && [ -t 1 ]; } || [ "${QUIPU_FORCE_TTY:-0}" = 1 ] || _q_die err_pending_human 4
   fi
   _q_v=$(_q_vault)
   [ -n "$_q_v" ] || _q_die err_no_vault

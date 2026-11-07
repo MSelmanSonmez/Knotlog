@@ -43,6 +43,7 @@ err_pending_closed=#%s no es una propuesta abierta (knotlog pending las lista)
 err_pending_tab=una nota en espera de revisión no puede contener un tabulador; no se encoló nada
 err_pending_kind=#%s tiene un tipo desconocido %s; no se escribió nada
 err_pending_to=destino desconocido %s: usa note, facts o thread
+err_pending_human=--approve y --reject son tu decisión, no la de tu agente: ejecuta el comando tú mismo en tu propia terminal (no a través de un agente, un hook o un script); no se cambió nada
 err_pending_untagged=#%s no empieza por una de las etiquetas (%s) seguida de dos puntos, así que no es un hecho duradero; no se escribió nada y la propuesta sigue abierta (reescríbela o apruébala con --to note)
 err_pending_dup=#%s ya está en %s (o se movió allí antes); no se escribió nada y la propuesta sigue abierta
 err_pending_nofacts=%s no existe; no se escribió nada (crea primero el archivo de hechos)

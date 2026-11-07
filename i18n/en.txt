@@ -43,6 +43,7 @@ err_pending_closed=#%s is not an open proposal (knotlog pending lists them)
 err_pending_tab=a note waiting for review must not contain a tab; nothing was queued
 err_pending_kind=#%s has an unknown kind %s; nothing was written
 err_pending_to=unknown target %s: use note, facts or thread
+err_pending_human=--approve and --reject are your decision, not your agent's: run the command yourself in your own terminal (not through an agent, a hook or a script); nothing was changed
 err_pending_untagged=#%s does not open with one of the tags (%s) and a colon, so it is not a lasting fact; nothing was written, the proposal stays open (reword it, or approve it with --to note)
 err_pending_dup=#%s is already in %s (or was moved there before); nothing was written, the proposal stays open
 err_pending_nofacts=%s does not exist; nothing was written (create the facts file first)

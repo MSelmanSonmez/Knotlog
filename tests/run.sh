@@ -50,6 +50,10 @@ exec < /dev/null
 # not a change to `quipu` itself: opening $EDITOR after a successful write
 # is the correct, wanted behavior for real interactive use.
 unset EDITOR VISUAL
+# Same reasoning for the agent markers: run from inside Claude Code the suite
+# inherits CLAUDECODE, and `pending --approve` refuses under it. Tests that
+# need a marker set it on the one command.
+unset CLAUDECODE KNOTLOG_HOOK QUIPU_HOOK
 # GNU grep 3.0 on Git for Windows fails multibyte fixed-string matches under
 # UTF-8 locales. Wrapping grep in LC_ALL=C ensures test-suite assertion greps
 # match bytes deterministically. SUT (`sh "$ROOT/knotlog"`) runs as a separate
@@ -13508,9 +13512,9 @@ b3_mk() { # name [config line...] -> en vault with an active threads section
   printf '%s\n' '# Threads' '<!-- knotlog:threads:start -->' '### Active threads' '- a' '### Closed threads' \
     '<!-- knotlog:threads:end -->' > "$TMP/$_b3_v/Threads.md"
 }
-b3_run() { # name args... -> $B3RC; stdout/stderr in name.out / name.err
+b3_run() { # name args... -> $B3RC; stdout/stderr in name.out / name.err; QUIPU_FORCE_TTY=1 stands in for the user at a terminal (pending --approve/--reject)
   _b3_v=$1; shift
-  QUIPU_LANG=en QUIPU_VAULT="$TMP/$_b3_v" sh "$ROOT/knotlog" "$@" </dev/null >"$TMP/$_b3_v.out" 2>"$TMP/$_b3_v.err"
+  QUIPU_FORCE_TTY=1 QUIPU_LANG=en QUIPU_VAULT="$TMP/$_b3_v" sh "$ROOT/knotlog" "$@" </dev/null >"$TMP/$_b3_v.out" 2>"$TMP/$_b3_v.err"
   B3RC=$?
 }
 b3_tree() { # name -> one checksum over every file outside .knotlog/ (names and bytes)
@@ -13777,9 +13781,9 @@ b2_ss() { # name [stdin] -> additionalContext of SessionStart
 b2_rem() { # name -> remember in hook mode, the way every adapter runs it
   QUIPU_HOOK=1 QUIPU_VAULT="$TMP/$1" sh "$ROOT/knotlog" remember </dev/null >/dev/null 2>&1
 }
-b2_run() { # name args... -> $B2RC; stdout/stderr in name.out / name.err
+b2_run() { # name args... -> $B2RC; stdout/stderr in name.out / name.err; QUIPU_FORCE_TTY=1 as in b3_run
   _b2_v=$1; shift
-  QUIPU_LANG=en QUIPU_VAULT="$TMP/$_b2_v" sh "$ROOT/knotlog" "$@" </dev/null >"$TMP/$_b2_v.out" 2>"$TMP/$_b2_v.err"
+  QUIPU_FORCE_TTY=1 QUIPU_LANG=en QUIPU_VAULT="$TMP/$_b2_v" sh "$ROOT/knotlog" "$@" </dev/null >"$TMP/$_b2_v.out" 2>"$TMP/$_b2_v.err"
   B2RC=$?
 }
 b2_tree() { # name -> one checksum over every file outside .knotlog/ (names and bytes)
@@ -14425,8 +14429,8 @@ mkvault p2tr; printf '%s\n' lang=tr layout=plain > "$TMP/p2tr/.knotlog/config"
 printf '# Gerçekler\n- Karar: eski\n' > "$TMP/p2tr/Gerçekler.md"
 QUIPU_VAULT="$TMP/p2tr" sh "$ROOT/knotlog" propose --kind lesson "Karar: p2 türkçe çalıştı" </dev/null >/dev/null 2>&1
 QUIPU_VAULT="$TMP/p2tr" sh "$ROOT/knotlog" propose --kind lesson "etiketsiz gözlem" </dev/null >/dev/null 2>&1
-QUIPU_VAULT="$TMP/p2tr" sh "$ROOT/knotlog" pending --approve 1 --to facts </dev/null >"$TMP/p2tr.out" 2>&1; R1389=$?
-QUIPU_VAULT="$TMP/p2tr" sh "$ROOT/knotlog" pending --approve 2 --to facts </dev/null >"$TMP/p2tr.err" 2>&1; R1389B=$?
+QUIPU_FORCE_TTY=1 QUIPU_VAULT="$TMP/p2tr" sh "$ROOT/knotlog" pending --approve 1 --to facts </dev/null >"$TMP/p2tr.out" 2>&1; R1389=$?
+QUIPU_FORCE_TTY=1 QUIPU_VAULT="$TMP/p2tr" sh "$ROOT/knotlog" pending --approve 2 --to facts </dev/null >"$TMP/p2tr.err" 2>&1; R1389B=$?
 t; assert_eq "T-1389: a Turkish vault appends to Gerçekler.md with the 'kaynak' suffix and the Turkish tags; an untagged text exits 2 in Turkish" "0 - Karar: p2 türkçe çalıştı (kaynak: pending #1) 2 yes" \
   "$R1389 $(tail -n 1 "$TMP/p2tr/Gerçekler.md") $R1389B $(grep -qF 'Tercih|Karar|Konvansiyon' "$TMP/p2tr.err" && printf yes || printf no)"
 
@@ -14606,6 +14610,50 @@ t; assert_eq "T-1405: usage names --min in every language file, and the summary 
   "$(for _s3_f in "$ROOT"/i18n/*.txt; do grep '^usage_similar=' "$_s3_f" | grep -qF -- '--min' && grep '^similar_summary=' "$_s3_f" | grep -qF '%d' || printf '%s ' "${_s3_f##*/}"; done)"
 b3_run s3a bogus-command
 t; assert_eq "T-1406: the usage text lists the similar command" 'yes' "$(b3_yn grep -qE '^ +similar ' "$TMP/s3a.err" "$TMP/s3a.out")"
+
+
+# ---- pending decisions need the user at a terminal; lessons re-run admission (T-1407..T-1411) ----
+# An agent that ran `propose` must not approve its own proposal. b3_run sets
+# QUIPU_FORCE_TTY=1; these calls go around it on purpose.
+hu_run() { # name env-assignment args... -> $HURC; stdout/stderr in name.out / name.err
+  _hu_v=$1; _hu_e=$2; shift 2
+  # shellcheck disable=SC2086 # $_hu_e is one or more VAR=value words, split on purpose
+  env QUIPU_LANG=en QUIPU_VAULT="$TMP/$_hu_v" $_hu_e sh "$ROOT/knotlog" "$@" </dev/null >"$TMP/$_hu_v.out" 2>"$TMP/$_hu_v.err"
+  HURC=$?
+}
+hu_said() { b3_yn grep -qxF -- "$(mi18n en err_pending_human)" "$TMP/$1.err"; }
+b3_mk hu
+b3_run hu propose --kind lesson "hu the build needs make"
+C1407=$(cksum < "$TMP/hu/.knotlog/pending"); T1407=$(b3_tree hu)
+hu_run hu QUIPU_FORCE_TTY=0 pending --approve 1; R1407A=$HURC; S1407A=$(hu_said hu)
+hu_run hu QUIPU_FORCE_TTY=0 pending --reject 1; R1407B=$HURC; S1407B=$(hu_said hu)
+t; assert_eq "T-1407: with no terminal, approve and reject exit 4 with err_pending_human; the queue and the vault are unchanged" '4 yes 4 yes yes yes' \
+  "$R1407A $S1407A $R1407B $S1407B $([ "$(cksum < "$TMP/hu/.knotlog/pending")" = "$C1407" ] && printf yes || printf no) $([ "$(b3_tree hu)" = "$T1407" ] && printf yes || printf no)"
+
+hu_run hu "QUIPU_FORCE_TTY=1 CLAUDECODE=1" pending --approve 1; R1408A=$HURC; S1408A=$(hu_said hu)
+hu_run hu "QUIPU_FORCE_TTY=1 KNOTLOG_HOOK=1" pending --approve 1; R1408B=$HURC; S1408B=$(hu_said hu)
+hu_run hu "QUIPU_FORCE_TTY=1 QUIPU_HOOK=1" pending --reject 1; R1408C=$HURC; S1408C=$(hu_said hu)
+t; assert_eq "T-1408: an agent or hook marker refuses even with the test switch (CLAUDECODE exit 4; a hook exits 0 as every hook error does); nothing changes" '4 yes 0 yes 0 yes yes yes' \
+  "$R1408A $S1408A $R1408B $S1408B $R1408C $S1408C $([ "$(cksum < "$TMP/hu/.knotlog/pending")" = "$C1407" ] && printf yes || printf no) $([ "$(b3_tree hu)" = "$T1407" ] && printf yes || printf no)"
+
+hu_run hu "QUIPU_FORCE_TTY=0 CLAUDECODE=1" pending --approve 1 --dry-run; R1409=$HURC
+t; assert_eq "T-1409: --dry-run decides nothing, so it still runs without a terminal and under an agent; the queue is unchanged" '0 yes yes' \
+  "$R1409 $(b3_yn grep -qF 'hu the build needs make' "$TMP/hu.out") $([ "$(cksum < "$TMP/hu/.knotlog/pending")" = "$C1407" ] && printf yes || printf no)"
+
+b3_run hu pending --approve 1
+t; assert_eq "T-1410: with the user at a terminal (the test switch, no marker) approve still writes and appends A" "0 A${TAB}1" \
+  "$B3RC $(tail -n 1 "$TMP/hu/.knotlog/pending" | cut -f 1-2)"
+
+# T-1411: a line appended to .knotlog/pending by hand skips propose's gate, so
+# the lessons section runs the secret check again, on the whole text (a secret
+# past the 100-byte cut is caught too).
+ls_mk husec
+ls_p husec 1 2026-11-01 lesson A "hu clean lesson stays"
+ls_p husec 2 2026-11-02 lesson A "hu key $B3_GHP"
+ls_p husec 3 2026-11-03 fix A "hu long $(b3_x 100) $B3_GHP"
+O1411=$(ls_ctx husec)
+t; assert_eq "T-1411: an approved line holding a secret never enters context, short or past the cut; a clean one still does" 'yes no no no' \
+  "$(sec_has "$O1411" 'hu clean lesson stays') $(sec_has "$O1411" 'ghp_') $(sec_has "$O1411" 'hu key') $(sec_has "$O1411" 'hu long')"
 
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1

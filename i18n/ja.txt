@@ -43,6 +43,7 @@ err_pending_closed=#%s は未決の提案ではありません (knotlog pending 
 err_pending_tab=レビュー待ちのノートにタブは使えません。キューには何も追加していません
 err_pending_kind=#%s の種類 %s は不明です。何も書き込んでいません
 err_pending_to=不明な書き込み先 %s: note、facts、thread のいずれかを指定してください
+err_pending_human=--approve と --reject はエージェントではなくあなたが決めることです。エージェント・フック・スクリプト経由ではなく、ご自身のターミナルでコマンドを実行してください。何も変更していません
 err_pending_untagged=#%s は (%s) のいずれかのタグとコロンで始まっていないため、恒久的な事実として扱えません。何も書き込まれず、提案は未処理のままです (書き直すか、--to note で承認してください)
 err_pending_dup=#%s は既に %s にあります (または以前そこへ移されました)。何も書き込まれず、提案は未処理のままです
 err_pending_nofacts=%s がありません。何も書き込まれませんでした (先に事実ファイルを作成してください)
