@@ -5883,12 +5883,16 @@ ${_q_text}"
 # ---- remember ---------------------------------------------------------------
 
 _q_remember_lock_acquire() {
-  # _q_remember_lock_acquire LOCKDIR BUSY_KEY — take the remember lock (an
-  # atomic mkdir). Returns 0 when acquired; after the bounded wait it warns
-  # with BUSY_KEY and returns 1, leaving the decision to exit to the caller.
+  # _q_remember_lock_acquire LOCKDIR BUSY_KEY — take the remember lock and
+  # write $$ to LOCKDIR/pid. Returns 0 when acquired; after the bounded wait it
+  # warns with BUSY_KEY and returns 1, leaving the decision to exit to the caller.
+  # The owner is whoever creates LOCKDIR/pid under noclobber (O_EXCL): mkdir's
+  # status alone is not atomic everywhere -- uutils mkdir (Ubuntu 26.04's
+  # default) exits 0 when a racing process made the directory between its
+  # exists() check and mkdir(2), so two callers both "won" the lock.
   _q_rla_lock=$1
   _q_rla_wait=0
-  while ! mkdir "$_q_rla_lock" 2>/dev/null; do
+  while ! { mkdir "$_q_rla_lock" 2>/dev/null && (set -C; printf '%s\n' "$$" > "$_q_rla_lock/pid") 2>/dev/null; }; do
     # Recover a lock left by a process that was killed, but never steal a
     # live owner's lock.  The bounded wait keeps hook shutdown responsive.
     _q_rla_pid=
@@ -5896,6 +5900,7 @@ _q_remember_lock_acquire() {
       _q_rla_pid=$(cat "$_q_rla_lock/pid" 2>/dev/null || true)
     fi
     if [ -n "$_q_rla_pid" ] && ! kill -0 "$_q_rla_pid" 2>/dev/null; then
+      # shortcut: a third caller that takes the lock between the read above and this rm loses it to us; needs three overlapping writers, upgrade if that is ever seen.
       rm -f "$_q_rla_lock/pid"
       rmdir "$_q_rla_lock" 2>/dev/null || true
       continue
@@ -5975,7 +5980,6 @@ _q_cmd_remember() {
     fi
     exit 1
   }
-  printf '%s\n' "$$" > "$_q_lock/pid"
   _q_body=
   _q_remember_cleanup() {
     [ -z "${_q_body:-}" ] || rm -f "$_q_body"
@@ -6371,7 +6375,6 @@ _q_note_thread_write() {
   _q_nt_cr=$(printf '\r')
   _q_nt_lock="$_q_nt_v/$_q_SD/remember.lock"
   _q_remember_lock_acquire "$_q_nt_lock" note_busy || exit 1
-  printf '%s\n' "$$" > "$_q_nt_lock/pid"
   _q_nt_tmp="$_q_nt_v/$_q_SD/thread.tmp"
   _q_nt_line="$_q_nt_v/$_q_SD/thread.line"
   _q_nt_cleanup() {
@@ -6535,7 +6538,6 @@ _q_note_plain_write() {
   # Same lock as remember: the two commands edit the same session file.
   _q_lock="$_q_v/$_q_SD/remember.lock"
   _q_remember_lock_acquire "$_q_lock" note_busy || exit 1
-  printf '%s\n' "$$" > "$_q_lock/pid"
   _q_note_tmp="$_q_v/$_q_SD/note.tmp"
   _q_note_line="$_q_v/$_q_SD/note.line"
   _q_note_cleanup() {
@@ -6754,7 +6756,6 @@ _q_cmd_distill() {
   if [ "$_q_ds_apply" = 1 ] && [ $((_q_ds_n1 + _q_ds_n2)) -gt 0 ]; then
     _q_lock="$_q_v/$_q_SD/remember.lock"
     _q_remember_lock_acquire "$_q_lock" distill_busy || { _q_lock=; exit 1; }
-    printf '%s\n' "$$" > "$_q_lock/pid"
     # The files may have changed while the lock was free: plan again under it.
     _q_ds_plans
     _q_ds_n1=$(_q_ds_nl "$_q_ds_t/a1")
@@ -6862,7 +6863,6 @@ _q_pending_lock() {
   # The remember lock guards .knotlog/pending too (ids are max + 1).
   _q_pl_lock="$_q_v/$_q_SD/remember.lock"
   _q_remember_lock_acquire "$_q_pl_lock" note_busy || exit 1
-  printf '%s\n' "$$" > "$_q_pl_lock/pid"
   trap 'rm -f "$_q_pl_lock/pid"; rmdir "$_q_pl_lock" 2>/dev/null || true' EXIT HUP INT TERM
 }
 
