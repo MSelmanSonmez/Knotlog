@@ -12,6 +12,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The review ask (`ctx_review_ask`, all six languages) now tells the agent to propose nothing from a conversation the user called off the record; still under 600 bytes.
 - `knotlog similar [--min X]`: a read-only report of line pairs that may be the same topic, across the facts lines, the active thread lines and the approved `lesson`/`fix`/`skill` proposals. Words are folded and cut to five characters, pairs are scored by Jaccard (default `--min 0.4`, a number from 0 to 1, anything else exits 2), and each row gives the score, both places, which side Knotlog wrote (`knotlog/user`) and the first 60 bytes of each text. It writes nothing, takes no lock and never merges. `doctor` adds one row when the default scan finds a pair (no exit code change; skipped above 500 candidate lines).
 
+### Fixed
+- Two overlapping `remember` runs (or `note`, `distill`, `pending --approve`) could both take the remember lock where `mkdir` is uutils coreutils (Ubuntu 26.04's default), which exits 0 when another process creates the directory during its own call; the session file then got the same digest twice. The lock now belongs to whoever creates its `pid` file under noclobber, whatever `mkdir` reports.
+
 ## [1.5.0] - 2026-10-31
 
 ### Added
