@@ -5892,7 +5892,17 @@ _q_remember_lock_acquire() {
   # exists() check and mkdir(2), so two callers both "won" the lock.
   _q_rla_lock=$1
   _q_rla_wait=0
-  while ! { mkdir "$_q_rla_lock" 2>/dev/null && (set -C; printf '%s\n' "$$" > "$_q_rla_lock/pid") 2>/dev/null; }; do
+  while :; do
+    if mkdir "$_q_rla_lock" 2>/dev/null; then
+      (set -C; printf '%s\n' "$$" > "$_q_rla_lock/pid") 2>/dev/null && return 0
+      # The write failed. With a pid file there, another caller owns the lock
+      # (the uutils race above); without one it failed for another reason
+      # (ENOSPC, EACCES, an AV lock) and the empty directory is ours: remove it,
+      # or it never goes stale and every later caller reports busy. rmdir
+      # refuses a directory whose owner has written its pid meanwhile; one
+      # that has not yet only fails its write and retries.
+      [ -e "$_q_rla_lock/pid" ] || rmdir "$_q_rla_lock" 2>/dev/null || true
+    fi
     # Recover a lock left by a process that was killed, but never steal a
     # live owner's lock.  The bounded wait keeps hook shutdown responsive.
     _q_rla_pid=
@@ -5916,7 +5926,6 @@ _q_remember_lock_acquire() {
     sleep 0.1
     _q_rla_wait=$((_q_rla_wait + 1))
   done
-  return 0
 }
 
 _q_reflect_scaffold() {

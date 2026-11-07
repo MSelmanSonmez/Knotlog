@@ -1551,6 +1551,24 @@ rmdir "$TMP/vr31uu/.knotlog/remember.lock" 2>/dev/null || true
 t; assert_eq "T-234: a mkdir that reports EEXIST as success does not let remember past a live owner" 'yes' \
   "$([ "$RC" -ne 0 ] && grep -qF "$REM_BUSY" "$TMP/vr31uu.err" && [ ! -f "$TMP/vr31uu/.knotlog/remembered" ] && printf yes || printf no)"
 
+# T-1416: a pid write that fails for a reason other than a racing owner
+# (ENOSPC, EACCES, an AV lock) must not leave the empty lock directory behind:
+# it would never go stale, and every later remember/note/pending would report
+# busy.  A scratch copy writes the pid into a missing directory, so the write
+# fails (ENOENT) on every platform; QUIPU_HOME keeps lib/i18n on $ROOT.
+LKPATCH="$TMP/t1416"
+mkdir -p "$LKPATCH"
+sed 's|> "[$]_q_rla_lock/pid")|> "$_q_rla_lock/nodir/pid")|' "$ROOT/knotlog" > "$LKPATCH/knotlog"
+t; assert_eq "T-1416 setup: the scratch copy's pid write was redirected" '1' "$(grep -c 'nodir/pid' "$LKPATCH/knotlog")"
+mkrem vr31nopid
+printf '%s\n' '2026-08-20T10:00 | PostToolUse | Edit | 500-Knowledge/nopid.md' >> "$TMP/vr31nopid/.knotlog/activity.log"
+QUIPU_HOME="$ROOT" QUIPU_VAULT="$TMP/vr31nopid" QUIPU_LANG=en sh "$LKPATCH/knotlog" remember >"$TMP/vr31nopid.out" 2>"$TMP/vr31nopid.err"; RC=$?
+t; assert_eq "T-1416: when the pid write fails, remember reports busy and leaves no lock directory behind" 'yes' \
+  "$([ "$RC" -ne 0 ] && grep -qF "$REM_BUSY" "$TMP/vr31nopid.err" && [ ! -e "$TMP/vr31nopid/.knotlog/remember.lock" ] && printf yes || printf no)"
+OUT=$(rem vr31nopid 2>&1); RC=$?
+t; assert_eq "T-1416: the next remember is not blocked by it and writes the digest" 'yes' \
+  "$([ "$RC" -eq 0 ] && grep -qF 'nopid.md' "$TMP/vr31nopid/700-Sessions/$D.md" && printf yes || printf no)"
+
 printf '%s\n' '2026-08-20T11:00 | PostToolUse | Edit | 500-Knowledge/new.md' > "$TMP/vr31/.knotlog/activity.log"
 printf '%s\n' '2026-08-20T11:01 | PostToolUse | Read | 500-Knowledge/new.md' >> "$TMP/vr31/.knotlog/activity.log"
 t; BEFORE=$(grep -c '## ' "$TMP/vr31/700-Sessions/$D.md")
