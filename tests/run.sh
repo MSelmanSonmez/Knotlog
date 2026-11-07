@@ -1527,6 +1527,26 @@ t; OUT=$(rem vr31busy); RC=$?
 assert_eq "remember: skipped lock transaction is recovered on next run" 'yes' \
   "$([ "$RC" -eq 0 ] && [ -f "$TMP/vr31busy/.knotlog/remembered" ] && grep -qF 'busy.md' "$TMP/vr31busy/700-Sessions/$D.md" && printf yes || printf no)"
 
+# T-234: the lock must not trust mkdir's exit status.  uutils mkdir (Ubuntu
+# 26.04's default) exits 0 when a racing caller made the directory between its
+# exists() check and mkdir(2), so the concurrent test above saw two digests.
+# This wrapper loses that race every time (EEXIST on a directory -> success),
+# which makes the interleaving deterministic: a live owner must still win.
+mkrem vr31uu
+printf '%s\n' '2026-08-20T10:00 | PostToolUse | Edit | 500-Knowledge/uu.md' >> "$TMP/vr31uu/.knotlog/activity.log"
+mkdir -p "$TMP/t234wrap"
+printf '#!/bin/sh\nfor a; do d=$a; done\n"%s" "$@" 2>/dev/null || [ -d "$d" ]\n' "$(command -v mkdir)" > "$TMP/t234wrap/mkdir"
+chmod +x "$TMP/t234wrap/mkdir"
+sleep 300 & BUSY_PID=$!
+mkdir "$TMP/vr31uu/.knotlog/remember.lock"
+printf '%s\n' "$BUSY_PID" > "$TMP/vr31uu/.knotlog/remember.lock/pid"
+PATH="$TMP/t234wrap:$PATH" QUIPU_VAULT="$TMP/vr31uu" QUIPU_LANG=en sh "$ROOT/knotlog" remember >"$TMP/vr31uu.out" 2>"$TMP/vr31uu.err"; RC=$?
+kill "$BUSY_PID" 2>/dev/null || true; wait "$BUSY_PID" 2>/dev/null || true
+rm -f "$TMP/vr31uu/.knotlog/remember.lock/pid"
+rmdir "$TMP/vr31uu/.knotlog/remember.lock" 2>/dev/null || true
+t; assert_eq "T-234: a mkdir that reports EEXIST as success does not let remember past a live owner" 'yes' \
+  "$([ "$RC" -ne 0 ] && grep -qF "$REM_BUSY" "$TMP/vr31uu.err" && [ ! -f "$TMP/vr31uu/.knotlog/remembered" ] && printf yes || printf no)"
+
 printf '%s\n' '2026-08-20T11:00 | PostToolUse | Edit | 500-Knowledge/new.md' > "$TMP/vr31/.knotlog/activity.log"
 printf '%s\n' '2026-08-20T11:01 | PostToolUse | Read | 500-Knowledge/new.md' >> "$TMP/vr31/.knotlog/activity.log"
 t; BEFORE=$(grep -c '## ' "$TMP/vr31/700-Sessions/$D.md")
