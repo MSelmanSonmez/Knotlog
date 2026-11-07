@@ -1466,11 +1466,26 @@ assert_eq "remember: no new lines is a no-op" 'yes' \
 # Two overlapping hooks must not digest the same activity window twice.
 mkrem vr31race
 printf '%s\n' '2026-08-20T10:00 | PostToolUse | Edit | 500-Knowledge/race.md' >> "$TMP/vr31race/.knotlog/activity.log"
-(rem vr31race >/dev/null 2>&1) & RACE_PID=$!
-(rem vr31race >/dev/null 2>&1) & RACE_PID2=$!
-wait "$RACE_PID"; wait "$RACE_PID2"
-assert_eq "remember: concurrent calls append one digest" 'yes' \
-  "$([ "$(grep -c '^## ' "$TMP/vr31race/700-Sessions/$D.md")" = 1 ] && [ "$(grep -c '2026-08-20T10:00' "$TMP/vr31race/700-Sessions/$D.md")" = 1 ] && printf yes || printf no)"
+(rem vr31race >"$TMP/race1.out" 2>&1) & RACE_PID=$!
+(rem vr31race >"$TMP/race2.out" 2>&1) & RACE_PID2=$!
+wait "$RACE_PID"; RC1=$?
+wait "$RACE_PID2"; RC2=$?
+RACE_RES=$([ "$(grep -c '^## ' "$TMP/vr31race/700-Sessions/$D.md")" = 1 ] && [ "$(grep -c '2026-08-20T10:00' "$TMP/vr31race/700-Sessions/$D.md")" = 1 ] && printf yes || printf no)
+assert_eq "remember: concurrent calls append one digest" 'yes' "$RACE_RES"
+if [ "$RACE_RES" != yes ]; then
+  # Diagnostics for CI only: TAP comment lines, no effect on pass/fail.
+  {
+    printf 'rc1=%s rc2=%s\n--- race1.out\n' "$RC1" "$RC2"; cat "$TMP/race1.out"
+    printf -- '--- race2.out\n'; cat "$TMP/race2.out"
+    printf -- '--- 700-Sessions/%s.md\n' "$D"
+    cat "$TMP/vr31race/700-Sessions/$D.md" 2>/dev/null || printf 'missing\n'
+    printf -- '--- ls -la .knotlog\n'; ls -la "$TMP/vr31race/.knotlog"
+    for RACE_F in "$TMP/vr31race/.knotlog"/* "$TMP/vr31race/.knotlog"/*/* "$TMP/vr31race/Last-Session.md" "$TMP/vr31race/Threads.md"; do
+      [ -f "$RACE_F" ] && [ "$(wc -c < "$RACE_F")" -le 4096 ] || continue
+      printf -- '--- %s\n' "${RACE_F#"$TMP/vr31race/"}"; cat "$RACE_F"
+    done
+  } 2>&1 | sed 's/^/#    /'
+fi
 
 # A live owner can outlast the bounded lock wait.  Standalone remember must
 # report that it skipped the transaction, while a hook must stay successful so
