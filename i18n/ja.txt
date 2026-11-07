@@ -31,6 +31,7 @@ err_missing_arg=必須の引数がありません
 err_unknown_flag=不明なフラグ: %s
 err_note_args=note には引用符で囲んだテキストを 1 つだけ指定してください
 err_note_newline=note のテキストは 1 行にしてください (改行・復帰文字は不可)
+err_note_control=テキストに制御文字 (ESC など) が含まれています。ターミナルで文字を隠せるため、何も書き込んでいません
 err_note_block=今日のセッションファイルに振り返りの開始マーカーはありますが終了マーカーがありません; 何も書き込みませんでした
 err_note_write=%s に書き込めませんでした; ファイルは変更されていません
 err_thread_nofile=スレッドファイルがありません: %s; 先に knotlog init か knotlog remember を実行してください; 何も書き込みませんでした

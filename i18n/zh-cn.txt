@@ -31,6 +31,7 @@ err_missing_arg=缺少必需的参数
 err_unknown_flag=未知标志：%s
 err_note_args=note 只接受一个带引号的文本参数
 err_note_newline=note 文本必须为单行（不能包含换行或回车）
+err_note_control=文本包含控制字符（如 ESC），它可能在终端中隐藏文字；未写入任何内容
 err_note_block=今天的会话文件有反思起始标记但没有结束标记；未写入任何内容
 err_note_write=无法写入 %s；文件未被更改
 err_thread_nofile=缺少线索文件：%s；请先运行 knotlog init 或 knotlog remember；未写入任何内容

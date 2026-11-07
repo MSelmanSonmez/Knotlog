@@ -31,6 +31,7 @@ err_missing_arg=zorunlu argüman eksik
 err_unknown_flag=bilinmeyen bayrak: %s
 err_note_args=note tam olarak bir tırnaklı metin argümanı alır
 err_note_newline=not metni tek satır olmalı (satır sonu ya da satır başı karakteri olamaz)
+err_note_control=metinde terminalde yazıyı gizleyebilen bir denetim karakteri (ESC gibi) var; hiçbir şey yazılmadı
 err_note_block=bugünkü oturum dosyasında yansıma başlangıç işareti var, bitiş işareti yok; hiçbir şey yazılmadı
 err_note_write=%s yazılamadı; dosya değiştirilmedi
 err_thread_nofile=konu dosyası yok: %s; önce knotlog init veya knotlog remember çalıştır; hiçbir şey yazılmadı

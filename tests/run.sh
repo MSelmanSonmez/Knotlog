@@ -14655,6 +14655,37 @@ O1411=$(ls_ctx husec)
 t; assert_eq "T-1411: an approved line holding a secret never enters context, short or past the cut; a clean one still does" 'yes no no no' \
   "$(sec_has "$O1411" 'hu clean lesson stays') $(sec_has "$O1411" 'ghp_') $(sec_has "$O1411" 'hu key') $(sec_has "$O1411" 'hu long')"
 
+
+# ---- control characters never reach the queue or the reviewer's terminal (T-1412..T-1415) ----
+# ESC[8m makes a terminal conceal what follows: the reviewer would read
+# "ct shown" while the model reads "ct hidden" too.
+CT_ESC=$(printf '\033')
+CT_HIDE="ct shown ${CT_ESC}[8mct hidden${CT_ESC}[0m"
+ct_said() { b3_yn grep -qxF -- "$(mi18n en err_note_control)" "$TMP/$1.err"; }
+b3_mk ct
+T1412=$(b3_tree ct)
+b3_run ct propose --kind lesson "$CT_HIDE"; R1412A=$B3RC; S1412A=$(ct_said ct)
+b3_run ct note "$CT_HIDE"; R1412B=$B3RC; S1412B=$(ct_said ct)
+b3_run ct note "ct del $(printf '\177') bel $(printf '\007')"; R1412C=$B3RC; S1412C=$(ct_said ct)
+t; assert_eq "T-1412: propose and note refuse an ESC[8m sequence (and DEL, BEL) with exit 2 err_note_control; nothing queued or written" '2 yes 2 yes 2 yes no yes' \
+  "$R1412A $S1412A $R1412B $S1412B $R1412C $S1412C $(b3_yn test -e "$TMP/ct/.knotlog/pending") $([ "$(b3_tree ct)" = "$T1412" ] && printf yes || printf no)"
+
+b3_run ct note "ct tab${TAB}kept"
+t; assert_eq "T-1413: a tab is not refused as a control character: a plain note with one is still written" '0 yes' \
+  "$B3RC $(b3_has ct "ct tab${TAB}kept")"
+
+# A row that reached the queue before this check (or by hand) is cleaned on the way out.
+b3_mk ctl
+printf 'P\t1\t2026-11-01 10:00\tlesson\tpolicy_review_first\t%s\n' "$CT_HIDE" > "$TMP/ctl/.knotlog/pending"
+C1414=$(cksum < "$TMP/ctl/.knotlog/pending"); T1414=$(b3_tree ctl)
+b3_run ctl pending
+t; assert_eq "T-1414: pending lists a queued ESC row with the control bytes removed, so the hidden part shows; the TAB columns stay" '0 no yes 5' \
+  "$B3RC $(b3_yn grep -qF -- "$CT_ESC" "$TMP/ctl.out") $(b3_yn grep -qF -- 'ct shown [8mct hidden[0m' "$TMP/ctl.out") $(awk -F"$TAB" '{ print NF }' "$TMP/ctl.out")"
+
+b3_run ctl pending --approve 1; R1415=$B3RC; S1415=$(ct_said ctl)
+t; assert_eq "T-1415: approving that row exits 2 err_note_control; no A line, no vault file changes" '2 yes yes yes' \
+  "$R1415 $S1415 $([ "$(cksum < "$TMP/ctl/.knotlog/pending")" = "$C1414" ] && printf yes || printf no) $([ "$(b3_tree ctl)" = "$T1414" ] && printf yes || printf no)"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0

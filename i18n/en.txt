@@ -31,6 +31,7 @@ err_missing_arg=missing required argument
 err_unknown_flag=unknown flag: %s
 err_note_args=note takes exactly one quoted text argument
 err_note_newline=note text must be one line (no newline or carriage return)
+err_note_control=the text holds a control character (such as ESC), which can hide text in a terminal; nothing was written
 err_note_block=today's session file has a reflection start marker without an end marker; nothing was written
 err_note_write=could not write %s; the file was not changed
 err_thread_nofile=threads file is missing: %s; run knotlog init or knotlog remember first; nothing was written

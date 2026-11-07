@@ -31,6 +31,7 @@ err_missing_arg=falta un argumento obligatorio
 err_unknown_flag=opción desconocida: %s
 err_note_args=note admite exactamente un argumento de texto entre comillas
 err_note_newline=el texto de note debe ser una sola línea (sin salto de línea ni retorno de carro)
+err_note_control=el texto contiene un carácter de control (como ESC), que puede ocultar texto en una terminal; no se escribió nada
 err_note_block=el archivo de sesión de hoy tiene un marcador de inicio del bloque de reflexión sin marcador de fin; no se escribió nada
 err_note_write=no se pudo escribir %s; el archivo no cambió
 err_thread_nofile=falta el archivo de hilos: %s; ejecuta knotlog init o knotlog remember primero; no se escribió nada

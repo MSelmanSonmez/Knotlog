@@ -6490,6 +6490,7 @@ _q_cmd_note() {
   case "$_q_note_text" in
     *"$_q_lf"*|*"$_q_cr"*) _q_die err_note_newline 2 ;;
   esac
+  ! _q_has_ctl "$_q_note_text" || _q_die err_note_control 2
 
   _q_v=$(_q_vault)
   if [ -z "$_q_v" ]; then
@@ -6827,6 +6828,13 @@ _q_admit() {
   fi
 }
 
+_q_has_ctl() {
+  # _q_has_ctl TEXT -- does TEXT hold a control character other than TAB (ESC,
+  # BEL, DEL...)? An ESC sequence can hide text from the person reviewing it
+  # in a terminal while the model still reads it.
+  printf '%s\n' "$1" | LC_ALL=C tr -d '\t' | LC_ALL=C grep -q '[[:cntrl:]]'
+}
+
 _q_secret_hit() {
   # _q_secret_hit TEXT -- does TEXT match the secret pattern? One source for
   # it: the pre-commit hook's own _pat= line, read once per run.
@@ -6907,6 +6915,7 @@ _q_cmd_propose() {
   _q_lf=$(printf '\nx')
   _q_lf=${_q_lf%x}
   case "$3" in *"$_q_lf"* | *"$(printf '\r')"*) _q_die err_note_newline 2 ;; esac
+  ! _q_has_ctl "$3" || _q_die err_note_control 2
   _q_v=$(_q_vault)
   [ -n "$_q_v" ] || _q_die err_no_vault
   _q_admit "$3" "$2"
@@ -7030,7 +7039,8 @@ _q_cmd_pending() {
     if [ -z "$_q_pd_rows" ]; then
       _q_msg pending_none
     else
-      printf '%s\n' "$_q_pd_rows" | sed 's/^P.//'
+      # Control bytes (an ESC sequence can hide text) go; the TAB separators stay.
+      printf '%s\n' "$_q_pd_rows" | sed 's/^P.//' | LC_ALL=C tr -d '\001-\010\013-\037\177'
     fi
     return 0
   fi
@@ -7053,6 +7063,7 @@ _q_cmd_pending() {
   _q_pd_kind=$(printf '%s\n' "$_q_pd_line" | awk -F"$(printf '\t')" '{ print $4 }')
   _q_pd_text=$(printf '%s\n' "$_q_pd_line" | awk -F"$(printf '\t')" '{ print $6 }')
   # The queue file is state, not trust: approval runs the refusing checks again.
+  ! _q_has_ctl "$_q_pd_text" || _q_die err_note_control 2
   _q_admit "$_q_pd_text" "$_q_pd_kind"
   [ "$_q_ad_rc" -ne 4 ] || _q_admit_say 4
   _q_pd_pre=

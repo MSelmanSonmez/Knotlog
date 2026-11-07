@@ -592,6 +592,8 @@ Every `knotlog note` and `knotlog note --thread` text is a candidate, checked be
 
 Both word lists are extended regular expressions; the active language's list is checked together with the English one. The secret pattern has one source: `knotlog` reads the pattern from the pre-commit hook it ships, so the commit gate and the note gate cannot drift apart. With the setting off (the default) a text without a secret is written exactly as before, byte for byte; a text with one, which earlier versions wrote, is refused.
 
+Before these checks, a text (of `note`, `note --thread` or `propose`) with a line break exits 2 (`err_note_newline`), and so does one with any other control character except a tab, such as ESC or DEL (`err_note_control`): an ESC sequence like `ESC[8m` can make a terminal hide text from the person reviewing it while the model still reads it. `pending --approve` refuses such a row the same way (exit 2, the proposal stays open), and `knotlog pending` removes control bytes other than the tab separators from what it lists, so a row queued before this check, or by hand, shows its hidden part.
+
 ## Write approval
 
 `write_approval=on` in `.knotlog/config` turns on review before writing. A note that passes the checks above is not written to the vault: it is appended to `.knotlog/pending` and `note` prints `pending_review<TAB>policy_review_first<TAB>#N (knotlog pending)` with exit 5. Only `note` and `note --thread` (and so the MCP `knotlog_note` tool) are queued, plus `knotlog propose`, which is always queued (see Review loop); `remember`, `capture`, `index`, `archive` and `compact` are not. Any other value, or no key, means off; `doctor` shows the row only when the key is present and warns on a value that is neither `on` nor `off`.
@@ -628,7 +630,7 @@ An unknown `--to` value, a missing value or `--to`/`--dry-run` together with `--
 |---|---|---|
 | 0 | `remembered` | written (or listed, rejected) |
 | 1 | `error` | could not write; the file is unchanged |
-| 2 | | usage: bad arguments, a tab in a queued text, an id that is not open, an unknown `--to`; `--to facts` with an untagged or duplicate text |
+| 2 | | usage: bad arguments, a tab in a queued text, a line break or another control character in the text, an id that is not open, an unknown `--to`; `--to facts` with an untagged or duplicate text |
 | 3 | `no_space` | `--thread` (or approving one, or `--to thread`) would push the threads file past the context budget; `--to facts` would push the facts section past it (see Large vaults) |
 | 4 | `refused` | `secret_pattern` or `instruction_shaped`; `pending --approve`/`--reject` without the user at a terminal (`err_pending_human`); nothing written |
 | 5 | `pending_review` | queued in `.knotlog/pending` (`policy_review_first` or `relative_time`) |

@@ -31,6 +31,7 @@ err_missing_arg=falta um argumento obrigatório
 err_unknown_flag=flag desconhecida: %s
 err_note_args=note aceita exatamente um argumento de texto entre aspas
 err_note_newline=o texto do note deve ter uma única linha (sem quebra de linha nem retorno de carro)
+err_note_control=o texto contém um caractere de controle (como ESC), que pode esconder texto num terminal; nada foi gravado
 err_note_block=o arquivo da sessão de hoje tem um marcador de início de reflexão sem o marcador de fim; nada foi gravado
 err_note_write=não foi possível gravar %s; o arquivo não foi alterado
 err_thread_nofile=o arquivo de threads não existe: %s; execute knotlog init ou knotlog remember primeiro; nada foi gravado
