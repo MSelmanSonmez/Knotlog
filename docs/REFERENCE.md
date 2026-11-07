@@ -63,7 +63,7 @@ Prerequisites: POSIX sh plus `sed`, `awk`, `grep`, `tr`, and `git`.
 
 | Agent | Written to | Shipped from |
 |---|---|---|
-| `claude` | `<vault>/.claude/settings.json` | `adapters/claude-code.json` |
+| `claude` | `<vault>/.claude/settings.json` | `adapters/claude-code.json`; also `<vault>/.claude/commands/learn.md` from `adapters/claude-code-learn.md` (the `/learn` command, see [Review loop](#review-loop)) |
 | `codex` | `<vault>/.codex/hooks.json` | `adapters/codex/hooks.json` |
 | `omp` | `<vault>/.omp/hooks/pre/knotlog.ts` | `adapters/omp/hooks/pre/knotlog.ts` |
 | `gemini` | `<vault>/.gemini/settings.json` | `adapters/gemini/settings.json` (SessionStart, BeforeAgent, AfterTool, SessionEnd; no AfterAgent: its output is not documented as reaching the model) |
@@ -199,12 +199,12 @@ left it says so and changes nothing.
 | `knotlog compile` | manual, deterministic: writes one derived note per concept under the knowledge folder's `Compiled/` (first/last seen, occurrences, source pointers, co-mentioned concepts), built from `index.tsv`, wikilinks and Markdown headings; needs an existing `index.tsv` (run `knotlog index` first); takes no arguments; the notes are derived, not your memory, and never enter context |
 | `knotlog search` | folded lexical search + BM25 (`--tag`/`--status`: narrow by frontmatter; `--all`: include `validity: rejected` notes) |
 | `knotlog links` | print a note's outgoing/incoming `[[wikilinks]]` |
-| `knotlog context` | recent-session context; `--json EVENT` emits the hook envelope; `--cursor` (with `--json`) emits Cursor's `additional_context` shape instead; `--antigravity` (with `--json SessionStart` or `Stop`) emits Antigravity's shapes; `--bridge` writes it to AGENTS.md |
+| `knotlog context` | recent-session context; `--json EVENT` emits the hook envelope; `--cursor` (with `--json`) emits Cursor's `additional_context` shape instead; `--antigravity` (with `--json SessionStart` or `Stop`) emits Antigravity's shapes; `--bridge` writes it to AGENTS.md; approved lessons ride along (see [Review loop](#review-loop), `lessons=`) |
 | `knotlog remember` | mechanical digest: `activity.log` → `<sessions>/YYYY-MM-DD.md` + a pointer block in the session file doctor reads (`Last-Session.md`, `Son-Oturum.md` in a Turkish vault) (`--dry-run`/`--git`/`--limit`) |
 | `knotlog note "<text>"` | appends one line (`- HH:MM <text>`) to today's session reflection block, after the existing lines of the first heading; never rewrites other lines; shares `remember`'s lock; the session note never enters context, so no budget check applies; a secret-shaped text is refused (exit 4) and, with `write_approval=on`, the line is queued instead (see Admission, Write approval) |
 | `knotlog digest` | write/refresh a deterministic date-scoped digest under the layout's dump folder (`--date YYYY-MM-DD`, `--dry-run`, `--limit`; or `--since YYYY-MM-DD [--until YYYY-MM-DD]` to print a range to stdout) |
 | `knotlog note --thread "<text>"` | appends one line (`- YYYY-MM-DD HH:MM <text>`) to the end of the active threads section (`Threads.md` / `Konular.md`) inside the threads block; never inside the pin block; exits 1 and writes nothing when the file or the active section is missing; exits 3 and writes nothing when the new line would push the file past the context budget (see Large vaults); shares `remember`'s lock; admission and write approval as for `note` |
-| `knotlog pending [--approve N\|--reject N]` | list the notes and proposals waiting for review (notes queue when `write_approval=on`; `propose` always queues), write one through the normal note path, or drop one; see Write approval and Review loop |
+| `knotlog pending [--approve N [--to note\|facts\|thread] [--dry-run]\|--reject N]` | list the notes and proposals waiting for review (notes queue when `write_approval=on`; `propose` always queues), write one (to today's note by default; `--to facts` or `--to thread` pick another target; `--dry-run` shows the target and line and writes nothing), or drop one; see Write approval and Review loop |
 | `knotlog propose --kind lesson\|skill\|fix "<text>"` | the agent's answer to the review ask: queue one finding in `.knotlog/pending` for the user's approval, whatever `write_approval` says; writes no vault file; see Review loop |
 | `knotlog import FILE` | convert a local JSON export with role/content messages (Claude transcript, ChatGPT export, or JSONL) into a session note (`--date YYYY-MM-DD`); `import claude [--project DIR] [--apply]` turns Claude Code transcripts into session notes (dry run unless `--apply`) |
 | `knotlog plan <name> --proje <Project>` | open a plan note under `<projects>/<Project>/<Plans>/` from the localized front-matter template; a missing project folder is an error, never auto-created |
@@ -212,6 +212,7 @@ left it says so and changes nothing.
 | `knotlog flair [--list\|none\|kaomoji\|emoji]` | show or set the reply flair (`flair=` in `.knotlog/config`), independent of the tone; `init --flair` and `install --flair` set it too (never touches companion.md) |
 | `knotlog compact [--keep N] [--apply]` | move old `Closed threads` entries of `Threads.md` into the archive, losslessly; dry run unless `--apply`; the newest `--keep N` (default 20) stay; also trims the last-session file (newest 5 `## ` blocks stay, or `--keep N`); see Session reflection |
 | `knotlog distill [--apply]` | move marked lines up: session note `[fact]` to the facts file, facts-file `[core]` to the core block of `companion.md`; dry run unless `--apply`; see Distill |
+| `knotlog similar [--min X]` | list line pairs that may be the same topic (facts lines, active thread lines, approved proposals); read only, merges nothing; see Similar |
 | `knotlog update --check` | compare this checkout's version against the latest GitHub release; network read only, touches no file |
 | `knotlog update --apply [--no-verify]` | update this checkout in place (tarball checkout: download, SHA-256 check, atomic swap; git-clone checkout: `git fetch` + checkout `<tag>`); bare `knotlog update` errors on purpose |
 | `knotlog rollback` | undo the last `update --apply`, restoring the checkout from its newest backup (`.knotlog-previous`); repeat to step back through up to three |
@@ -223,6 +224,7 @@ The `adapters/claude-code.json` adapter wires Knotlog into Claude Code's local h
 
 - `knotlog` must be on your `PATH` for the hooks; otherwise write its absolute path in each `command`.
 - **Restart Claude Code after editing `settings.json`** — hook configuration is not loaded into a running session.
+- **`/learn`.** `knotlog setup claude` also places the `/learn` slash command at `.claude/commands/learn.md` (never overwriting a file that differs); it queues one lesson for your approval, see [Review loop](#review-loop). Restart Claude Code or open a new session to see it in the command list.
 - On Windows, Git for Windows puts only `cmd/` on `PATH` — if a hook reports `Executable not found in $PATH: bash`, add `C:\Program Files\Git\bin` to `PATH` (or write the absolute bash path in the `shell` field).
 - `knotlog remember --git` auto-commits the vault (`--git` is opt-in; the adapter never commits by itself).
 - **Profiles.** `profile=` in `.knotlog/config` bundles how much context the hooks inject. `normal` (the default, also for an absent or unknown value; `doctor` warns on an unknown one) changes nothing. `economical` caps the session-start context at 4000 bytes and silences the per-turn output (the prompt nudge, the Stop reminder and the review ask); `manual` injects nothing at session start or per turn. In both, `capture`, `remember` and `index` still run, and `knotlog context` run by hand prints normally. Precedence for the size cap: `KNOTLOG_CTX_MAX` (env) > `ctx_max=` > `economical` (4000) > default (4096). `doctor` prints a `profile` row only when the key is set.
@@ -590,6 +592,8 @@ Every `knotlog note` and `knotlog note --thread` text is a candidate, checked be
 
 Both word lists are extended regular expressions; the active language's list is checked together with the English one. The secret pattern has one source: `knotlog` reads the pattern from the pre-commit hook it ships, so the commit gate and the note gate cannot drift apart. With the setting off (the default) a text without a secret is written exactly as before, byte for byte; a text with one, which earlier versions wrote, is refused.
 
+Before these checks, a text (of `note`, `note --thread` or `propose`) with a line break exits 2 (`err_note_newline`), and so does one with any other control character except a tab, such as ESC or DEL (`err_note_control`): an ESC sequence like `ESC[8m` can make a terminal hide text from the person reviewing it while the model still reads it. `pending --approve` refuses such a row the same way (exit 2, the proposal stays open), and `knotlog pending` removes control bytes other than the tab separators from what it lists, so a row queued before this check, or by hand, shows its hidden part.
+
 ## Write approval
 
 `write_approval=on` in `.knotlog/config` turns on review before writing. A note that passes the checks above is not written to the vault: it is appended to `.knotlog/pending` and `note` prints `pending_review<TAB>policy_review_first<TAB>#N (knotlog pending)` with exit 5. Only `note` and `note --thread` (and so the MCP `knotlog_note` tool) are queued, plus `knotlog propose`, which is always queued (see Review loop); `remember`, `capture`, `index`, `archive` and `compact` are not. Any other value, or no key, means off; `doctor` shows the row only when the key is present and warns on a value that is neither `on` nor `off`.
@@ -597,12 +601,28 @@ Both word lists are extended regular expressions; the active language's list is 
 ```
 knotlog pending              # list open proposals: id, stamp, kind, reason, text (TAB-separated)
 knotlog pending --approve 3  # write #3 through the normal note path, then mark it approved
+knotlog pending --approve 3 --to facts      # ...or into the facts file (also: --to note, --to thread)
+knotlog pending --approve 3 --to facts --dry-run   # show the target and the exact line; write nothing
 knotlog pending --reject 3   # mark #3 rejected; no vault file is touched
 ```
 
-`.knotlog/pending` is append-only, one TAB-separated line per event, never rewritten: `P<TAB>id<TAB>YYYY-MM-DD HH:MM<TAB>kind<TAB>reason<TAB>text` for a proposal, `A<TAB>id<TAB>YYYY-MM-DD HH:MM` for an approval, `R<TAB>id<TAB>YYYY-MM-DD HH:MM` for a rejection. A proposal is open while it has no `A` or `R` line; ids are the largest id so far plus one, taken under `remember`'s lock. A queued text may not contain a tab (exit 2). Kinds are `note` and `thread`, and `lesson`, `fix` and `skill` from `knotlog propose`; those three are approved as a plain note line prefixed `[lesson] `, `[fix] ` or `[skill candidate] ` (no skill file is ever written). The file lives in the state folder: it never enters `context` and costs no budget.
+`.knotlog/pending` is append-only, one TAB-separated line per event, never rewritten: `P<TAB>id<TAB>YYYY-MM-DD HH:MM<TAB>kind<TAB>reason<TAB>text` for a proposal, `A<TAB>id<TAB>YYYY-MM-DD HH:MM` for an approval, `R<TAB>id<TAB>YYYY-MM-DD HH:MM` for a rejection. A proposal is open while it has no `A` or `R` line; ids are the largest id so far plus one, taken under `remember`'s lock. A queued text may not contain a tab (exit 2). Kinds are `note` and `thread`, and `lesson`, `fix` and `skill` from `knotlog propose`; those three are approved as a plain note line prefixed `[lesson] `, `[fix] ` or `[skill candidate] ` (no skill file is ever written). The file lives in the state folder. Open, rejected, `note` and `thread` proposals never enter `context`; approved `lesson`, `fix` and `skill` proposals do, as the lessons section inside the `ctx_max` budget (see [Lessons in the opening context](#review-loop)).
 
 `--approve` checks the text for a secret again (and for an instruction, when the setting is on), writes it, and only then appends `A`. If the write fails, for example because `note --thread` would push the threads file past the context budget (exit 3), no `A` line is written and the proposal stays open. Deciding an id that is not open, or that does not exist, exits 2.
+
+**Only the user decides.** `--approve` and `--reject` run only when stdin and stdout are a terminal and no agent or hook marker is set (`CLAUDECODE`, `KNOTLOG_HOOK`/`QUIPU_HOOK`); otherwise they exit 4 with `err_pending_human` and change nothing (under a hook the exit code is 0, like every hook error). So an agent that ran `propose` cannot approve its own proposal, and a Claude Code `!` command, which runs in the agent's shell, is refused too: run it in your own terminal. `--dry-run` decides nothing and is not gated. See [Honest limits](#honest-limits) for what this check cannot stop.
+
+**Targets.** `--to` chooses where an approved proposal lands; the same admission checks run again for every target.
+
+| `--to` | Writes | Notes |
+|---|---|---|
+| none, or `note` | today's session note, one line `- HH:MM <prefix><text>` (the `[lesson] `, `[fix] ` or `[skill candidate] ` prefix for those kinds); a `thread` proposal without `--to` goes to the threads file as before | the default, byte for byte what earlier versions wrote |
+| `thread` | the active threads section, as `note --thread` does (`- YYYY-MM-DD HH:MM <text>`, no kind prefix) | past the threads budget: exit 3, nothing written, the proposal stays open |
+| `facts` | the end of the facts file (`Facts.md`, `Gerçekler.md`): `- <text> (source: pending #N)` (`kaynak` in a Turkish vault), no kind prefix | planned by [Distill](#distill)'s own rules: the text must open with a `distill_tags` tag and a colon (`Preference:`, `Decision:`, `Convention:`; Turkish `Tercih:`, `Karar:`, `Konvansiyon:`), otherwise exit 2; a text already in the file (folded comparison) or in `.knotlog/distilled` exits 2; past the facts budget exit 3; a missing facts file exits 1 and a linked one is refused (exit 1). Nothing is written and the proposal stays open in each case. On success the folded text is appended to `.knotlog/distilled` as `facts<TAB>key`, so a later `distill` will not add it again |
+
+An unknown `--to` value, a missing value or `--to`/`--dry-run` together with `--reject` exits 2.
+
+`--dry-run` runs every check of the chosen target (secret, instruction, tag, duplicate, budget) and prints `dry run: would write to <file>` followed by the exact line, then exits 0; a refusal exits with its own code. It writes no file, appends no `A` line and leaves the proposal open. The one thing it cannot see is a session note that has no reflection block yet (the real write adds the block first).
 
 **Exit codes** of `knotlog note`, `knotlog propose` and `knotlog pending`:
 
@@ -610,14 +630,14 @@ knotlog pending --reject 3   # mark #3 rejected; no vault file is touched
 |---|---|---|
 | 0 | `remembered` | written (or listed, rejected) |
 | 1 | `error` | could not write; the file is unchanged |
-| 2 | | usage: bad arguments, a tab in a queued text, an id that is not open |
-| 3 | `no_space` | `--thread` (or approving one) would push the threads file past the context budget (see Large vaults) |
-| 4 | `refused` | `secret_pattern` or `instruction_shaped`; nothing written |
+| 2 | | usage: bad arguments, a tab in a queued text, a line break or another control character in the text, an id that is not open, an unknown `--to`; `--to facts` with an untagged or duplicate text |
+| 3 | `no_space` | `--thread` (or approving one, or `--to thread`) would push the threads file past the context budget; `--to facts` would push the facts section past it (see Large vaults) |
+| 4 | `refused` | `secret_pattern` or `instruction_shaped`; `pending --approve`/`--reject` without the user at a terminal (`err_pending_human`); nothing written |
 | 5 | `pending_review` | queued in `.knotlog/pending` (`policy_review_first` or `relative_time`) |
 
 ## Review loop
 
-Knotlog never calls a model; the agent that already runs the session does the reviewing. When more than `KNOTLOG_REVIEW_AFTER` activity events (default 40, from `.knotlog/activity.log`) have piled up since the last ask, Knotlog asks the agent once (`ctx_review_ask`, under 600 bytes, in the vault's language, naming the event count and the three most touched paths): is there a lasting lesson, a repeated workflow worth a skill, or a corrected mistake? If so, the agent answers with:
+Knotlog never calls a model; the agent that already runs the session does the reviewing. When more than `KNOTLOG_REVIEW_AFTER` activity events (default 40, from `.knotlog/activity.log`) have piled up since the last ask, Knotlog asks the agent once (`ctx_review_ask`, under 600 bytes, in the vault's language, naming the event count and the three most touched paths): is there a lasting lesson, a repeated workflow worth a skill, or a corrected mistake? It also tells the agent to propose nothing from a conversation the user called off the record. If so, the agent answers with:
 
 ```
 knotlog propose --kind lesson "<text>"   # also: --kind skill, --kind fix
@@ -625,10 +645,14 @@ knotlog propose --kind lesson "<text>"   # also: --kind skill, --kind fix
 
 `propose` always queues: it runs the [Admission](#admission) checks (the instruction check skips `--kind skill`, since a workflow is imperative by nature), then appends one `P` line to `.knotlog/pending` and exits 5 with `pending_review<TAB>policy_review_first<TAB>#N (knotlog pending)`, whether `write_approval` is on or off. It writes no vault file and never a skill file; `knotlog pending --approve N` turns an approved finding into one line of today's session note (`[lesson] …`, `[fix] …`, `[skill candidate] …`). A kind other than `lesson`, `skill` or `fix`, a missing text or a text with a line break exits 2; a secret is refused with exit 4.
 
+**`/learn` (Claude Code).** `knotlog setup claude` also writes `.claude/commands/learn.md` (from `adapters/claude-code-learn.md`), a slash command that asks the agent to pick one lasting lesson from the conversation, state it as a dated observation and queue it with `knotlog propose --kind lesson`, then show the user the text, its number and the three `knotlog pending --approve N --to note|facts|thread` choices. The command never approves anything itself, and it proposes nothing from a conversation the user called off the record. Like the hook file, it is written only when absent; an identical file is left alone and a different one is never overwritten (see [Setup](#setup)).
+
 **When the ask comes.** The watermark `.knotlog/reviewed` holds the last log line at the previous ask; only the events after it count, so the ask comes at most once per batch. Two routes:
 
 - **Stop (first choice):** `context --json Stop` returns the ask in the same envelope as the [checkpoint signal](#checkpoint-signal-mid-session-memory-guard) (`decision:block` + `reason`; Antigravity `decision:continue`). A due checkpoint goes first; the ask waits for the next Stop. `stop_hook_active`, `profile=economical|manual` and `review=off` keep Stop silent and leave the watermark where it is.
 - **Next SessionStart (fallback):** `remember` (SessionEnd, and the first step of every SessionStart hook) writes `.knotlog/needs_review` when the ask is due and moves the watermark; the next `context --json SessionStart` puts the ask at the top of the context once and deletes the file. Agents without a Stop channel get the ask this way, and so does the SessionStart that follows a compaction.
+
+**Lessons in the opening context.** An approved `lesson`, `fix` or `skill` proposal (an `A` line in `.knotlog/pending`, no `R` line) comes back at the next session start as a short section after the facts: `- YYYY-MM-DD [lesson|fix|skill candidate] <first ~100 bytes of the text>`, newest first, cut on a UTF-8 boundary with `...`. `note` and `thread` proposals never enter. The date is the day of the proposal. `lessons=N` in `.knotlog/config` sets how many lines (default 5; `0` turns the section off; any value that is not a positive integer falls back to 5). The file is state, not trust (a line can be appended to it by hand), so the [admission](#admission) checks run again on the whole text, before the cut: text that matches the secret pattern or the language's instruction marks (`admit_inject_marks`) is skipped on the way in whatever `write_approval` says, and control characters become spaces. The section rides the budget slack that threads, rules and facts leave: lines that do not fit are dropped, one line says how many, and the whole context never exceeds `ctx_max`. With no approved lesson (or no `pending` file) nothing is printed and the output is unchanged. `profile=economical` keeps it at session start (under its 4000-byte cap); `profile=manual` and the per-turn events carry no context at all. `doctor` warns once when approved lessons exist but none fits the budget.
 
 `review=off` in `.knotlog/config` turns both routes off (any other value, or no key, is on). Under `profile=economical` or `manual` `remember` writes no flag either.
 
@@ -697,8 +721,25 @@ Knotlog enforces the format, not the meaning.
 - **Facts budget.** Before it writes layer 1, `--apply` builds the facts file with the new lines in a temp copy and measures its section the way `context` does (what is left of `ctx_max` after the fixed parts, threads and rules; past it `context` drops the whole section). If it would not fit, nothing is written, the exit code is 3 and `err_facts_budget` names the section size, the budget and the bytes to free. A dry run prints the same line on stderr and still lists the rows, exit 0. Layer 2 (`companion.md`) is not checked.
 - Without `--apply` the command writes nothing and prints one row per candidate: status, layer (`facts` or `core`), source, text. `--apply` takes the same lock as `remember` and `note`, skips session notes that are links or leave the vault, and ends with `N fact(s), M core line(s) added`. Source lines are never edited. An unknown flag exits 2.
 
+## Similar
+
+`knotlog similar [--min X]` answers one question: which two lines might say the same thing? It only reports. It writes no file (the state folder included), takes no lock, merges nothing and never enters `context`; what to merge, if anything, is yours to decide.
+
+**What is scanned.** The `- ` lines of the facts file; the list lines of the active section of the threads file (the pin block and the closed section are left out); the approved, not rejected `lesson`/`fix`/`skill` proposals of `.knotlog/pending`. Session notes are not scanned. A file that is a link or resolves outside the vault is skipped.
+
+**How lines are compared.** Each line loses a trailing `(source: ...)` / `(kaynak: ...)` suffix, a leading `[lesson]`-style bracket and a leading distill tag (`Decision:`, `Karar:` ...), is folded with the vault's fold profile (the one `search` uses), and is split into words. Words under three bytes and plain numbers are dropped, and each word is cut to its first five characters, a crude stem that lets `etiketi` meet `etiketini` and `yeşil` meet `yeşilken`. The score is the Jaccard index of the two word sets: shared words divided by all words of either line.
+
+**Output.** One tab-separated row per pair, best score first: `score` (two decimals), `pathA:line`, `pathB:line`, `origin`, then the first 60 bytes of each text. `origin` is `knotlog/user`, `user/user` and so on, per side: `knotlog` means Knotlog wrote the line (a `(source: ...)` suffix, a key in `.knotlog/distilled`, or an approved proposal), `user` anything else. A proposal approved into the facts file is not paired with the fact that cites it. The last line is a summary with the pair count. No pair is exit 0 with the summary alone.
+
+**Threshold.** `--min X` takes a number from 0 to 1 (`0`, `.5`, `0.4`, `1`); anything else exits 2. The default is 0.4. On a measured set (three real duplicates, written as Turkish and English rewordings, and three look-alike lines that share words but not meaning) 0.4 finds all three and none of the look-alikes, whose best score was 0.33; the duplicates scored 0.50 to 0.73. Lower the value to see weaker neighbours, raise it for near-copies only.
+
+**Cost.** Pairs are found through a word index, so only lines that share a word are compared; the worst case is still quadratic in the number of lines. Measured on a Windows laptop with Git Bash: 500 facts lines took about 2.6 s at the default threshold (4.9 s at `--min 0` with 105 727 pairs printed). `doctor` shows one row, `N possible duplicate pair(s): knotlog similar`, when the default scan finds a pair; it does not change `doctor`'s exit code and it skips the scan silently when there are more than 500 candidate lines.
+
+Limits: the stem is a plain five-character cut, so it helps agglutinative and inflected languages but is blind to synonyms; a text in Japanese or Chinese has no spaces to split on and is compared as a few long words.
+
 ## Honest limits
 
+- **The approval check is defence in depth, not a sandbox**: `pending --approve`/`--reject` refuse without a terminal or under an agent or hook marker, and the lessons section re-runs the secret and instruction checks, but an agent with a shell can unset the variables, fake a terminal, or append an `A` line to `.knotlog/pending` itself. The real gate is that you run the approval, in your own terminal, after reading the text.
 - **Folding is lossy**: `açık` and `acık` collapse together — a deliberate trade-off.
 - **"Semantic" ≠ cosine similarity**: model judgment, better on meaning but weaker on exhaustive recall.
 - **Wikilink target resolution is exact-string, not folded**: the path/title/filename staged resolution described under [Notes: frontmatter and wikilinks](#notes-frontmatter-and-wikilinks) is byte-for-byte at every stage, unlike search. A wikilink written `[[Beta Notu]]` will not match a title of `Beta notu` (case) or a folded/accented variant. Outgoing links are unaffected (they print raw wikilink text, never resolved). Not fixed in this release.
@@ -707,3 +748,4 @@ Knotlog enforces the format, not the meaning.
 - **Live install is verified on Windows and Linux; macOS is CI-only so far**: the test suite exercises `install` on Linux, macOS, and Windows in CI, and a real end-to-end setup into a real `$HOME` — PATH, shell, desktop environment, folder icon — has been done on Windows and on Arch Linux, including `knotlog uninstall` (v2.3.0). The two bugs fixed in v2.2.2 were both in an untested surface at the time and both survived hundreds of tests and three-platform CI, so treat macOS as plausible-but-unverified until someone runs it there. If you install on macOS and something is off, that is a report worth filing.
 - **`capture --git` is stateless**: it diffs the tree, so it cannot see `Read` events (content unchanged), and two runs without a commit append the same files twice — commit (or `knotlog remember --git`) before re-running. Deletions are captured; the index later drops them.
 - **Interactive `init`'s tty detection is not machine-verified**: questions appear only when `[ -t 0 ]` is true. The test suite proves the question/fill/skip mechanics under a forced-tty override, but whether a given OS's `isatty(0)` agrees with that POSIX check is not something a piped CI shell can prove. Manual check: run `knotlog init` in an empty folder from a real terminal and confirm the questions appear.
+- **On Windows, a long vault path can leak into the activity log**: when the vault lives under a long path, `capture` may record a hook-reported file path as a Windows absolute path (with backslashes) instead of a vault-relative one, so the log shows the full path; short vault paths are not affected. Known since 1.5.0, fix planned after 1.6.0.

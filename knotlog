@@ -497,6 +497,7 @@ usage() {
   _q_msg usage_archive
   _q_msg usage_compact
   _q_msg usage_distill
+  _q_msg usage_similar
   _q_msg usage_tui
   _q_msg usage_update
 }
@@ -1714,6 +1715,15 @@ _q_doctor() {
         fi
       fi
     fi
+    # Approved lessons exist but the lessons section has no room at all.
+    # shellcheck disable=SC2030 # subshell on purpose: the outer _q_limit must stay unchanged
+    _q_ls_fit=$( (_q_limit=10; _q_ctx_text; printf '%s %s' "$_q_lsn_tot" "$_q_lsn_k") 2>/dev/null || true)
+    case "$_q_ls_fit" in
+      [1-9]*" 0")
+        # shellcheck disable=SC2059
+        _q_line warn lessons "$(printf "$(_q_msg doc_lessons_nofit)" "${_q_ls_fit% *}" "$_q_cm")"
+        ;;
+    esac
     # FAZ 9 V-5: identity — user= or companion= absent -> warn (exit stays 0).
     # Mirror of the doc_layout_missing pattern above.
     _q_idu=$(awk -F= -v k=user '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_v/$_q_SD/config" 2>/dev/null || true)
@@ -1878,6 +1888,14 @@ _q_doctor() {
       _q_ffmt=$(_q_msg doc_facts_n)
       # shellcheck disable=SC2059
       _q_line ok facts "$(printf "$_q_ffmt" "$_q_fts_n")"
+    fi
+    # `knotlog similar`: one informational row when possible duplicate pairs
+    # exist. Over 500 candidate lines the scan is skipped without a word
+    # (it is quadratic in the worst case; doctor must stay quick).
+    _q_sm_dn=$(_q_similar_pairs "$_q_v" "$_q_sm_default" 500 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$_q_sm_dn" -gt 0 ]; then
+      # shellcheck disable=SC2059
+      _q_line ok similar "$(printf "$(_q_msg doc_similar)" "$_q_sm_dn")"
     fi
   fi
 
@@ -5305,6 +5323,7 @@ _q_ctx_text() {
   }
   _q_add_act "$(_q_msg ctx_activity)"
   if [ -s "$_q_log" ]; then
+    # shellcheck disable=SC2031 # the outer _q_limit; the earlier assignment was in a subshell
     _q_add_act "$(awk -v n="$_q_limit" '{ line[NR] = $0 } END { s = NR - n + 1; if (s < 1) s = 1; for (i = s; i <= NR; i++) print line[i] }' "$_q_log")"
     # $_q_act_head_lines protects everything added so far (header + the
     # already-bounded tail-lines block, at most $_q_limit lines) from the
@@ -5540,11 +5559,15 @@ $_q_fts_h
     fi
   fi
 
+  # Variable part 4 (lessons): approved lesson/fix/skill proposals, last of the
+  # variable sections so it only rides the slack the others leave.
+  _q_lessons_build
+
   if [ -n "$_q_thr" ]; then
     _q_text="$_q_now$_q_id$_q_purp$_q_tone$_q_act$_q_thr
-$_q_rul$_q_fts$_q_idx"
+$_q_rul$_q_fts$_q_lsn$_q_idx"
   else
-    _q_text="$_q_now$_q_id$_q_purp$_q_tone$_q_act$_q_rul$_q_fts$_q_idx"
+    _q_text="$_q_now$_q_id$_q_purp$_q_tone$_q_act$_q_rul$_q_fts$_q_lsn$_q_idx"
   fi
 }
 
@@ -5860,12 +5883,26 @@ ${_q_text}"
 # ---- remember ---------------------------------------------------------------
 
 _q_remember_lock_acquire() {
-  # _q_remember_lock_acquire LOCKDIR BUSY_KEY — take the remember lock (an
-  # atomic mkdir). Returns 0 when acquired; after the bounded wait it warns
-  # with BUSY_KEY and returns 1, leaving the decision to exit to the caller.
+  # _q_remember_lock_acquire LOCKDIR BUSY_KEY — take the remember lock and
+  # write $$ to LOCKDIR/pid. Returns 0 when acquired; after the bounded wait it
+  # warns with BUSY_KEY and returns 1, leaving the decision to exit to the caller.
+  # The owner is whoever creates LOCKDIR/pid under noclobber (O_EXCL): mkdir's
+  # status alone is not atomic everywhere -- uutils mkdir (Ubuntu 26.04's
+  # default) exits 0 when a racing process made the directory between its
+  # exists() check and mkdir(2), so two callers both "won" the lock.
   _q_rla_lock=$1
   _q_rla_wait=0
-  while ! mkdir "$_q_rla_lock" 2>/dev/null; do
+  while :; do
+    if mkdir "$_q_rla_lock" 2>/dev/null; then
+      (set -C; printf '%s\n' "$$" > "$_q_rla_lock/pid") 2>/dev/null && return 0
+      # The write failed. With a pid file there, another caller owns the lock
+      # (the uutils race above); without one it failed for another reason
+      # (ENOSPC, EACCES, an AV lock) and the empty directory is ours: remove it,
+      # or it never goes stale and every later caller reports busy. rmdir
+      # refuses a directory whose owner has written its pid meanwhile; one
+      # that has not yet only fails its write and retries.
+      [ -e "$_q_rla_lock/pid" ] || rmdir "$_q_rla_lock" 2>/dev/null || true
+    fi
     # Recover a lock left by a process that was killed, but never steal a
     # live owner's lock.  The bounded wait keeps hook shutdown responsive.
     _q_rla_pid=
@@ -5873,6 +5910,7 @@ _q_remember_lock_acquire() {
       _q_rla_pid=$(cat "$_q_rla_lock/pid" 2>/dev/null || true)
     fi
     if [ -n "$_q_rla_pid" ] && ! kill -0 "$_q_rla_pid" 2>/dev/null; then
+      # shortcut: a third caller that takes the lock between the read above and this rm loses it to us; needs three overlapping writers, upgrade if that is ever seen.
       rm -f "$_q_rla_lock/pid"
       rmdir "$_q_rla_lock" 2>/dev/null || true
       continue
@@ -5888,7 +5926,6 @@ _q_remember_lock_acquire() {
     sleep 0.1
     _q_rla_wait=$((_q_rla_wait + 1))
   done
-  return 0
 }
 
 _q_reflect_scaffold() {
@@ -5952,7 +5989,6 @@ _q_cmd_remember() {
     fi
     exit 1
   }
-  printf '%s\n' "$$" > "$_q_lock/pid"
   _q_body=
   _q_remember_cleanup() {
     [ -z "${_q_body:-}" ] || rm -f "$_q_body"
@@ -6191,6 +6227,122 @@ _q_thr_fit() {
   fi
 }
 
+_q_lessons_n() {
+  # lessons= (vault config, default 5, 0 = off): how many approved lessons
+  # the opening context lists. Same positive-integer read as stale_days=; any
+  # other value falls back to 5. Sets $_q_ln. $1 = vault path.
+  _q_ln=5
+  _q_ln_cfg=
+  if [ -f "$1/$_q_SD/config" ]; then
+    _q_ln_cfg=$(awk -F= -v k=lessons '$1==k{sub(/^[^=]*=/,"");print;exit}' "$1/$_q_SD/config" 2>/dev/null || true)
+  fi
+  case "$_q_ln_cfg" in
+    ''|*[!0-9]*|0?*|??????????*) ;;
+    *) _q_ln=$_q_ln_cfg ;;
+  esac
+}
+
+_q_lessons_build() {
+  # Global setter: the "lessons" context section -- the newest N approved
+  # (A line, no R line) lesson/fix/skill proposals of .knotlog/pending, newest
+  # first. Reads _q_ctx_text's globals ($_q_max, $_q_fixed, $_q_thr, $_q_rul,
+  # $_q_fts). Sets $_q_lsn (the section, empty when nothing is shown),
+  # $_q_lsn_tot (lines that qualified) and $_q_lsn_k (lines that fit). Rides
+  # the slack threads, rules and facts leave: lines that do not fit are dropped
+  # and one note counts them; the section is never cut mid-line.
+  _q_lsn=
+  _q_lsn_tot=0
+  _q_lsn_k=0
+  _q_lessons_n "$_q_v"
+  [ "$_q_ln" -gt 0 ] || return 0
+  _q_ln_f="$_q_v/$_q_SD/pending"
+  _q_safe_target "$_q_v" "$_q_ln_f" || return 0
+  [ -f "$_q_ln_f" ] || return 0
+  _q_ln_all=$(LC_ALL=C awk '
+    BEGIN {
+      FS = "\t"
+      for (i = 1; i < 256; i++) ord[sprintf("%c", i)] = i
+      lab["lesson"] = "lesson"; lab["fix"] = "fix"; lab["skill"] = "skill candidate"
+    }
+    $1 == "P" { n++; id[n] = $2; kd[n] = $4; ts[n] = substr($3, 1, 10); t = $0
+      for (j = 0; j < 5; j++) sub(/^[^\t]*\t/, "", t); tx[n] = t }
+    $1 == "A" { ok[$2] = 1 }
+    $1 == "R" { no[$2] = 1 }
+    END {
+      for (i = n; i >= 1; i--) {
+        if (!(kd[i] in lab) || !(id[i] in ok) || (id[i] in no)) continue
+        t = tx[i]; gsub(/[[:cntrl:]]/, " ", t); sub(/^ +/, "", t); sub(/ +$/, "", t)
+        if (t == "") continue
+        f = t
+        if (length(t) > 100) {
+          # Cut at 100 bytes, never inside a UTF-8 character.
+          s = substr(t, 1, 100)
+          if (ord[substr(t, 101, 1)] >= 128 && ord[substr(t, 101, 1)] < 192) {
+            while (length(s) > 0 && ord[substr(s, length(s), 1)] < 192) s = substr(s, 1, length(s) - 1)
+            s = substr(s, 1, length(s) - 1)
+          }
+          t = s "..."
+        }
+        print ts[i] "\t" lab[kd[i]] "\t" t "\t" f
+      }
+    }' "$_q_ln_f" 2>/dev/null || true)
+  [ -n "$_q_ln_all" ] || return 0
+  _q_ln_rows=
+  _q_ln_tab=$(printf '\t')
+  while IFS= read -r _q_ln_l; do
+    [ -n "$_q_ln_l" ] || continue
+    _q_ln_t=${_q_ln_l#*"$_q_ln_tab"}
+    _q_ln_t=${_q_ln_t#*"$_q_ln_tab"}
+    _q_ln_full=${_q_ln_t#*"$_q_ln_tab"}
+    _q_ln_t=${_q_ln_t%%"$_q_ln_tab"*}
+    # The pending file is state, not trust (a line can be appended by hand):
+    # secret- and instruction-shaped text never enters, whatever write_approval says.
+    ! _q_secret_hit "$_q_ln_full" || continue
+    ! _q_admit_hit admit_inject_marks "$_q_ln_full" || continue
+    _q_ln_d=${_q_ln_l%%"$_q_ln_tab"*}
+    _q_ln_r=${_q_ln_l#*"$_q_ln_tab"}
+    _q_ln_r=${_q_ln_r%%"$_q_ln_tab"*}
+    _q_ln_rows="$_q_ln_rows- $_q_ln_d [$_q_ln_r] $_q_ln_t
+"
+    _q_lsn_tot=$((_q_lsn_tot + 1))
+    [ "$_q_lsn_tot" -lt "$_q_ln" ] || break
+  done <<LSNIN
+$_q_ln_all
+LSNIN
+  [ "$_q_lsn_tot" -gt 0 ] || return 0
+  _q_ln_hdr=$(_q_msg ctx_lessons)
+  _q_ln_nfmt=$(_q_msg ctx_lessons_dropped)
+  _q_ln_bud=$((_q_max - _q_fixed))
+  if [ -n "$_q_thr" ]; then
+    _q_ln_bud=$((_q_ln_bud - $(printf '%s\n' "$_q_thr" | LC_ALL=C wc -c | tr -d ' ')))
+  fi
+  if [ -n "$_q_rul" ]; then
+    _q_ln_bud=$((_q_ln_bud - $(printf '%s\n' "$_q_rul" | LC_ALL=C wc -c | tr -d ' ')))
+  fi
+  if [ -n "$_q_fts" ]; then
+    _q_ln_bud=$((_q_ln_bud - $(printf '%s\n' "$_q_fts" | LC_ALL=C wc -c | tr -d ' ')))
+  fi
+  _q_ln_hl=$(printf '%s\n' "$_q_ln_hdr" | LC_ALL=C wc -c | tr -d ' ')
+  _q_ln_nl=$(printf '%s\n' "$_q_ln_nfmt" | LC_ALL=C wc -c | tr -d ' ')
+  # Largest k whose lines (plus the drop note when k < total) fit the slack;
+  # the note reserve over-counts its digits, so ctx_max stays the hard cap.
+  _q_lsn_k=$(printf '%s' "$_q_ln_rows" | LC_ALL=C awk -v bud="$_q_ln_bud" -v h="$_q_ln_hl" -v nl="$((_q_ln_nl + 3))" '
+    { s[NR] = length($0) + 1 }
+    END { for (k = NR; k >= 1; k--) { sum = h; for (i = 1; i <= k; i++) sum += s[i]
+            if (k < NR) sum += nl
+            if (sum <= bud) { print k; exit } }
+          if (k < 1) print 0 }')
+  [ "$_q_lsn_k" -gt 0 ] || return 0
+  _q_lsn="$_q_ln_hdr
+$(printf '%s' "$_q_ln_rows" | head -n "$_q_lsn_k")
+"
+  if [ "$_q_lsn_k" -lt "$_q_lsn_tot" ]; then
+    # shellcheck disable=SC2059
+    _q_lsn="$_q_lsn$(printf "$_q_ln_nfmt" "$((_q_lsn_tot - _q_lsn_k))")
+"
+  fi
+}
+
 _q_fts_room() {
   # The one facts-budget formula: what is left for the facts section after
   # the fixed parts, threads and rules. Reads _q_ctx_text's globals, leaves
@@ -6237,7 +6389,6 @@ _q_note_thread_write() {
   _q_nt_cr=$(printf '\r')
   _q_nt_lock="$_q_nt_v/$_q_SD/remember.lock"
   _q_remember_lock_acquire "$_q_nt_lock" note_busy || exit 1
-  printf '%s\n' "$$" > "$_q_nt_lock/pid"
   _q_nt_tmp="$_q_nt_v/$_q_SD/thread.tmp"
   _q_nt_line="$_q_nt_v/$_q_SD/thread.line"
   _q_nt_cleanup() {
@@ -6307,6 +6458,13 @@ _q_note_thread_write() {
   if [ "$_q_thr_crop" -gt "$_q_thr_bud" ]; then
     _q_die err_budget_full 3 "${_q_nt_tp#"$_q_nt_v"/}" "$_q_thr_crop" "$_q_thr_bud" "$((_q_thr_crop - _q_thr_bud))"
   fi
+  # `pending --approve --dry-run`: every check above ran; show the line, write nothing.
+  if [ "${_q_nt_dry:-0}" = 1 ]; then
+    # shellcheck disable=SC2059
+    printf "$(_q_msg pending_dry)\n" "${_q_nt_tp#"$_q_nt_v"/}"
+    cat "$_q_nt_line"
+    return 0
+  fi
   mv -f "$_q_nt_tmp" "$_q_nt_tp" || _q_die err_note_write 1 "${_q_nt_tp#"$_q_nt_v"/}"
 
   # shellcheck disable=SC2059
@@ -6341,6 +6499,7 @@ _q_cmd_note() {
   case "$_q_note_text" in
     *"$_q_lf"*|*"$_q_cr"*) _q_die err_note_newline 2 ;;
   esac
+  ! _q_has_ctl "$_q_note_text" || _q_die err_note_control 2
 
   _q_v=$(_q_vault)
   if [ -z "$_q_v" ]; then
@@ -6382,10 +6541,18 @@ _q_note_plain_write() {
   _q_now=$(date +%H:%M)
   _q_note_file="$_q_v/$_q_rel"
 
+  # `pending --approve --dry-run`: name the target and the line, take no lock, write nothing.
+  if [ "${_q_np_dry:-0}" = 1 ]; then
+    _q_safe_target "$_q_v" "$_q_note_file" || _q_die err_unsafe_write 1 "$_q_rel"
+    # shellcheck disable=SC2059
+    printf "$(_q_msg pending_dry)\n" "$_q_rel"
+    printf '%s %s %s\n' '-' "$_q_now" "$_q_note_text"
+    return 0
+  fi
+
   # Same lock as remember: the two commands edit the same session file.
   _q_lock="$_q_v/$_q_SD/remember.lock"
   _q_remember_lock_acquire "$_q_lock" note_busy || exit 1
-  printf '%s\n' "$$" > "$_q_lock/pid"
   _q_note_tmp="$_q_v/$_q_SD/note.tmp"
   _q_note_line="$_q_v/$_q_SD/note.line"
   _q_note_cleanup() {
@@ -6604,7 +6771,6 @@ _q_cmd_distill() {
   if [ "$_q_ds_apply" = 1 ] && [ $((_q_ds_n1 + _q_ds_n2)) -gt 0 ]; then
     _q_lock="$_q_v/$_q_SD/remember.lock"
     _q_remember_lock_acquire "$_q_lock" distill_busy || { _q_lock=; exit 1; }
-    printf '%s\n' "$$" > "$_q_lock/pid"
     # The files may have changed while the lock was free: plan again under it.
     _q_ds_plans
     _q_ds_n1=$(_q_ds_nl "$_q_ds_t/a1")
@@ -6651,13 +6817,7 @@ _q_admit() {
   # write_approval=on. Vault: $_q_v.
   _q_ad_rc=0
   _q_ad_why=
-  # One source for the secret pattern: the pre-commit hook's own _pat= line.
-  # shortcut: a missing hooks/pre-commit skips the check (broken install), upgrade if installs ever drop hooks/.
-  _q_sp=
-  if [ -f "$_q_HOME/hooks/pre-commit" ]; then
-    eval "$(sed -n 's/^_pat=/_q_sp=/p' "$_q_HOME/hooks/pre-commit")"
-  fi
-  if [ -n "$_q_sp" ] && printf '%s\n' "$1" | LC_ALL=C grep -Eiq -- "$_q_sp"; then
+  if _q_secret_hit "$1"; then
     _q_ad_rc=4
     _q_ad_why=secret_pattern
     return 0
@@ -6675,6 +6835,27 @@ _q_admit() {
     _q_ad_rc=5
     _q_ad_why=policy_review_first
   fi
+}
+
+_q_has_ctl() {
+  # _q_has_ctl TEXT -- does TEXT hold a control character other than TAB (ESC,
+  # BEL, DEL...)? An ESC sequence can hide text from the person reviewing it
+  # in a terminal while the model still reads it.
+  printf '%s\n' "$1" | LC_ALL=C tr -d '\t' | LC_ALL=C grep -q '[[:cntrl:]]'
+}
+
+_q_secret_hit() {
+  # _q_secret_hit TEXT -- does TEXT match the secret pattern? One source for
+  # it: the pre-commit hook's own _pat= line, read once per run.
+  # shortcut: a missing hooks/pre-commit skips the check (broken install), upgrade if installs ever drop hooks/.
+  if [ -z "${_q_shp_read:-}" ]; then
+    _q_shp=
+    if [ -f "$_q_HOME/hooks/pre-commit" ]; then
+      eval "$(sed -n 's/^_pat=/_q_shp=/p' "$_q_HOME/hooks/pre-commit")"
+    fi
+    _q_shp_read=1
+  fi
+  [ -n "$_q_shp" ] && printf '%s\n' "$1" | LC_ALL=C grep -Eiq -- "$_q_shp"
 }
 
 _q_admit_hit() {
@@ -6712,7 +6893,6 @@ _q_pending_lock() {
   # The remember lock guards .knotlog/pending too (ids are max + 1).
   _q_pl_lock="$_q_v/$_q_SD/remember.lock"
   _q_remember_lock_acquire "$_q_pl_lock" note_busy || exit 1
-  printf '%s\n' "$$" > "$_q_pl_lock/pid"
   trap 'rm -f "$_q_pl_lock/pid"; rmdir "$_q_pl_lock" 2>/dev/null || true' EXIT HUP INT TERM
 }
 
@@ -6744,6 +6924,7 @@ _q_cmd_propose() {
   _q_lf=$(printf '\nx')
   _q_lf=${_q_lf%x}
   case "$3" in *"$_q_lf"* | *"$(printf '\r')"*) _q_die err_note_newline 2 ;; esac
+  ! _q_has_ctl "$3" || _q_die err_note_control 2
   _q_v=$(_q_vault)
   [ -n "$_q_v" ] || _q_die err_no_vault
   _q_admit "$3" "$2"
@@ -6761,20 +6942,104 @@ _q_pending_open() {
     END { for (i = 1; i <= n; i++) if (!(id[i] in done)) print ln[i] }' "$1"
 }
 
-_q_cmd_pending() {
-  # knotlog pending [--approve N | --reject N] -- the write-approval queue.
-  # A list row is the P line without its leading "P<TAB>".
-  case "$#:${1:-}" in
-    0:) _q_pd_op=list ;;
-    2:--approve | 2:--reject)
-      _q_pd_op=${1#--}
-      case "$2" in
-        '' | *[!0-9]* | 0*) _q_die err_pending_args 2 ;;
-      esac
-      _q_pd_id=$2
-      ;;
-    *) _q_die err_pending_args 2 ;;
+_q_pending_facts() {
+  # _q_pending_facts ID TEXT DRY -- `pending --approve N --to facts`: one line
+  # at the end of the facts file, planned by distill's own machinery (tag
+  # check, folded dedupe, .knotlog/distilled ledger, facts budget). Nothing
+  # is written unless every check passes; the caller appends A afterwards.
+  _q_pf_id=$1
+  _q_pf_text=$2
+  _q_pf_dry=$3
+  _q_tab=$(printf '\t')
+  _q_ds_prof=$(_q_fold_prof "$_q_v")
+  _q_ds_srcw=$(_q_msg distill_source)
+  _q_ds_facts=$(_q_facts_path "$_q_v")
+  _q_ds_led="$_q_v/$_q_SD/distilled"
+  _q_pf_rel=${_q_ds_facts#"$_q_v"/}
+  [ -f "$_q_ds_facts" ] || _q_die err_pending_nofacts 1 "$_q_pf_rel"
+  _q_guard "$_q_v" "$_q_ds_facts"
+  _q_ds_t=$(mktemp -d "${TMPDIR:-/tmp}/knotlog-pending-XXXXXX") || exit 1
+  trap 'rm -rf "$_q_ds_t"' EXIT HUP INT TERM
+  if [ "$_q_pf_dry" = 0 ]; then
+    _q_pending_lock
+    trap 'rm -rf "$_q_ds_t"; rm -f "$_q_pl_lock/pid"; rmdir "$_q_pl_lock" 2>/dev/null || true' EXIT HUP INT TERM
+  fi
+  export DS_FACT DS_CORE DS_TAGS DS_SRC DS_PRE DS_MARK DS_ADD DS_LABEL DS_TIME DS_COUNT
+  DS_FACT=$(_q_msg distill_fact_mark)
+  DS_CORE=$(_q_msg distill_core_mark)
+  DS_TAGS=$(_q_msg distill_tags)
+  DS_SRC=$_q_ds_srcw
+  DS_PRE="$_q_v/"
+  printf -- '- %s\n' "$_q_pf_text" > "$_q_ds_t/txt"
+  _q_pf_clean=$(awk -v mode=key -f "$_q_HOME/lib/distill.awk" "$_q_ds_t/txt" </dev/null)
+  printf 'pending #%s\t%s\n' "$_q_pf_id" "$_q_pf_clean" > "$_q_ds_t/c1"
+  awk -v mode=key -f "$_q_HOME/lib/distill.awk" "$_q_ds_facts" </dev/null > "$_q_ds_t/k1"
+  _q_ds_plan 1 "$_q_ds_t/k1" "$_q_ds_t/c1" "$_q_ds_t/p1" facts
+  case $(cut -f1 "$_q_ds_t/p1") in
+    ADD) ;;
+    DUP) _q_die err_pending_dup 2 "$_q_pf_id" "$_q_pf_rel" ;;
+    *) _q_die err_pending_untagged 2 "$_q_pf_id" "$DS_TAGS" ;;
   esac
+  awk -F"$_q_tab" -v s="$_q_ds_srcw" '{ print "- " $3 " (" s ": " $2 ")" }' "$_q_ds_t/p1" > "$_q_ds_t/a1"
+  awk -F"$_q_tab" -v OFS="$_q_tab" '{ print "facts", $4 }' "$_q_ds_t/p1" > "$_q_ds_t/l1"
+  _q_ds_n1=1
+  # shellcheck disable=SC2086 # $_q_ds_over is three numbers, split on purpose
+  _q_ds_fits || _q_die err_facts_budget 3 "$_q_pf_rel" $_q_ds_over
+  if [ "$_q_pf_dry" = 1 ]; then
+    # shellcheck disable=SC2059
+    printf "$(_q_msg pending_dry)\n" "$_q_pf_rel"
+    cat "$_q_ds_t/a1"
+    return 0
+  fi
+  _q_ds_append "$_q_ds_facts" || _q_die err_note_write 1 "$_q_pf_rel"
+  _q_guard "$_q_v" "$_q_ds_led"
+  cat "$_q_ds_t/l1" >> "$_q_ds_led" || _q_die err_note_write 1 "$_q_SD/distilled"
+  # shellcheck disable=SC2059
+  printf "$(_q_msg pending_facts_ok)\n" "$_q_pf_rel"
+}
+
+_q_cmd_pending() {
+  # knotlog pending [--approve N [--to note|facts|thread] [--dry-run] | --reject N]
+  # -- the write-approval queue. A list row is the P line without its leading "P<TAB>".
+  _q_pd_to=
+  _q_pd_dry=0
+  if [ "$#" -eq 0 ]; then
+    _q_pd_op=list
+  else
+    case "$1" in --approve | --reject) ;; *) _q_die err_pending_args 2 ;; esac
+    [ "$#" -ge 2 ] || _q_die err_pending_args 2
+    _q_pd_op=${1#--}
+    case "$2" in
+      '' | *[!0-9]* | 0*) _q_die err_pending_args 2 ;;
+    esac
+    _q_pd_id=$2
+    shift 2
+    [ "$_q_pd_op" = approve ] || [ "$#" -eq 0 ] || _q_die err_pending_args 2
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --dry-run) _q_pd_dry=1 ;;
+        --to)
+          [ "$#" -ge 2 ] || _q_die err_pending_args 2
+          case "$2" in
+            note | facts | thread) _q_pd_to=$2 ;;
+            *) _q_die err_pending_to 2 "$2" ;;
+          esac
+          shift
+          ;;
+        *) _q_die err_pending_args 2 ;;
+      esac
+      shift
+    done
+  fi
+  # A decision is the user's: an agent that ran `propose` must not approve its
+  # own proposal. Agent and hook markers refuse even under QUIPU_FORCE_TTY (the
+  # test switch); a dry run decides nothing, so it stays open to agents.
+  if [ "$_q_pd_op" != list ] && [ "$_q_pd_dry" = 0 ]; then
+    if [ "${QUIPU_HOOK:-0}" = 1 ] || [ -n "${CLAUDECODE:-}" ]; then
+      _q_die err_pending_human 4
+    fi
+    { [ -t 0 ] && [ -t 1 ]; } || [ "${QUIPU_FORCE_TTY:-0}" = 1 ] || _q_die err_pending_human 4
+  fi
   _q_v=$(_q_vault)
   [ -n "$_q_v" ] || _q_die err_no_vault
   _q_pd_f="$_q_v/$_q_SD/pending"
@@ -6783,7 +7048,8 @@ _q_cmd_pending() {
     if [ -z "$_q_pd_rows" ]; then
       _q_msg pending_none
     else
-      printf '%s\n' "$_q_pd_rows" | sed 's/^P.//'
+      # Control bytes (an ESC sequence can hide text) go; the TAB separators stay.
+      printf '%s\n' "$_q_pd_rows" | sed 's/^P.//' | LC_ALL=C tr -d '\001-\010\013-\037\177'
     fi
     return 0
   fi
@@ -6806,16 +7072,31 @@ _q_cmd_pending() {
   _q_pd_kind=$(printf '%s\n' "$_q_pd_line" | awk -F"$(printf '\t')" '{ print $4 }')
   _q_pd_text=$(printf '%s\n' "$_q_pd_line" | awk -F"$(printf '\t')" '{ print $6 }')
   # The queue file is state, not trust: approval runs the refusing checks again.
+  ! _q_has_ctl "$_q_pd_text" || _q_die err_note_control 2
   _q_admit "$_q_pd_text" "$_q_pd_kind"
   [ "$_q_ad_rc" -ne 4 ] || _q_admit_say 4
+  _q_pd_pre=
   case "$_q_pd_kind" in
-    note) _q_note_plain_write "$_q_v" "$_q_pd_text" ;;
-    thread) _q_note_thread_write "$_q_v" "$_q_pd_text" ;;
-    lesson) _q_note_plain_write "$_q_v" "[lesson] $_q_pd_text" ;;
-    fix) _q_note_plain_write "$_q_v" "[fix] $_q_pd_text" ;;
-    skill) _q_note_plain_write "$_q_v" "[skill candidate] $_q_pd_text" ;;
+    note | thread) ;;
+    lesson) _q_pd_pre='[lesson] ' ;;
+    fix) _q_pd_pre='[fix] ' ;;
+    skill) _q_pd_pre='[skill candidate] ' ;;
     *) _q_die err_pending_kind 1 "$_q_pd_id" "$_q_pd_kind" ;;
   esac
+  # No --to: the proposal's own kind decides, as it always did. An explicit --to wins.
+  _q_pd_tgt=$_q_pd_to
+  if [ -z "$_q_pd_tgt" ]; then
+    _q_pd_tgt=note
+    [ "$_q_pd_kind" != thread ] || _q_pd_tgt=thread
+  fi
+  _q_np_dry=$_q_pd_dry
+  _q_nt_dry=$_q_pd_dry
+  case "$_q_pd_tgt" in
+    facts) _q_pending_facts "$_q_pd_id" "$_q_pd_text" "$_q_pd_dry" ;;
+    thread) _q_note_thread_write "$_q_v" "$_q_pd_text" ;;
+    *) _q_note_plain_write "$_q_v" "$_q_pd_pre$_q_pd_text" ;;
+  esac
+  [ "$_q_pd_dry" = 0 ] || return 0
   # Still under the writer's remember lock; a failed write exited above, so no A line.
   printf 'A\t%s\t%s\n' "$_q_pd_id" "$_q_pd_ts" >> "$_q_pd_f" || _q_die err_note_write 1 "$_q_SD/pending"
 }
@@ -6868,6 +7149,79 @@ _q_cmd_compile() {
   _q_fmt=$(_q_msg compile_summary)
   # shellcheck disable=SC2059
   printf "$_q_fmt\n" "$_q_compile_count"
+}
+
+# ---- similar ----------------------------------------------------------------
+
+_q_sm_default=0.4
+
+_q_similar_pairs() {
+  # _q_similar_pairs VAULT MIN MAXROWS -- print the scored pairs, best first, as
+  # score<TAB>pathA:line<TAB>pathB:line<TAB>origin<TAB>textA<TAB>textB. Read
+  # only: scratch files live under TMPDIR. MAXROWS > 0 gives up (exit 3, no
+  # output) when more candidate lines than that exist.
+  (
+    _q_sm_v=$1
+    _q_sm_t=$(mktemp -d "${TMPDIR:-/tmp}/knotlog-similar-XXXXXX") || exit 1
+    trap 'rm -rf "$_q_sm_t"' EXIT HUP INT TERM
+    : > "$_q_sm_t/rows"
+    export SM_REL SM_WORDS SM_HEAD SM_TAGS SM_STEM SM_MIN
+    SM_WORDS="$(_q_msg distill_source)|source|kaynak"
+    SM_HEAD="### $(_q_msg threads_head_active)"
+    SM_STEM=5
+    SM_MIN=$2
+    _q_sm_prof=$(_q_fold_prof "$_q_sm_v")
+    _q_sm_fold() {
+      # shellcheck disable=SC2018,SC2019
+      sed -f "$_q_HOME/fold/$_q_sm_prof.sed" | tr 'A-Z' 'a-z'
+    }
+    SM_TAGS=$(_q_msg distill_tags | tr '|' '\n' | _q_sm_fold | paste -sd'|' -)
+    _q_sm_add() {
+      # _q_sm_add MODE FILE REL -- candidate rows of one source file.
+      [ -f "$2" ] && _q_safe_target "$_q_sm_v" "$2" || return 0
+      SM_REL=$3 LC_ALL=C awk -v mode="$1" -f "$_q_HOME/lib/similar.awk" "$2" </dev/null >> "$_q_sm_t/rows"
+    }
+    _q_sm_f=$(_q_facts_path "$_q_sm_v")
+    _q_sm_add facts "$_q_sm_f" "${_q_sm_f#"$_q_sm_v"/}"
+    _q_sm_f=$(_q_threads_path "$_q_sm_v")
+    _q_sm_add threads "$_q_sm_f" "${_q_sm_f#"$_q_sm_v"/}"
+    _q_sm_add pending "$_q_sm_v/$_q_SD/pending" "$_q_SD/pending"
+    _q_sm_n=$(wc -l < "$_q_sm_t/rows" | tr -d ' ')
+    if [ "$3" -gt 0 ] && [ "$_q_sm_n" -gt "$3" ]; then exit 3; fi
+    [ "$_q_sm_n" -gt 1 ] || exit 0
+    cut -f6 "$_q_sm_t/rows" | _q_sm_fold > "$_q_sm_t/fold"
+    paste "$_q_sm_t/rows" "$_q_sm_t/fold" > "$_q_sm_t/join"
+    _q_sm_led="$_q_sm_v/$_q_SD/distilled"
+    if [ -f "$_q_sm_led" ] && _q_safe_target "$_q_sm_v" "$_q_sm_led"; then :; else _q_sm_led=/dev/null; fi
+    LC_ALL=C awk -v mode=score -f "$_q_HOME/lib/similar.awk" "$_q_sm_led" "$_q_sm_t/join" </dev/null |
+      LC_ALL=C sort -t "$(printf '\t')" -k1,1nr -k3,3 -k4,4 | cut -f2-
+  )
+}
+
+_q_cmd_similar() {
+  # knotlog similar [--min X] -- read-only report of line pairs that may be the
+  # same topic. Writes nothing, merges nothing.
+  _q_sm_min=$_q_sm_default
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --min)
+        [ "$#" -ge 2 ] || _q_die err_missing_arg 2
+        # A decimal from 0 to 1 (0, 1, 0.4, .4); anything else is refused.
+        printf '%s\n' "$2" | awk '$0 ~ /^([0-9]*[.])?[0-9]+$/ && $0 + 0 <= 1 { ok = 1 } END { exit !ok }' || _q_die err_similar_min 2 "$2"
+        _q_sm_min=$2
+        shift 2
+        ;;
+      *) _q_die err_unknown_flag 2 "$1" ;;
+    esac
+  done
+  _q_v=$(_q_vault)
+  [ -n "$_q_v" ] || _q_die err_no_vault
+  _q_sm_out=$(_q_similar_pairs "$_q_v" "$_q_sm_min" 0) || exit 1
+  [ -z "$_q_sm_out" ] || printf '%s\n' "$_q_sm_out"
+  _q_sm_n=0
+  [ -z "$_q_sm_out" ] || _q_sm_n=$(printf '%s\n' "$_q_sm_out" | wc -l | tr -d ' ')
+  # shellcheck disable=SC2059
+  printf "$(_q_msg similar_summary)\n" "$_q_sm_n"
 }
 
 # ---- index ------------------------------------------------------------------
@@ -8391,6 +8745,14 @@ _q_cmd_setup() {
     _q_msg setup_dry_run
   fi
   _q_setup_place "$_q_st_source" "$_q_st_vault/$_q_st_rel" "$_q_st_dry" "$_q_st_agent"
+  if [ "$_q_st_agent" = claude ]; then
+    # The /learn slash command rides along, placed by the same never-overwrite rule.
+    _q_st_source="$_q_HOME/adapters/claude-code-learn.md"
+    if [ ! -f "$_q_st_source" ] || [ ! -r "$_q_st_source" ]; then
+      _q_die err_install_asset_source 2 "$_q_st_source"
+    fi
+    _q_setup_place "$_q_st_source" "$_q_st_vault/.claude/commands/learn.md" "$_q_st_dry" "$_q_st_agent"
+  fi
 }
 
 # ---- migrate: bring a pre-rename (Quipu) vault over to Knotlog -------------
@@ -8669,6 +9031,7 @@ case "$_q_cmd" in
   archive) shift; _q_cmd_archive "$@" ;;
   compact) shift; _q_cmd_compact "$@" ;;
   distill) shift; _q_cmd_distill "$@" ;;
+  similar) shift; _q_cmd_similar "$@" ;;
   tui) shift; _q_cmd_tui "$@" ;;
   help) shift; _q_cmd_help "$@" ;;
   *) usage; exit 2 ;;

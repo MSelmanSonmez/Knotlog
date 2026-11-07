@@ -27,7 +27,7 @@
   <!-- badge counts are re-measured at the release commit: tests = `sh tests/run.sh` -> "# pass N"; scripts = `git ls-files | grep -cE '^(knotlog|lib/.*\.awk|fold/.*\.sed)$'`; LongMemEval-S = `tests/bench/longmemeval.sh` -->
   <img src="https://img.shields.io/badge/tests-2068%20passing-brightgreen" alt="2068 件のテストが成功">
   <img src="https://img.shields.io/badge/agents-9-blue" alt="対応エージェント 9 種">
-  <img src="https://img.shields.io/badge/scripts-28-lightgrey" alt="配布スクリプト 28 本">
+  <img src="https://img.shields.io/badge/scripts-29-lightgrey" alt="配布スクリプト 29 本">
   <img src="https://img.shields.io/badge/LongMemEval--S-recall__any%405%2060.4%25-blue" alt="LongMemEval-S recall_any@5 60.4%">
 </p>
 
@@ -147,7 +147,7 @@ Claude Code は `CLAUDE.md` を、他の多くのエージェントは `AGENTS.m
 | `knotlog doctor` | セットアップを点検: ツール、エージェント、壊れたリンク、未コミットのメモリ |
 | `knotlog search <terms>` | ノートを検索(BM25、アクセント除去。`--tag`/`--status` フィルタ) |
 | `knotlog note "<text>"` | 今日のセッション振り返りに一行追加 |
-| `knotlog pending` | 書き込み前にキュー内のノートと提案をレビュー (ノートは `write_approval=on` でキューに入り、`propose` は常にキューに入る、`--approve N`、`--reject N`) |
+| `knotlog pending` | 書き込み前にキュー内のノートと提案をレビュー (ノートは `write_approval=on` でキューに入り、`propose` は常にキューに入る、`--approve N`、`--reject N`; `--approve N --to note\|facts\|thread [--dry-run]` で書き込み先を選択、Claude Code の `/learn` は教訓をキューに入れる) |
 | `knotlog context` | セッション開始時にエージェントに見えるものを出力 |
 | `knotlog tui` | 最新のセッションノートをターミナルで閲覧 |
 | `knotlog plan <name> --proje <Project>` | プロジェクト内にプランノートを作成 |

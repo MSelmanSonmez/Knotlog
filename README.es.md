@@ -27,7 +27,7 @@
   <!-- badge counts are re-measured at the release commit: tests = `sh tests/run.sh` -> "# pass N"; scripts = `git ls-files | grep -cE '^(knotlog|lib/.*\.awk|fold/.*\.sed)$'`; LongMemEval-S = `tests/bench/longmemeval.sh` -->
   <img src="https://img.shields.io/badge/tests-2068%20passing-brightgreen" alt="2068 pruebas superadas">
   <img src="https://img.shields.io/badge/agents-9-blue" alt="9 agentes compatibles">
-  <img src="https://img.shields.io/badge/scripts-28-lightgrey" alt="28 scripts distribuidos">
+  <img src="https://img.shields.io/badge/scripts-29-lightgrey" alt="29 scripts distribuidos">
   <img src="https://img.shields.io/badge/LongMemEval--S-recall__any%405%2060.4%25-blue" alt="LongMemEval-S recall_any@5 60,4 %">
 </p>
 
@@ -147,7 +147,7 @@ Los que realmente vas a escribir; la tabla completa está en [docs/REFERENCE.md]
 | `knotlog doctor` | revisa la configuración: herramientas, agentes, enlaces rotos, memoria sin commit |
 | `knotlog search <terms>` | busca notas (BM25, sin distinguir acentos; filtros `--tag`/`--status`) |
 | `knotlog note "<text>"` | añade una línea a la reflexión de la sesión de hoy |
-| `knotlog pending` | revisa las notas y propuestas en cola antes de escribirlas (las notas se encolan con `write_approval=on`; `propose` siempre encola; `--approve N`, `--reject N`) |
+| `knotlog pending` | revisa las notas y propuestas en cola antes de escribirlas (las notas se encolan con `write_approval=on`; `propose` siempre encola; `--approve N`, `--reject N`; `--approve N --to note\|facts\|thread [--dry-run]` elige el destino; `/learn` en Claude Code encola una lección) |
 | `knotlog context` | muestra lo que ve el agente al inicio de la sesión |
 | `knotlog tui` | explora en la terminal las notas de sesión más recientes |
 | `knotlog plan <name> --proje <Project>` | abre una nota de plan dentro de un proyecto |

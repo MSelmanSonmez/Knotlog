@@ -25,7 +25,7 @@
   <!-- badge counts are re-measured at the release commit: tests = `sh tests/run.sh` -> "# pass N"; scripts = `git ls-files | grep -cE '^(knotlog|lib/.*\.awk|fold/.*\.sed)$'`; LongMemEval-S = `tests/bench/longmemeval.sh` -->
   <img src="https://img.shields.io/badge/tests-2068%20passing-brightgreen" alt="2068 tests passing">
   <img src="https://img.shields.io/badge/agents-9-blue" alt="9 supported agents">
-  <img src="https://img.shields.io/badge/scripts-28-lightgrey" alt="28 shipped scripts">
+  <img src="https://img.shields.io/badge/scripts-29-lightgrey" alt="29 shipped scripts">
   <img src="https://img.shields.io/badge/LongMemEval--S-recall__any%405%2060.4%25-blue" alt="LongMemEval-S recall_any@5 60.4%">
 </p>
 
@@ -145,7 +145,7 @@ The ones you will actually type; the full table is in [docs/REFERENCE.md](docs/R
 | `knotlog doctor` | check the setup: tools, agents, broken links, uncommitted memory |
 | `knotlog search <terms>` | find notes (BM25, accent-folded; `--tag`/`--status` filters) |
 | `knotlog note "<text>"` | add one line to today's session reflection |
-| `knotlog pending` | review queued notes and proposals before they are written (notes queue when `write_approval=on`; `propose` always queues; `--approve N`, `--reject N`) |
+| `knotlog pending` | review queued notes and proposals before they are written (notes queue when `write_approval=on`; `propose` always queues; `--approve N`, `--reject N`; `--approve N --to note\|facts\|thread [--dry-run]` picks the target; `/learn` in Claude Code queues a lesson) |
 | `knotlog context` | print what the agent sees at session start |
 | `knotlog tui` | browse the newest session notes in the terminal |
 | `knotlog plan <name> --proje <Project>` | open a plan note inside a project |

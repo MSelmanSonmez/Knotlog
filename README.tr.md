@@ -25,7 +25,7 @@
   <!-- badge counts are re-measured at the release commit: tests = `sh tests/run.sh` -> "# pass N"; scripts = `git ls-files | grep -cE '^(knotlog|lib/.*\.awk|fold/.*\.sed)$'`; LongMemEval-S = `tests/bench/longmemeval.sh` -->
   <img src="https://img.shields.io/badge/tests-2068%20passing-brightgreen" alt="2068 test geçiyor">
   <img src="https://img.shields.io/badge/agents-9-blue" alt="9 desteklenen ajan">
-  <img src="https://img.shields.io/badge/scripts-28-lightgrey" alt="28 dağıtılan betik">
+  <img src="https://img.shields.io/badge/scripts-29-lightgrey" alt="29 dağıtılan betik">
   <img src="https://img.shields.io/badge/LongMemEval--S-recall__any%405%2060.4%25-blue" alt="LongMemEval-S recall_any@5 %60,4">
 </p>
 
@@ -145,7 +145,7 @@ Gerçekten elle yazacakların; tam tablo [docs/REFERENCE.md](docs/REFERENCE.md#c
 | `knotlog doctor` | kurulumu denetler: araçlar, ajanlar, kırık linkler, commit'lenmemiş hafıza |
 | `knotlog search <terimler>` | not bulur (BM25, aksan katlamalı; `--tag`/`--status` süzgeçleri) |
 | `knotlog note "<metin>"` | bugünkü oturum yansımasına tek satır ekler |
-| `knotlog pending` | kuyruktaki not ve önerileri yazılmadan önce onaylar (notlar `write_approval=on` iken kuyruğa girer; `propose` her zaman kuyruğa alır; `--approve N`, `--reject N`) |
+| `knotlog pending` | kuyruktaki not ve önerileri yazılmadan önce onaylar (notlar `write_approval=on` iken kuyruğa girer; `propose` her zaman kuyruğa alır; `--approve N`, `--reject N`; `--approve N --to note\|facts\|thread [--dry-run]` hedefi seçer; Claude Code'da `/learn` bir dersi kuyruğa alır) |
 | `knotlog context` | ajanın oturum açılışında gördüğünü yazdırır |
 | `knotlog tui` | en yeni oturum notlarına terminalde göz atar |
 | `knotlog plan <ad> --proje <Proje>` | bir projenin içinde plan notu açar |
