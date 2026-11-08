@@ -242,6 +242,7 @@ The complete list, including what each adapter does *not* capture, is in [docs/R
 - [Why Knotlog](docs/WHY.md) ([Türkçe](docs/WHY.tr.md) · [Español](docs/WHY.es.md) · [Português](docs/WHY.pt-BR.md) · [日本語](docs/WHY.ja.md) · [简体中文](docs/WHY.zh-CN.md)) — the case for it in one read.
 - [Reference](docs/REFERENCE.md) — install internals, every command, each adapter, vault layout, search, update and rollback.
 - [Usage runbook](docs/USAGE.md) — step-by-step setup written for a coding agent to follow; locked by tests, so it cannot drift from the real command surface.
+- [Stability](STABILITY.md) — what stays stable across 1.x, what may change, and how breaking changes are announced.
 
 ## License
 
