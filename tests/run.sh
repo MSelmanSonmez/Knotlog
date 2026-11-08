@@ -7394,8 +7394,8 @@ t; assert_eq "T-538: a cap too small for the headings still bounds the output" '
 
 # T-1419: context carries the rule headings only, so one line under them
 # names the file that holds the full text (ctx_rules_hint). The line is absent
-# with no rules file, and under a cap that holds the headings but not the
-# line, the line goes and the headings stay.
+# with no rules file, and it only takes slack: under a cap that holds the
+# headings but not the line, the line goes and the headings stay.
 mkvault vr1419
 printf 'lang=en\n' > "$TMP/vr1419/.knotlog/config"
 printf '# Rules\n## Approval gates\n' > "$TMP/vr1419/Rules.md"
