@@ -3,6 +3,11 @@
 All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+- `knotlog note` and `note --thread` keep the target file's permissions. Both write through a temp file and a rename, and the temp file used to be created fresh, so a session note or threads file set to 600 came back with the umask default (644 on most systems). The temp file now starts as a `cp -p` copy, the same way `distill` and `compact` already did (T-1417, T-1418).
+
 ## [1.6.0] - 2026-11-07
 
 ### Added
