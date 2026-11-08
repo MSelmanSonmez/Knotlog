@@ -5438,6 +5438,17 @@ _q_ctx_text() {
       _q_rul="$(_q_msg ctx_rules)
 $_q_rul_h
 "
+      # Headings only, so one line names the file that holds the full text.
+      # It joins the section only when both fit next to the fixed part: under
+      # a tight cap the hint goes first, never the headings.
+      # ctx_rules_hint is the controlled i18n template (one %s: the file name).
+      # shellcheck disable=SC2059
+      _q_rul_hint=$(printf "$(_q_msg ctx_rules_hint)" "${_q_rul_path##*/}")
+      _q_rul_full="$_q_rul$_q_rul_hint
+"
+      if [ "$(printf '%s\n' "$_q_rul_full" | LC_ALL=C wc -c | tr -d ' ')" -le $((_q_max - _q_fixed)) ]; then
+        _q_rul=$_q_rul_full
+      fi
     fi
   fi
   _q_rul_rez=0
