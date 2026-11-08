@@ -6444,7 +6444,8 @@ _q_note_thread_write() {
   # Dated (C1): doctor ages active lines by their newest YYYY-MM-DD.
   _q_nt_now=$(date '+%Y-%m-%d %H:%M')
   printf '%s %s %s%s\n' '-' "$_q_nt_now" "$_q_nt_text" "$_q_nt_crs" > "$_q_nt_line"
-  if ! {
+  # cp -p first: the threads file keeps its permissions through the rename.
+  if ! cp -p "$_q_nt_tp" "$_q_nt_tmp" || ! {
     head -n "$((_q_nt_anchor - 1))" "$_q_nt_tp"
     cat "$_q_nt_line"
     tail -n "+$_q_nt_anchor" "$_q_nt_tp"
@@ -6593,7 +6594,8 @@ _q_note_plain_write() {
     _q_crs=$_q_cr
   fi
   printf '%s %s %s%s\n' '-' "$_q_now" "$_q_note_text" "$_q_crs" > "$_q_note_line"
-  if ! {
+  # cp -p first: the note file keeps its permissions through the rename.
+  if ! cp -p "$_q_note_file" "$_q_note_tmp" || ! {
     head -n "$((_q_anchor - 1))" "$_q_note_file"
     cat "$_q_note_line"
     tail -n "+$_q_anchor" "$_q_note_file"
