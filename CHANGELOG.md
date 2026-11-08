@@ -5,6 +5,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- `knotlog context` adds one line under the rule headings that names the rules file (`Rules.md`, `Kurallar.md`, ...), since only the headings enter context and the full text stays on disk. New i18n key `ctx_rules_hint` in all six languages; the line joins the rules section only when both fit the budget; under a tight `ctx_max` the line goes first and the headings stay. Measured on a fresh English `init` vault: +53 bytes (T-1419).
+
 ### Fixed
 - `knotlog note` and `note --thread` keep the target file's permissions. Both write through a temp file and a rename, and the temp file used to be created fresh, so a session note or threads file set to 600 came back with the umask default (644 on most systems). The temp file now starts as a `cp -p` copy, the same way `distill` and `compact` already did (T-1417, T-1418).
 
