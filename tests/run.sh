@@ -10172,6 +10172,16 @@ N2=$(grep -n 'second note' "$F3" | cut -d: -f1)
 assert_eq "T-681: second note is added after the first, order kept, one block" 'yes' \
   "$([ "$RC" -eq 0 ] && [ "$N2" -eq "$((N1 + 1))" ] && [ "$(grep -c 'knotlog:reflect:start' "$F3")" = 1 ] && printf yes || printf no)"
 
+# T-1417: note keeps the session file's mode through its temp-file rename.
+# NTFS ignores chmod 600 (Git Bash shows -rw-r--r--): expect the mode the file had.
+chmod 600 "$F3"
+# shellcheck disable=SC2012
+B1417=$(ls -l "$F3" | cut -c1-10)
+t; nte vn3 'mode note' >/dev/null; RC1417=$?
+# shellcheck disable=SC2012
+M1417=$(ls -l "$F3" | cut -c1-10)
+assert_eq "T-1417: note keeps the session file mode (600 where honoured)" "0 $B1417" "$RC1417 $M1417"
+
 # T-682: note added to a remember-written file; removing the added line gives
 # the original bytes (the rest of the file, including user text, is untouched).
 mkrem vn4
@@ -11061,6 +11071,16 @@ PINA=$(awk '/quipu:pin:start/{p=1} p{print} /quipu:pin:end/{if(p) exit}' "$TH/be
 PINB=$(awk '/quipu:pin:start/{p=1} p{print} /quipu:pin:end/{if(p) exit}' "$TH/Threads.md")
 t; assert_eq "T-771: pin block is byte-identical after note --thread" 'yes' \
   "$([ "$PINA" = "$PINB" ] && [ -n "$PINA" ] && printf yes || printf no)"
+# T-1418: note --thread keeps the threads file's mode (600 where honoured).
+TM="$TMP/kn1418"
+mkdir -p "$TM/.knotlog" && : > "$TM/.knotlog/config"
+cp "$TH/before.md" "$TM/Threads.md"; chmod 600 "$TM/Threads.md"
+# shellcheck disable=SC2012
+B1418=$(ls -l "$TM/Threads.md" | cut -c1-10)
+QUIPU_LANG=en QUIPU_VAULT="$TM" sh "$ROOT/knotlog" note --thread "mode thread" </dev/null >/dev/null 2>&1; RC1418=$?
+# shellcheck disable=SC2012
+M1418=$(ls -l "$TM/Threads.md" | cut -c1-10)
+t; assert_eq "T-1418: note --thread keeps the threads file mode (600 where honoured)" "0 $B1418" "$RC1418 $M1418"
 cp "$TH/Threads.md" "$TH/mid.md"
 QUIPU_LANG=en QUIPU_VAULT="$TH" sh "$ROOT/knotlog" note "plain bare note" </dev/null >/dev/null 2>&1; RC772=$?
 t; assert_eq "T-772: bare note exits 0" '0' "$RC772"
