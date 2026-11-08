@@ -3,6 +3,11 @@
 All notable changes to Knotlog (formerly Quipu; last Quipu release was v2.7.3).
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Documentation
+- `STABILITY.md`: the semver policy for 1.x, the stable and not-stable surfaces, the state files in `.knotlog/`, the move from Quipu, and how breaking changes are announced. Linked from the README's Documentation list.
+
 ## [1.6.0] - 2026-11-07
 
 ### Added
