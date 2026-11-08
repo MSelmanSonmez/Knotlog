@@ -7392,6 +7392,30 @@ t; CTX538S=$(env -u QUIPU_CTX_MAX QUIPU_LANG=en QUIPU_VAULT="$TMP/vr538" sh "$RO
 t; assert_eq "T-538: a cap too small for the headings still bounds the output" 'yes' \
   "$([ "$(printf '%s' "$CTX538S" | LC_ALL=C wc -c | tr -d ' ')" -le 200 ] && printf yes || printf no)"
 
+# T-1419: context carries the rule headings only, so one line under them
+# names the file that holds the full text (ctx_rules_hint). The line is absent
+# with no rules file, and under a cap that holds the headings but not the
+# line, the line goes and the headings stay.
+mkvault vr1419
+printf 'lang=en\n' > "$TMP/vr1419/.knotlog/config"
+printf '# Rules\n## Approval gates\n' > "$TMP/vr1419/Rules.md"
+t; CTX1419=$(env -u QUIPU_CTX_MAX QUIPU_LANG=en QUIPU_VAULT="$TMP/vr1419" sh "$ROOT/knotlog" context)
+# shellcheck disable=SC2059 # the i18n template is the format, as in knotlog
+t; assert_eq "T-1419: the hint line follows the last rule heading" "$(printf "$(men ctx_rules_hint)" Rules.md)" \
+  "$(printf '%s\n' "$CTX1419" | awk '/^## Approval gates$/ { getline; print; exit }')"
+t; CTX1419T=$(QUIPU_VAULT="$TMP/vr395" sh "$ROOT/knotlog" context)
+# shellcheck disable=SC2059
+t; assert_eq "T-1419: a Turkish vault names Kurallar.md" 'yes' \
+  "$(printf '%s\n' "$CTX1419T" | grep -qxF "$(printf "$(mtr ctx_rules_hint)" Kurallar.md)" && printf yes || printf no)"
+# shellcheck disable=SC2059
+t; assert_eq "T-1419: no rules file, no hint line" 'no' \
+  "$(printf '%s\n' "$CTX402" | grep -qF "$(printf "$(mtr ctx_rules_hint)" Kurallar.md)" && printf yes || printf no)"
+printf 'lang=en\nctx_max=160\n' > "$TMP/vr538/.knotlog/config"
+t; CTX1419S=$(env -u QUIPU_CTX_MAX QUIPU_LANG=en QUIPU_VAULT="$TMP/vr538" sh "$ROOT/knotlog" context)
+# shellcheck disable=SC2059
+t; assert_eq "T-1419: a cap too small for the hint keeps the headings, drops the hint" 'yes no' \
+  "$(printf '%s\n' "$CTX1419S" | grep -qxF '## Zero-level protocols' && printf yes || printf no) $(printf '%s\n' "$CTX1419S" | grep -qF "$(printf "$(men ctx_rules_hint)" Rules.md)" && printf yes || printf no)"
+
 # T-403: D6 -- the checkpoint protocol rides the bridge, and the bridge body
 # stays single-source: AGENTS.md and CLAUDE.md remain byte-equal in both
 # languages.
