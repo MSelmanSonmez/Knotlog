@@ -21,8 +21,8 @@ usage_note_thread=  note --thread  añade una línea a la sección de hilos acti
 usage_pending=  pending   lista las notas en espera de revisión (write_approval=on); --approve N [--to note|facts|thread] [--dry-run] escribe una, --reject N la descarta
 usage_propose=  propose   pone en espera de aprobación un hallazgo de revisión (propose --kind lesson|skill|fix "texto"; knotlog pending)
 usage_import=  import    convierte una exportación JSON local de una conversación en una nota de sesión (FILE, --date YYYY-MM-DD; claude [--project DIR] [--apply]: transcripciones de Claude Code)
-usage_plan=  plan      abre un plan de proyecto en <Projects>/<Project>/<Plans>/ a partir de la plantilla con front matter (--proje <Project>)
-usage_card=  card      abre una tarjeta de trabajo numerada en <Projects>/<Project>/<Cards>/NNN-<name>.md (--proje <Project>, --tur kod|icerik)
+usage_plan=  plan      abre un plan de proyecto en <Projects>/<Project>/<Plans>/ a partir de la plantilla con front matter (--project <Project>)
+usage_card=  card      abre una tarjeta de trabajo numerada en <Projects>/<Project>/<Cards>/NNN-<name>.md (--project <Project>, --type code|content)
 usage_tone=  tone      muestra o fija el preset de tono activo (--list para verlos; un slug solo escribe tone= en la configuración)
 usage_archive=  archive   mueve un encabezado cerrado de Threads.md al archivo (--list: muestra los encabezados; --dry-run: solo previsualiza)
 usage_compact=  compact   mueve al archivo, sin pérdidas, las entradas antiguas de "Closed threads" de Threads.md (simulación por defecto; --apply escribe; --keep N conserva las N más recientes, por defecto 20; el archivo de última sesión también conserva sus N bloques de sesión más recientes, por defecto 5)
@@ -428,12 +428,14 @@ err_plan_extra_arg=argumento extra inesperado en plan: %s
 err_plan_template=la plantilla de plan no existe o no se puede leer: %s
 err_plan_mkdir=no se pudo crear la carpeta de planes: %s
 cards_dir=Cards
-err_card_type=tipo de tarjeta no válido: %s (usa kod o icerik)
+err_card_type=tipo de tarjeta no válido: %s (usa code o content)
 err_card_name=nombre de tarjeta no válido: %s
 err_card_extra_arg=argumento extra de tarjeta inesperado: %s
 err_card_exists=la tarjeta ya existe, no se sobrescribió: %s
 err_card_template=falta la plantilla de tarjeta o no se puede leer: %s
 err_card_mkdir=no se pudo crear la carpeta de tarjetas: %s
+err_card_write=no se pudo escribir la tarjeta: %s
+err_card_project=nombre de proyecto no válido: %s
 # reflect
 reflect_head_what=¿Qué cambió en esta sesión?
 reflect_head_where=¿Dónde se hizo el trabajo?

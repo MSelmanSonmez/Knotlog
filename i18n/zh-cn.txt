@@ -21,8 +21,8 @@ usage_note_thread=  note --thread  向活跃线索部分添加一行（note --th
 usage_pending=  pending   列出等待审核的笔记（write_approval=on）；--approve N [--to note|facts|thread] [--dry-run] 写入一条，--reject N 丢弃
 usage_propose=  propose   把一条审查发现放入待批准队列（propose --kind lesson|skill|fix "文本"；knotlog pending）
 usage_import=  import    将本地 JSON 对话导出转换为会话笔记（FILE、--date YYYY-MM-DD；claude [--project DIR] [--apply]：Claude Code 记录）
-usage_plan=  plan      根据 front-matter 模板在 <Projects>/<Project>/<Plans>/ 下创建项目计划（--proje <Project>）
-usage_card=  card      在 <Projects>/<Project>/<Cards>/NNN-<name>.md 创建带编号的工作卡片（--proje <Project>, --tur kod|icerik）
+usage_plan=  plan      根据 front-matter 模板在 <Projects>/<Project>/<Plans>/ 下创建项目计划（--project <Project>）
+usage_card=  card      在 <Projects>/<Project>/<Cards>/NNN-<name>.md 创建带编号的工作卡片（--project <Project>, --type code|content）
 usage_tone=  tone      显示/设置当前语气预设（--list 浏览；直接给出 slug 会把 tone= 写入配置）
 usage_archive=  archive   将已关闭的标题从 Threads.md 移入归档（--list：显示标题；--dry-run：仅预览）
 usage_compact=  compact   将 Threads.md 中旧的 "Closed threads" 条目无损移入归档（默认为试运行；--apply 写入；--keep N 保留最新的 N 条，默认 20；最近会话文件也保留最新的 N 个会话块，默认 5）
@@ -428,12 +428,14 @@ err_plan_extra_arg=plan 有多余的参数：%s
 err_plan_template=计划模板缺失或不可读：%s
 err_plan_mkdir=无法创建计划文件夹：%s
 cards_dir=Cards
-err_card_type=无效的卡片类型：%s（请使用 kod 或 icerik）
+err_card_type=无效的卡片类型：%s（请使用 code 或 content）
 err_card_name=无效的卡片名称：%s
 err_card_extra_arg=多余的卡片参数：%s
 err_card_exists=卡片已存在，未覆盖：%s
 err_card_template=卡片模板缺失或无法读取：%s
 err_card_mkdir=无法创建卡片文件夹：%s
+err_card_write=无法写入卡片：%s
+err_card_project=无效的项目名称：%s
 # reflect
 reflect_head_what=这次会话改了什么？
 reflect_head_where=工作发生在哪里？

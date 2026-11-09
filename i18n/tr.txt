@@ -21,8 +21,8 @@ usage_note_thread=  note --thread  açık konular bölümüne tek satır ekle (n
 usage_pending=  pending   onay bekleyen notları listeler (write_approval=on); --approve N [--to note|facts|thread] [--dry-run] birini yazar, --reject N düşürür
 usage_propose=  propose   inceleme bulgusunu onaya sıraya koyar (propose --kind lesson|skill|fix "metin"; knotlog pending)
 usage_import=  import    yerel JSON sohbet dışa aktarımını oturum notuna çevir (DOSYA, --date YYYY-MM-DD; claude [--project DİZİN] [--apply]: Claude Code dökümleri)
-usage_plan=  plan      proje planını <Projeler>/<Proje>/<Planlar>/ altında frontmatter'lı şablonla açar (--proje <Proje>)
-usage_card=  card      iş kartını <Projeler>/<Proje>/<Kartlar>/NNN-<ad>.md olarak numaralı açar (--proje <Proje>, --tur kod|icerik)
+usage_plan=  plan      proje planını <Projeler>/<Proje>/<Planlar>/ altında frontmatter'lı şablonla açar (--project <Proje>)
+usage_card=  card      iş kartını <Projeler>/<Proje>/<Kartlar>/NNN-<ad>.md olarak numaralı açar (--project <Proje>, --type code|content)
 usage_tone=  tone      etkin üslup setini gösterir/ayarlar (--list ile listele; çıplak bir slug config'e tone= yazar)
 usage_archive=  archive   Konular.md'den kapanmış bir başlığı arşive taşır (--list: başlıkları göster; --dry-run: uygulamadan önizle)
 usage_compact=  compact   Konular.md'nin "Kapanan konular" bölümündeki eski girdileri kayıpsız arşive taşır (varsayılan kuru çalıştırma; --apply yazar; --keep N en yeni N girdiyi bırakır, varsayılan 20; son oturum dosyasında da en yeni N oturum bloğu kalır, varsayılan 5)
@@ -428,12 +428,14 @@ err_plan_extra_arg=beklenmeyen fazla plan argümanı: %s
 err_plan_template=plan şablonu yok veya okunamıyor: %s
 err_plan_mkdir=Planlar klasörü oluşturulamadı: %s
 cards_dir=Kartlar
-err_card_type=geçersiz kart türü: %s (kod ya da icerik kullan)
+err_card_type=geçersiz kart türü: %s (code ya da content kullan; kod ve icerik de kabul edilir)
 err_card_name=geçersiz kart adı: %s
 err_card_extra_arg=beklenmeyen fazla kart argümanı: %s
 err_card_exists=kart zaten var, üzerine yazılmadı: %s
 err_card_template=kart şablonu yok veya okunamıyor: %s
 err_card_mkdir=Kartlar klasörü oluşturulamadı: %s
+err_card_write=kart yazılamadı: %s
+err_card_project=geçersiz proje adı: %s
 # reflect
 reflect_head_what=Bu oturumda ne değişti?
 reflect_head_where=İş nerede yapıldı?

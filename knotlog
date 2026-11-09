@@ -8060,7 +8060,7 @@ _q_cmd_plan() {
   _q_pl_proj=
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --proje)
+      --proje|--project)
         [ "$#" -ge 2 ] || _q_die err_missing_arg 2
         case "$2" in
           -*) _q_die err_unknown_flag 2 "$2" ;;
@@ -8162,9 +8162,10 @@ _q_cards_dir_path() {
 }
 
 _q_cmd_card() {
-  # knotlog card <ad> [--proje <Proje>] [--tur kod|icerik] -- open a numbered
-  # work card under <projects>/<Proje>/<cards_dir>/NNN-<ad>.md from the
-  # localized template. Same edges as `plan`: a MISSING project is an error,
+  # knotlog card <name> [--project <Project>] [--type code|content] -- open a
+  # numbered work card under <projects>/<Project>/<cards_dir>/NNN-<name>.md
+  # from the localized template. --proje and --tur (kod|icerik) are aliases.
+  # Same edges as `plan`: a MISSING project is an error,
   # never auto-created, never guessed; the cards directory is created when
   # absent; an existing file is never overwritten. NNN is the highest
   # number already in the directory + 1, so two calls never share one.
@@ -8172,22 +8173,23 @@ _q_cmd_card() {
   [ -n "$_q_v" ] || _q_die err_no_vault
   _q_cd_name=
   _q_cd_proj=
-  _q_cd_type=kod
+  _q_cd_type=code
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --proje)
+      --project|--proje)
         [ "$#" -ge 2 ] || _q_die err_missing_arg 2
         case "$2" in
           -*) _q_die err_unknown_flag 2 "$2" ;;
         esac
         _q_cd_proj=$2; shift 2 ;;
-      --tur)
+      --type|--tur)
         [ "$#" -ge 2 ] || _q_die err_missing_arg 2
         case "$2" in
-          kod|icerik) ;;
+          code|kod) _q_cd_type=code ;;
+          content|icerik) _q_cd_type=content ;;
           *) _q_die err_card_type 2 "$2" ;;
         esac
-        _q_cd_type=$2; shift 2 ;;
+        shift 2 ;;
       -*) _q_die err_unknown_flag 2 "$1" ;;
       *)
         [ -z "$_q_cd_name" ] || _q_die err_card_extra_arg 2 "$1"
@@ -8195,13 +8197,12 @@ _q_cmd_card() {
     esac
   done
   [ -n "$_q_cd_name" ] || _q_die err_missing_arg 2
-  case "$_q_cd_name" in
-    */*|.|..) _q_die err_card_name 2 "$_q_cd_name" ;;
-  esac
   _q_cd_name=${_q_cd_name%.md}
-  [ -n "$_q_cd_name" ] || _q_die err_card_name 2 ".md"
+  case "$_q_cd_name" in
+    ""|.|..|*/*|*\\*|*[[:cntrl:]]*) _q_die err_card_name 2 "$_q_cd_name" ;;
+  esac
 
-  # Project resolution is `plan`'s: --proje wins, else the project folder
+  # Project resolution is `plan`'s: --project wins, else the project folder
   # the caller is working in, else an error.
   _q_cd_tab=$(printf '\t')
   _q_cd_lay=$(awk -F= -v k=layout '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_v/$_q_SD/config" 2>/dev/null || true)
@@ -8218,6 +8219,9 @@ _q_cmd_card() {
   if [ -z "$_q_cd_proj" ] || [ -z "$_q_cd_pdir" ]; then
     _q_die err_plan_project_required 2
   fi
+  case "$_q_cd_proj" in
+    .|..|*/*|*\\*|*[[:cntrl:]]*) _q_die err_card_project 2 "$_q_cd_proj" ;;
+  esac
   _q_cd_projdir="$_q_v/$_q_cd_pdir/$_q_cd_proj"
   if [ ! -d "$_q_cd_projdir" ]; then
     _q_die err_plan_project_missing 2 "$_q_cd_projdir"
@@ -8253,6 +8257,13 @@ _q_cmd_card() {
   fi
 
   _q_cd_lang=$(_q_lang)
+  # The type word is written in the vault's language, like the field names.
+  if [ "$_q_cd_lang" = tr ]; then
+    case "$_q_cd_type" in
+      code) _q_cd_type=kod ;;
+      content) _q_cd_type=icerik ;;
+    esac
+  fi
   if [ ! -f "$_q_HOME/templates/$_q_cd_lang/card.md" ]; then
     _q_cd_lang=en
   fi
@@ -8283,7 +8294,7 @@ _q_cmd_card() {
       $0 = rep($0, "{project}", p)
       print
     }
-  ' "$_q_HOME/templates/$_q_cd_lang/card.md" > "$_q_cd_file" || _q_die err_card_template 2 "$_q_HOME/templates/$_q_cd_lang/card.md"
+  ' "$_q_HOME/templates/$_q_cd_lang/card.md" > "$_q_cd_file" || _q_die err_card_write 1 "$_q_cd_file"
 
   # shellcheck disable=SC2059
   printf "$(_q_msg plan_written)\n" "$_q_cd_file"
