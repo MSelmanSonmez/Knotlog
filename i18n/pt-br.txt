@@ -68,6 +68,7 @@ doc_stat_none=stat não encontrado - mtime() cai para 0
 doc_awk_bs=tratamento de barra invertida por ponto de código no awk
 doc_vault_ok=cofre presente
 doc_vault_missing=cofre ausente (knotlog init)
+doc_worktree=git worktree: esta cópia tem o próprio .knotlog/ e as escritas ficam aqui; para gravar no cofre principal defina KNOTLOG_VAULT=<caminho do cofre principal>
 doc_wsl_bash=o bash no PATH é o do WSL (System32); os hooks podem rodar nele: coloque o Git Bash primeiro no PATH
 doc_path_missing=knotlog não está no PATH; os hooks chamam knotlog pelo nome e vão falhar em silêncio (knotlog install cria o link)
 doc_path_shadow=os hooks vão executar %s (knotlog %s), mas este é o knotlog %s: coloque este primeiro no PATH

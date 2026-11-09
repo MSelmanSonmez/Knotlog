@@ -68,6 +68,7 @@ doc_stat_none=stat が見つかりません - mtime() は 0 にフォールバ�
 doc_awk_bs=awk のコードポイント単位のバックスラッシュ処理
 doc_vault_ok=ボールトあり
 doc_vault_missing=ボールトがありません (knotlog init)
+doc_worktree=git worktree: このコピーには専用の .knotlog/ があり、書き込みはここに残ります。メインのボールトへ書くには KNOTLOG_VAULT=<メインのボールトのパス> を指定します
 doc_wsl_bash=PATH 上の bash は WSL (System32) です; フックがそちらで実行される可能性があります: Git Bash を PATH の先頭にしてください
 doc_path_missing=knotlog が PATH にありません; フックは knotlog を名前で呼ぶため、静かに失敗します (knotlog install でリンクされます)
 doc_path_shadow=フックは %s (knotlog %s) を実行しますが、これは knotlog %s です: こちらを PATH の先頭に置いてください

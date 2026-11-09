@@ -68,6 +68,7 @@ doc_stat_none=stat yok - mtime() 0 döner
 doc_awk_bs=awk kod noktası ters-slash işlemesi
 doc_vault_ok=kasa mevcut
 doc_vault_missing=kasa yok (knotlog init)
+doc_worktree=git worktree: bu kopyanın kendi .knotlog/ klasörü var, yazılar burada kalır; ana kasaya yazmak için KNOTLOG_VAULT=<ana kasa yolu> verin
 doc_wsl_bash=PATH'teki bash WSL (System32); hook'lar oraya gidebilir: Git Bash'i PATH'te öne alın
 doc_path_missing=knotlog PATH içinde yok; kancalar düz knotlog çağırır ve sessizce başarısız olur (knotlog install bağlar)
 doc_path_shadow=kancalar %s (knotlog %s) çalıştıracak, oysa bu knotlog %s: bunu PATH'te öne al

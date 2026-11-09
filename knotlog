@@ -1588,6 +1588,11 @@ _q_doctor() {
     _q_line warn vault "$(_q_msg doc_vault_missing)"
   else
     _q_line ok vault "$(_q_msg doc_vault_ok)"
+    # A linked git worktree keeps `.git` as a file; its tracked config makes
+    # the checkout a vault of its own. Information only: no counter moves.
+    if [ -f "$_q_v/.git" ]; then
+      _q_line info worktree "$(_q_msg doc_worktree)"
+    fi
     # The links every other command refuses to run with (see dispatch).
     if _q_has_link "$_q_v/$_q_SD"; then
       _q_line fail "$_q_SD" "$(_q_msg doc_state_link)"

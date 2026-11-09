@@ -14748,6 +14748,50 @@ b3_run ctl pending --approve 1; R1415=$B3RC; S1415=$(ct_said ctl)
 t; assert_eq "T-1415: approving that row exits 2 err_note_control; no A line, no vault file changes" '2 yes yes yes' \
   "$R1415 $S1415 $([ "$(cksum < "$TMP/ctl/.knotlog/pending")" = "$C1414" ] && printf yes || printf no) $([ "$(b3_tree ctl)" = "$T1414" ] && printf yes || printf no)"
 
+
+# T-1420..T-1423: a linked git worktree is a vault of its own. doctor says so
+# with one information row (no counter, no exit code moves); a command run in
+# the worktree writes to that copy, and KNOTLOG_VAULT sends it to the main one.
+wtg() { git -c user.name=t -c user.email=t@t -c core.hooksPath=/dev/null "$@"; }
+mkvault wtmain
+printf 'lang=en\n' > "$TMP/wtmain/.knotlog/config"
+printf '%s\n' '# Threads' '<!-- knotlog:threads:start -->' '### Active threads' '- a' '### Closed threads' \
+  '<!-- knotlog:threads:end -->' > "$TMP/wtmain/Threads.md"
+(cd "$TMP/wtmain" && wtg init -q && wtg add -A && wtg commit -q -m base && wtg worktree add -q "$TMP/wtlink" -b wtlink) >/dev/null 2>&1
+(cd "$TMP/wtlink" && env -u QUIPU_VAULT QUIPU_LANG=en sh "$ROOT/knotlog" doctor </dev/null) >"$TMP/wtlink-doctor.out" 2>&1; R1420A=$?
+(cd "$TMP/wtmain" && env -u QUIPU_VAULT QUIPU_LANG=en sh "$ROOT/knotlog" doctor </dev/null) >"$TMP/wtmain-doctor.out" 2>&1; R1420B=$?
+t; assert_eq "T-1420: doctor in a linked worktree prints the worktree row (en text), the main checkout does not" 'yes no' \
+  "$(b3_yn grep -qxF "info${TAB}worktree${TAB}$(men doc_worktree)" "$TMP/wtlink-doctor.out") $(b3_yn grep -q "^info${TAB}worktree${TAB}" "$TMP/wtmain-doctor.out")"
+t; assert_eq "T-1421: the row moves no counter and no exit code: same exit code and summary line in the worktree and the main checkout" 'yes yes' \
+  "$([ "$R1420A" = "$R1420B" ] && printf yes || printf no) $([ "$(grep '^summary:' "$TMP/wtlink-doctor.out")" = "$(grep '^summary:' "$TMP/wtmain-doctor.out")" ] && printf yes || printf no)"
+(cd "$TMP/wtlink" && env -u QUIPU_VAULT QUIPU_LANG=tr sh "$ROOT/knotlog" doctor </dev/null) >"$TMP/wtlink-doctor-tr.out" 2>&1
+t; assert_eq "T-1421: the Turkish worktree row uses the tr text" 'yes' \
+  "$(b3_yn grep -qxF "info${TAB}worktree${TAB}$(mtr doc_worktree)" "$TMP/wtlink-doctor-tr.out")"
+
+# A command run in the worktree writes into the worktree copy; KNOTLOG_VAULT sends it to the main vault.
+wtrun() { # dir "ENV=.. or empty" args... -> $WTRC
+  _wt_d=$1; _wt_e=$2; shift 2
+  # shellcheck disable=SC2086 # $_wt_e is empty or one NAME=value word
+  (cd "$_wt_d" && env -u QUIPU_VAULT -u KNOTLOG_VAULT $_wt_e QUIPU_LANG=en sh "$ROOT/knotlog" "$@" </dev/null) >/dev/null 2>&1
+  WTRC=$?
+}
+L1422=$(b3_tree wtlink)
+wtrun "$TMP/wtlink" '' note "wt walkup note"; R1422=$WTRC
+t; assert_eq "T-1422: note run in the worktree writes into the worktree copy and leaves the main vault alone" '0 yes yes no' \
+  "$R1422 $(b3_has wtlink 'wt walkup note') $([ "$(b3_tree wtlink)" != "$L1422" ] && printf yes || printf no) $(b3_has wtmain 'wt walkup note')"
+wtrun "$TMP/wtlink" "KNOTLOG_VAULT=$TMP/wtmain" note "wt redirected note"; R1423=$WTRC
+t; assert_eq "T-1423: with KNOTLOG_VAULT=<main vault> the same note lands in the main vault and not in the worktree" '0 yes no' \
+  "$R1423 $(b3_has wtmain 'wt redirected note') $(b3_has wtlink 'wt redirected note')"
+
+# note --thread needs an active section: without one it writes nothing and exits 1.
+mkvault wtnosec
+printf 'lang=en\n' > "$TMP/wtnosec/.knotlog/config"
+printf '# Threads\n\nno markers here\n' > "$TMP/wtnosec/Threads.md"
+N1424=$(b3_tree wtnosec)
+wtrun "$TMP/wtnosec" '' note --thread "wt thread line"; R1424=$WTRC
+t; assert_eq "T-1424: note --thread without an active section exits 1 and changes no file" '1 yes' \
+  "$R1424 $([ "$(b3_tree wtnosec)" = "$N1424" ] && printf yes || printf no)"
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0

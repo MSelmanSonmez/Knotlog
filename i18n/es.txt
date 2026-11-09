@@ -68,6 +68,7 @@ doc_stat_none=no se encontró stat - mtime() devuelve 0
 doc_awk_bs=manejo de barras invertidas por punto de código en awk
 doc_vault_ok=bóveda presente
 doc_vault_missing=falta la bóveda (knotlog init)
+doc_worktree=git worktree: esta copia tiene su propio .knotlog/ y las escrituras se quedan aquí; para escribir en la bóveda principal define KNOTLOG_VAULT=<ruta de la bóveda principal>
 doc_wsl_bash=el bash del PATH es el de WSL (System32); los hooks pueden ejecutarse allí: pon Git Bash primero en el PATH
 doc_path_missing=knotlog no está en el PATH; los hooks llaman a knotlog por su nombre y fallarán en silencio (knotlog install lo enlaza)
 doc_path_shadow=los hooks ejecutarán %s (knotlog %s), pero este es knotlog %s: pon este primero en el PATH
