@@ -68,6 +68,7 @@ doc_stat_none=stat not found - mtime() falls back to 0
 doc_awk_bs=awk code-point backslash handling
 doc_vault_ok=vault present
 doc_vault_missing=vault missing (knotlog init)
+doc_worktree=git worktree: this copy has its own .knotlog/ and writes stay here; to write to the main vault set KNOTLOG_VAULT=<main vault path>
 doc_wsl_bash=bash on PATH is WSL (System32); hooks may run there: put Git Bash first on PATH
 doc_path_missing=knotlog is not on PATH; hooks call plain knotlog and will fail silently (knotlog install links it)
 doc_path_shadow=hooks will run %s (knotlog %s), but this is knotlog %s: put this one first on PATH
