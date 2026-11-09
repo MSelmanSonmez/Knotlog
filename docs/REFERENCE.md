@@ -556,7 +556,7 @@ Resolution goes through three stages, stopping at the first match: literal vault
 | Build | recall_any@5 | recall_all@5 |
 |---|---|---|
 | knotlog 1.2.0 `search` | 284/470 = 60.4% | 185/470 = 39.4% |
-| with the query-term fix (strip punctuation, keep one copy of a repeated term; branch `fix/search-query`, not released) | 424/470 = 90.2% | 329/470 = 70.0% |
+| with the query-term fix (strip punctuation, keep one copy of a repeated term; shipped in 1.3.0) | 424/470 = 90.2% | 329/470 = 70.0% |
 
 **Comparison.** agentmemory's BM25 on the same set at @5 reports any-hit 452/470 = 96.2% and strict recall-all 398/470 = 84.7% (`github.com/rohitg00/agentmemory`, `docs/benchmarks/2026-10-28-retrieval-evaluation.md`, commit `3f8784d`). Knotlog is still behind. agentmemory also uses stemming, synonyms and prefix expansion, which Knotlog does not; part of the gap may come from that, but this was not measured.
 
