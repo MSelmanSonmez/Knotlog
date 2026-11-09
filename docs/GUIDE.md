@@ -370,7 +370,7 @@ Run `knotlog distill` to see what would move (it writes nothing), then `knotlog 
 there are only warnings, and 1 only when something failed.
 
 ```
-summary: 151 ok, 3 warn, 0 fail
+summary: 157 ok, 3 warn, 0 fail
 ```
 
 **Which part of your memory is audited?** Not every file in a vault is held to
