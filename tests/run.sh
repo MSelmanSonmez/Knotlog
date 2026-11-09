@@ -14775,7 +14775,7 @@ wtrun() { # dir "ENV=.. or empty" args... -> $WTRC
   (cd "$_wt_d" && env -u QUIPU_VAULT -u KNOTLOG_VAULT $_wt_e QUIPU_LANG=en sh "$ROOT/knotlog" "$@" </dev/null) >/dev/null 2>&1
   WTRC=$?
 }
-M1422=$(b3_tree wtmain); L1422=$(b3_tree wtlink)
+L1422=$(b3_tree wtlink)
 wtrun "$TMP/wtlink" '' note "wt walkup note"; R1422=$WTRC
 t; assert_eq "T-1422: note run in the worktree writes into the worktree copy and leaves the main vault alone" '0 yes yes no' \
   "$R1422 $(b3_has wtlink 'wt walkup note') $([ "$(b3_tree wtlink)" != "$L1422" ] && printf yes || printf no) $(b3_has wtmain 'wt walkup note')"
