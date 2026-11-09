@@ -299,6 +299,30 @@ _q_stem_prof() {
   esac
 }
 
+_q_syn_prof() {
+  # Synonym expansion for `search`: tr-en (synonyms/tr-en.txt) or off.
+  # Chain: vault config synonyms= (tr-en = on, off = off, anything else =
+  # off) -> no synonyms= key at all: language tr -> tr-en, every other
+  # language -> off. Search-time only; the index is not touched.
+  # $1 = vault path.
+  _q_yp_v=$1
+  _q_yp=
+  if [ -n "$_q_yp_v" ] && [ -f "$_q_yp_v/$_q_SD/config" ]; then
+    # "k:" + value of the first synonyms= line; empty when the key is absent.
+    _q_yp=$(awk -F= -v k=synonyms '$1==k{sub(/^[^=]*=/,"");print "k:" $0;exit}' "$_q_yp_v/$_q_SD/config" 2>/dev/null || true)
+  fi
+  if [ -z "$_q_yp" ]; then
+    case "$(_q_lang)" in
+      tr) _q_yp=k:tr-en ;;
+      *) _q_yp=k:off ;;
+    esac
+  fi
+  case "$_q_yp" in
+    k:tr-en) printf 'tr-en\n' ;;
+    *) printf 'off\n' ;;
+  esac
+}
+
 _q_profile() {
   # Global setter: $_q_prof = normal|economical|manual (anything else, or no
   # profile= key, is normal); $_q_prof_raw = the raw config value (doctor).
@@ -7514,6 +7538,13 @@ _q_cmd_search() {
   # V1-DUZELTME R-4: same single helper as `quipu index` (was a copy, P-2).
   _q_prof=$(_q_fold_prof "$_q_v")
   _q_stem=$(_q_stem_prof "$_q_v")
+  # Synonyms: -v syn_file= names the list ($_q_HOME/synonyms/tr-en.txt), empty
+  # means off. A missing list file also means off: search just runs unexpanded.
+  _q_syn=$(_q_syn_prof "$_q_v")
+  _q_synf=
+  if [ "$_q_syn" = tr-en ] && [ -f "$_q_HOME/synonyms/tr-en.txt" ]; then
+    _q_synf="$_q_HOME/synonyms/tr-en.txt"
+  fi
 
   # Fold the query with the same profile and order as the index (PLAN 4.3):
   # sed -f fold/PROFIL.sed, THEN tr 'A-Z' 'a-z'. SC2018/SC2019 suggest
@@ -7580,6 +7611,7 @@ _q_cmd_search() {
     -v showall="$_q_all" \
     -v idxfile="$_q_v/$_q_SD/index.tsv" -v dfout="$_q_df" \
     -v blocksfile="$_q_bf" -v stem_mode="$_q_stem" \
+    -v syn_file="$_q_synf" \
     -f "$_q_HOME/lib/stem.awk" -f "$_q_HOME/lib/search.awk" "$_q_v/$_q_SD/index.tsv" "$_q_bf"
 
   # Pass 2 (mode=bm25score): dfout first (FNR==NR join, same idiom as
@@ -7592,6 +7624,7 @@ _q_cmd_search() {
     -v tagf="$_q_tagf" -v statf="$_q_statf" \
     -v showall="$_q_all" \
     -v blocksfile="$_q_bf" -v blocks="$_q_blk" -v stem_mode="$_q_stem" \
+    -v syn_file="$_q_synf" \
     -f "$_q_HOME/lib/stem.awk" -f "$_q_HOME/lib/search.awk" "$_q_df" "$_q_v/$_q_SD/index.tsv" "$_q_bf" \
     | sort $_q_sortk \
     | CUTOUT="$_q_df.cut" LC_ALL=C awk -v n="$_q_limit" -v p="$_q_paths" -v blk="$_q_blk" -v mb="$_q_maxb" -F "$_q_tab" '

@@ -148,14 +148,23 @@ BEGIN {
   # normalized term for everything that compares against raw text -- the
   # title/tag/alias boosts and the substring fallback behave as before.
   stem_on = (stem_mode == "tr") ? 1 : 0
+  no = 0
   for (t = 1; t <= nraw; t++) {
     term = norm_term(rawq[t])
     if (term == "") continue
+    ot[++no] = term
     sterm = stem_on ? stem_word(term) : term
     if (sterm in qseen) continue
     qseen[sterm] = 1
     qw[++qc] = sterm
     qraw[qc] = term
+  }
+  # Synonyms (synonyms/tr-en.txt): -v syn_file=<path> turns it on, empty is
+  # off. Extra terms are appended after the typed ones and count as normal terms.
+  qorig = qc
+  if (syn_file != "") {
+    syn_load()
+    syn_expand()
   }
   fallback = 0
   avgdl = 1
@@ -401,6 +410,110 @@ function count_occ(s, needle,   pos, cnt, len, rest) {
 # the punctuation the index side never strips.
 function is_trail_punct(c) {
   return (c == "." || c == "," || c == ";" || c == ":" || c == "!" || c == "?" || c == ")" || c == "'" || c == sprintf("%c", 34))
+}
+
+# ---- synonyms -----------------------------------------------------------------
+
+# Compare/lookup form of a folded word: stemmed when stemming is on, so a
+# query word and a list word meet at the same stem ("kurulumu" -> "kurulum").
+function syn_key(w) {
+  return stem_on ? stem_word(w) : w
+}
+
+# Read synonyms/tr-en.txt (format: see the header of that file) into
+#   sg_m[g]    group g: its words, single-spaced
+#   sg_idx[k]  groups holding a word whose key is k, as " g g ..."
+#   sj_*[j]    join line j: nl left words (sj_lw), their keys (sj_lk[j,i]),
+#              the compound (sj_c) and its key (sj_ck)
+# A missing file reads as empty: no groups, search runs without expansion.
+function syn_load(   line, p, nl, nr, i, nw, key, gs) {
+  sg_n = 0
+  sj_n = 0
+  while ((getline line < syn_file) > 0) {
+    if (substr(line, length(line), 1) == CR) line = substr(line, 1, length(line) - 1)
+    p = index(line, " = ")
+    if (p > 0) {
+      nl = split(substr(line, 1, p - 1), lw, " ")
+      nr = split(substr(line, p + 3), rw, " ")
+      if (nl < 2 || nr != 1 || substr(lw[1], 1, 1) == "#") continue
+      sj_n++
+      sj_len[sj_n] = nl
+      sj_lw[sj_n] = lw[1]
+      sj_lk[sj_n, 1] = syn_key(lw[1])
+      for (i = 2; i <= nl; i++) {
+        sj_lw[sj_n] = sj_lw[sj_n] " " lw[i]
+        sj_lk[sj_n, i] = syn_key(lw[i])
+      }
+      sj_c[sj_n] = rw[1]
+      sj_ck[sj_n] = syn_key(rw[1])
+      continue
+    }
+    nw = split(line, lw, " ")
+    if (nw < 2 || substr(lw[1], 1, 1) == "#") continue
+    sg_n++
+    gs = lw[1]
+    for (i = 2; i <= nw; i++) gs = gs " " lw[i]
+    sg_m[sg_n] = gs
+    for (i = 1; i <= nw; i++) {
+      key = syn_key(lw[i])
+      sg_idx[key] = sg_idx[key] " " sg_n
+    }
+  }
+  close(syn_file)
+}
+
+# Append one extra query term, normalized and stemmed like a typed one. A term
+# already in the query (typed, or added before) is not added twice.
+function syn_add(w,   term, sterm) {
+  term = norm_term(w)
+  if (term == "") return
+  sterm = syn_key(term)
+  if (sterm in qseen) return
+  qseen[sterm] = 1
+  qw[++qc] = sterm
+  qraw[qc] = term
+}
+
+# Expansion, in two steps over the typed terms ot[1..no] / qw[1..qorig]:
+#  1. join lines. Consecutive typed terms equal to the left words add the
+#     compound ("open source" -> opensource), and that compound is looked up in
+#     the groups below too ("set up" -> setup -> kurulum, install). A typed
+#     compound adds each left word as a term of its own ("opensource" -> open,
+#     source); those parts are not looked up further.
+#  2. group lines. A typed term (or compound from step 1) whose key is in a
+#     group adds every other word of that group. The added words do not expand
+#     again, so groups never chain.
+function syn_expand(   j, i, k, m, ok, ncc, cc, key, gl, ng, gi, nm, mw) {
+  ncc = 0
+  for (j = 1; j <= sj_n; j++) {
+    m = sj_len[j]
+    for (i = 1; i + m - 1 <= no; i++) {
+      ok = 1
+      for (k = 1; k <= m; k++) {
+        if (syn_key(ot[i + k - 1]) != sj_lk[j, k]) { ok = 0; break }
+      }
+      if (ok) {
+        syn_add(sj_c[j])
+        cc[++ncc] = sj_ck[j]
+      }
+    }
+    for (i = 1; i <= no; i++) {
+      if (syn_key(ot[i]) == sj_ck[j]) {
+        nm = split(sj_lw[j], mw, " ")
+        for (k = 1; k <= nm; k++) syn_add(mw[k])
+      }
+    }
+  }
+  for (i = 1; i <= qorig + ncc; i++) {
+    key = (i <= qorig) ? qw[i] : cc[i - qorig]
+    gl = sg_idx[key]
+    if (gl == "") continue
+    ng = split(gl, gi, " ")
+    for (k = 1; k <= ng; k++) {
+      nm = split(sg_m[gi[k]], mw, " ")
+      for (m = 1; m <= nm; m++) syn_add(mw[m])
+    }
+  }
 }
 
 # Query-side word normalization, the mirror of the document-side boundary

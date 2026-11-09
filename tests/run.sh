@@ -15035,6 +15035,68 @@ t; assert_eq "T-1447: stemming leaves the index file alone: the same index.tsv w
   "$(a=$(cksum < "$TMP/stv/.knotlog/index.tsv"); st_s tr '' güncellemesi >/dev/null; [ "$a" = "$(cksum < "$TMP/stv/.knotlog/index.tsv")" ] && printf yes || printf no)"
 # ---- end stemming tests ----
 
+# ---- search: Turkish/English synonyms (synonyms=), T-1450..T-1459 ----
+# Synthetic notes; one vault, indexed once, config rewritten per case.
+mkdir -p "$TMP/syv/.knotlog"
+printf 'fold=tr\nlang=tr\n' > "$TMP/syv/.knotlog/config"
+printf '# Paket\nPaket listesi güncel tutuldu.\n' > "$TMP/syv/paket.md"
+printf '# Package\nThe package list and the guide.\n' > "$TMP/syv/package.md"
+printf '# Kurulum\nKurulumu tamamladık, notlar ekte.\n' > "$TMP/syv/kurulum.md"
+printf '# Install\nInstall steps for the tool.\n' > "$TMP/syv/install.md"
+printf '# Lisans\nopensource lisans metni.\n' > "$TMP/syv/os1.md"
+printf '# License\nThe open source license text.\n' > "$TMP/syv/os2.md"
+printf '# Login\nWe set up the login page.\n' > "$TMP/syv/login.md"
+printf '# Kurulus\nKurulus ayarlari yapildi.\n' > "$TMP/syv/ayar.md"
+printf '# Meyve\nElma armut sepeti.\n' > "$TMP/syv/elma.md"
+QUIPU_VAULT="$TMP/syv" sh "$ROOT/knotlog" index >/dev/null 2>&1
+sy_cfg() { # LANG SYN(empty = no synonyms= line)
+  printf 'fold=tr\nlang=%s\n' "$1" > "$TMP/syv/.knotlog/config"
+  [ -z "$2" ] || printf 'synonyms=%s\n' "$2" >> "$TMP/syv/.knotlog/config"
+}
+sy_s() { # LANG SYN search-args... -> result paths, sorted, one line
+  sy_cfg "$1" "$2"; shift 2
+  env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/syv" sh "$ROOT/knotlog" search "$@" --paths 2>/dev/null | sort | tr '\n' ' '
+}
+t; assert_eq "T-1450: lang=tr without synonyms=, an English query also finds the Turkish note" \
+  'package.md paket.md |install.md kurulum.md |' \
+  "$(sy_s tr '' package list)|$(sy_s tr '' kurulumu)|"
+t; assert_eq "T-1451: synonyms=off: only the typed words are found" \
+  'package.md |kurulum.md ' \
+  "$(sy_s tr off package list)|$(sy_s tr off kurulumu)"
+t; assert_eq "T-1452: lang=en without synonyms= is off; synonyms=tr-en turns it on for lang=en; unknown values are off" \
+  'package.md |package.md paket.md |package.md |package.md ' \
+  "$(sy_s en '' package list)|$(sy_s en tr-en package list)|$(sy_s tr bogus package list)|$(sy_s tr 'x ' package list)"
+t; assert_eq "T-1453: open source and opensource find each other; a typed compound or pair finds both spellings" \
+  'os1.md os2.md |os1.md os2.md ' \
+  "$(sy_s tr '' open source)|$(sy_s tr '' opensource)"
+t; assert_eq "T-1454: set up (apart) reaches setup and, through the groups, kurulum and install; off does not" \
+  'install.md kurulum.md login.md |login.md ' \
+  "$(sy_s tr '' set up)|$(sy_s tr off set up)"
+sy_cfg tr ""
+SY1=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/syv" sh "$ROOT/knotlog" search kurulum 2>/dev/null)
+SY2=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/syv" sh "$ROOT/knotlog" search 'kurulum install kurulum' 2>/dev/null)
+t; assert_eq "T-1455: a word already in the query is not added twice: a member typed next to its group scores like the one word" 'yes' \
+  "$([ -n "$SY1" ] && [ "$SY1" = "$SY2" ] && printf yes || printf no)"
+sy_cfg tr off
+SY3=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/syv" sh "$ROOT/knotlog" search 'package list' 2>/dev/null)
+t; assert_eq "T-1456: synonyms=off ranks and scores exactly like the engine without synonyms" \
+  "3.787${TAB}package.md${TAB}Package${TAB}" "$SY3"
+t; assert_eq "T-1457: a word that is only a stem-neighbour of a list word (kurulus) is not expanded" 'ayar.md ' \
+  "$(sy_s tr '' kurulus)"
+t; assert_eq "T-1458: synonyms leave the index file alone: the same index.tsv with synonyms on and off" 'yes' \
+  "$(a=$(cksum < "$TMP/syv/.knotlog/index.tsv"); sy_s tr tr-en package list >/dev/null; [ "$a" = "$(cksum < "$TMP/syv/.knotlog/index.tsv")" ] && printf yes || printf no)"
+# The list file: every line is a comment, a group (folded words) or "words = compound".
+t; assert_eq "T-1459: synonyms/tr-en.txt holds only folded ASCII words" 'clean' \
+  "$(awk 'substr($0, 1, 1) == "#" || NF == 0 { next } { for (i = 1; i <= NF; i++) { w = $i; if (w == "=") continue; for (j = 1; j <= length(w); j++) { c = substr(w, j, 1); if (index("abcdefghijklmnopqrstuvwxyz0123456789", c) == 0) bad++ } } } END { print (bad + 0 == 0) ? "clean" : "dirty" }' "$ROOT/synonyms/tr-en.txt")"
+# A checkout without synonyms/tr-en.txt: search still runs, just without expansion.
+mkdir -p "$TMP/synroot"
+cp "$ROOT/knotlog" "$TMP/synroot/knotlog"
+cp -R "$ROOT/lib" "$ROOT/fold" "$ROOT/i18n" "$ROOT/layout" "$TMP/synroot/"
+sy_cfg tr ''
+SY4=$(env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/syv" sh "$TMP/synroot/knotlog" search package list --paths 2>&1 | sort | tr '\n' ' ')
+t; assert_eq "T-1460: no synonyms/tr-en.txt in the checkout: search runs without expansion, no error" 'package.md ' "$SY4"
+# ---- end synonym tests ----
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
