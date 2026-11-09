@@ -12344,7 +12344,11 @@ QUIPU_LANG=en QUIPU_VAULT="$MN/mcp" sh "$ROOT/knotlog" mcp < "$MN/req.jsonl" > "
 QUIPU_LANG=en QUIPU_VAULT="$MN/cli" sh "$ROOT/knotlog" note "shipped the parser" </dev/null >/dev/null 2>&1
 t; assert_eq "T-985: tools/list names knotlog_note with text as its only required argument" 'yes' \
   "$(sed -n 1p "$MN/out.jsonl" | grep -qF '{"name":"knotlog_note"' && sed -n 1p "$MN/out.jsonl" | grep -qF '"properties":{"text":{"type":"string","description":"One line to add"}},"required":["text"],"additionalProperties":false}' && printf yes || printf no)"
-mn_tree() { (cd "$1" && find . -type f ! -path './.knotlog/*' ! -path './.git/*' | LC_ALL=C sort | while IFS= read -r f; do printf '%s ' "$f"; cksum < "$f"; done); }
+# `note` stamps its line with the wall-clock minute, and the two writes can
+# straddle a minute boundary on a slow runner. Pin that stamp ("- HH:MM " in a
+# session note, "- YYYY-MM-DD HH:MM " in a thread) before the checksum, so only
+# a real byte difference (the text, a file, a path) turns the comparison red.
+mn_tree() { (cd "$1" && find . -type f ! -path './.knotlog/*' ! -path './.git/*' | LC_ALL=C sort | while IFS= read -r f; do printf '%s ' "$f"; LC_ALL=C sed 's/^- \([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] \)\{0,1\}[0-9][0-9]:[0-9][0-9] /- STAMP /' "$f" | cksum; done); }
 t; assert_eq "T-986: knotlog_note leaves the vault byte-identical to knotlog note (same files, same bytes)" 'yes no' \
   "$([ "$(mn_tree "$MN/cli")" = "$(mn_tree "$MN/mcp")" ] && printf yes || printf no) $(sed -n 2p "$MN/out.jsonl" | grep -qF '"isError":true' && printf yes || printf no)"
 t; assert_eq "T-987: a missing or non-string text is a protocol error (-32602)" '2' \
