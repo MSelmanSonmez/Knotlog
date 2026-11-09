@@ -14919,6 +14919,35 @@ mkdir -p "$TMP/cddoc"
 t; assert_eq "T-1441: doctor in an empty directory exits 0 and lists card.md for every language" '0 6' \
   "$RC $(grep -c 'templates/[a-z-]*/card.md' "$TMP/cddoc.out")"
 
+# Characters Windows forbids in a file name are refused everywhere, with the name message and nothing written.
+N3=$(cdfiles "$TMP")
+cd_bad=
+cd_msg=yes
+for cd_n in 'a:b' 'a*b' 'a?b' 'a<b' 'a>b' 'a|b' 'a"b'; do
+  cdrun en "$TMP/cdven" "$cd_n" --project Demo
+  [ "$CDRC" = 2 ] || cd_bad="$cd_bad rc:$cd_n"
+  [ "$(cdsaw en err_card_name "$cd_n")" = yes ] || cd_msg=no
+done
+t; assert_eq "T-1442: card names holding : * ? < > | or a double quote exit 2 with err_card_name" ' yes' "$cd_bad $cd_msg"
+t; assert_eq "T-1442: none of those calls wrote a file" "$N3" "$(cdfiles "$TMP")"
+
+# A failed write leaves no half-written card behind and does not burn a number.
+mkdir -p "$TMP/cdstub"
+cd_realawk=$(command -v awk)
+printf '#!/bin/sh\nif [ -n "${Q_CARD_TITLE:-}" ]; then echo partial; exit 1; fi\nexec %s "$@"\n' "$cd_realawk" > "$TMP/cdstub/awk"
+chmod +x "$TMP/cdstub/awk"
+cd_before=$(ls "$CDE" | wc -l)
+CDOUT=$(cd "$TMP/cdven" && env -u QUIPU_VAULT PATH="$TMP/cdstub:$PATH" QUIPU_LANG=en sh "$ROOT/knotlog" card halfway --project Demo </dev/null 2>&1); CDRC=$?
+t; assert_eq "T-1443: a failing write exits 1 with err_card_write, leaves no file and the next card takes the same number" '1 yes yes' \
+  "$CDRC $(cdsaw en err_card_write "$CDE/004-halfway.md") $([ "$(ls "$CDE" | wc -l)" = "$cd_before" ] && printf yes || printf no)"
+cdrun en "$TMP/cdven" halfway --project Demo
+t; assert_eq "T-1443: the retry without the failure writes 004-halfway.md" '0 yes' \
+  "$CDRC $([ -f "$CDE/004-halfway.md" ] && printf yes || printf no)"
+
+t; assert_eq "T-1444: err_card_type names code, content and both aliases in every language" '' \
+  "$(for _f in "$ROOT"/i18n/*.txt; do _l=${_f##*/}; _l=${_l%.txt}; v=$(mi18n "$_l" err_card_type); case "$v" in *code*content*kod*icerik*) ;; *) printf '%s ' "$_l" ;; esac; done)"
+
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
