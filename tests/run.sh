@@ -14792,6 +14792,83 @@ wtrun "$TMP/wtnosec" '' note --thread "wt thread line"; R1424=$WTRC
 t; assert_eq "T-1424: note --thread without an active section exits 1 and changes no file" '1 yes' \
   "$R1424 $([ "$(b3_tree wtnosec)" = "$N1424" ] && printf yes || printf no)"
 
+# ---- card: numbered work cards (knotlog card) -----------------------------------
+# card follows plan's shape: the project resolves the same way (error, never a
+# guess), the folder name is the i18n key cards_dir, an existing file is never
+# overwritten, and the number is the highest in the folder plus one.
+cdrun() { # lang dir args... -> $CDRC, output in $CDOUT
+  _cd_l=$1; _cd_d=$2; shift 2
+  CDOUT=$(cd "$_cd_d" && env -u QUIPU_VAULT -u KNOTLOG_VAULT QUIPU_LANG=$_cd_l sh "$ROOT/knotlog" card "$@" </dev/null 2>&1)
+  CDRC=$?
+}
+cd_pdir_tr=$(awk -F"$(printf '\t')" '$1=="projects"{print $2;exit}' "$ROOT/layout/tr.txt")
+cd_pdir_en=$(awk -F"$(printf '\t')" '$1=="projects"{print $2;exit}' "$ROOT/layout/en.txt")
+for cd_l in tr en; do
+  mkvault "cdv$cd_l"
+  printf 'lang=%s\nlayout=%s\n' "$cd_l" "$cd_l" > "$TMP/cdv$cd_l/.knotlog/config"
+done
+mkdir -p "$TMP/cdvtr/$cd_pdir_tr/Deneme" "$TMP/cdven/$cd_pdir_en/Demo"
+CDT="$TMP/cdvtr/$cd_pdir_tr/Deneme/Kartlar"
+CDE="$TMP/cdven/$cd_pdir_en/Demo/Cards"
+
+cdrun tr "$TMP/cdvtr" ilk --proje Deneme; R1=$CDRC; O1=$CDOUT
+t; assert_eq "T-1430: card opens 001-<name>.md in the localized cards folder, prints the written path" '0 yes yes' \
+  "$R1 $([ -f "$CDT/001-ilk.md" ] && printf yes || printf no) $(printf '%s\n' "$O1" | grep -qxF "$(memfmt tr plan_written "$CDT/001-ilk.md")" && printf yes || printf no)"
+cdrun en "$TMP/cdven" first --proje Demo
+t; assert_eq "T-1430: the en vault gets Cards/ (not Kartlar/)" 'yes no' \
+  "$([ -f "$CDE/001-first.md" ] && printf yes || printf no) $([ -d "$TMP/cdven/$cd_pdir_en/Demo/Kartlar" ] && printf yes || printf no)"
+t; assert_eq "T-1431: the front matter carries the title with its number, today's dates, type card and status: draft" 'yes' \
+  "$(f="$CDT/001-ilk.md"; { sed -n 1p "$f" | grep -qxF -- '---' && grep -qxF 'title: 001-ilk' "$f" && grep -qxF "created: $(date +%Y-%m-%d)" "$f" && grep -qxF "modified: $(date +%Y-%m-%d)" "$f" && grep -qxF 'type: card' "$f" && grep -qxF 'status: draft' "$f" && grep -qxF '# 001-ilk' "$f"; } && printf yes || printf no)"
+cdhas() { # file line... -> yes when every line is present as a whole line
+  _cdh_f=$1; shift
+  for _cdh_s in "$@"; do
+    grep -qxF -- "$_cdh_s" "$_cdh_f" || { printf no; return 0; }
+  done
+  printf yes
+}
+t; assert_eq "T-1432: the tr card has the tr field names and the en card the en ones" 'yes yes' \
+  "$(cdhas "$CDT/001-ilk.md" '**Tür:** kod' '**Proje:** Deneme' '**Bekliyor:** yok' '## Ne yapılacak' '## Neye dokunma' '## Bitti demek' '## Takılırsan' '## Kayıt' '## Rapor') $(cdhas "$CDE/001-first.md" '**Type:** kod' '**Project:** Demo' '**Waiting on:** none' '## What to do' '## Do not touch' '## Done means' '## If stuck' '## Record' '## Report')"
+cdrun tr "$TMP/cdvtr" ikinci --proje Deneme --tur icerik
+t; assert_eq "T-1433: the second call takes the next number and --tur lands on the card" '0 yes yes' \
+  "$CDRC $([ -f "$CDT/002-ikinci.md" ] && printf yes || printf no) $(grep -qxF '**Tür:** icerik' "$CDT/002-ikinci.md" && printf yes || printf no)"
+# A file that is already there is never touched: the next card goes past it.
+printf 'hand written\n' > "$CDT/007-elle.md"
+printf 'not a card\n' > "$CDT/notes.md"
+cd_sum=$(cksum < "$CDT/007-elle.md")
+cdrun tr "$TMP/cdvtr" son --proje Deneme
+t; assert_eq "T-1434: an existing numbered file stays byte-identical and the new card goes past its number" 'yes yes yes' \
+  "$([ "$(cksum < "$CDT/007-elle.md")" = "$cd_sum" ] && printf yes || printf no) $([ -f "$CDT/008-son.md" ] && printf yes || printf no) $([ ! -e "$CDT/003-son.md" ] && printf yes || printf no)"
+cdrun tr "$TMP/cdvtr" ayni.md --proje Deneme
+t; assert_eq "T-1434: a trailing .md in the name is not doubled" 'yes' \
+  "$([ -f "$CDT/009-ayni.md" ] && printf yes || printf no)"
+
+N1=$(find "$TMP/cdvtr" -type f -not -path '*/.knotlog/*' | wc -l)
+cdrun tr "$TMP/cdvtr" x --proje Yok
+t; assert_eq "T-1435: an unknown project exits 2, names the project decision, creates nothing" '2 yes yes' \
+  "$CDRC $(printf '%s\n' "$CDOUT" | grep -qF "$(memfmt tr err_plan_project_missing "$TMP/cdvtr/$cd_pdir_tr/Yok")" && printf yes || printf no) $([ ! -d "$TMP/cdvtr/$cd_pdir_tr/Yok" ] && [ "$(find "$TMP/cdvtr" -type f -not -path '*/.knotlog/*' | wc -l)" = "$N1" ] && printf yes || printf no)"
+cdrun tr "$TMP/cdvtr" x
+t; assert_eq "T-1435: no --proje and no project folder as cwd exits 2" '2 yes' \
+  "$CDRC $(printf '%s\n' "$CDOUT" | grep -qF "$(mtr err_plan_project_required)" && printf yes || printf no)"
+cdrun tr "$TMP/cdvtr/$cd_pdir_tr/Deneme" icerden
+t; assert_eq "T-1435: inside a project folder the project resolves without --proje" '0 yes' \
+  "$CDRC $([ -f "$CDT/010-icerden.md" ] && printf yes || printf no)"
+
+cdrun tr "$TMP/cdvtr" bozuk --proje Deneme --tur yanlis
+t; assert_eq "T-1436: an invalid --tur exits 2 with the usage error and writes no card" '2 yes yes' \
+  "$CDRC $(printf '%s\n' "$CDOUT" | grep -qF "$(memfmt tr err_card_type yanlis)" && printf yes || printf no) $([ ! -e "$CDT/011-bozuk.md" ] && printf yes || printf no)"
+cdrun tr "$TMP/cdvtr" a b --proje Deneme; R1=$CDRC
+cdrun tr "$TMP/cdvtr" a/b --proje Deneme; R2=$CDRC
+cdrun tr "$TMP/cdvtr" --proje Deneme; R3=$CDRC
+t; assert_eq "T-1436: a second name, a name with a slash and a missing name all exit 2" '2 2 2' "$R1 $R2 $R3"
+
+# card is not context material: its title does not reach `knotlog context`.
+cd_ctx=$(cd "$TMP/cdvtr" && env -u QUIPU_VAULT QUIPU_LANG=tr sh "$ROOT/knotlog" context </dev/null 2>&1)
+t; assert_eq "T-1437: knotlog context does not list cards" 'no' \
+  "$(printf '%s\n' "$cd_ctx" | grep -qF 'ikinci' && printf yes || printf no)"
+t; assert_eq "T-1437: help lists card in both languages" 'yes yes' \
+  "$("$ROOT/knotlog" help --tr 2>&1 | grep -qF "$(mtr usage_card)" && printf yes || printf no) $("$ROOT/knotlog" help 2>&1 | grep -qF "$(men usage_card)" && printf yes || printf no)"
+
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
