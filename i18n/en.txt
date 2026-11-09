@@ -22,6 +22,7 @@ usage_pending=  pending   list notes waiting for review (write_approval=on); --a
 usage_propose=  propose   queue a review finding for approval (propose --kind lesson|skill|fix "text"; knotlog pending)
 usage_import=  import    convert a local JSON conversation export into a session note (FILE, --date YYYY-MM-DD; claude [--project DIR] [--apply]: Claude Code transcripts)
 usage_plan=  plan      open a project plan under <Projects>/<Project>/<Plans>/ from the front-matter template (--proje <Project>)
+usage_card=  card      open a numbered work card under <Projects>/<Project>/<Cards>/NNN-<name>.md (--proje <Project>, --tur kod|icerik)
 usage_tone=  tone      show/set the active tone preset (--list to browse; a bare slug writes tone= to config)
 usage_archive=  archive   move a closed heading out of Threads.md into the archive (--list: show headings; --dry-run: preview only)
 usage_compact=  compact   move old "Closed threads" entries of Threads.md into the archive, losslessly (dry run by default; --apply writes; --keep N keeps the newest N, default 20; the last-session file also keeps its newest N session blocks, default 5)
@@ -426,6 +427,13 @@ err_plan_name=invalid plan name: %s
 err_plan_extra_arg=unexpected extra plan argument: %s
 err_plan_template=plan template missing or unreadable: %s
 err_plan_mkdir=could not create the plans folder: %s
+cards_dir=Cards
+err_card_type=invalid card type: %s (use kod or icerik)
+err_card_name=invalid card name: %s
+err_card_extra_arg=unexpected extra card argument: %s
+err_card_exists=card already exists, not overwritten: %s
+err_card_template=card template missing or unreadable: %s
+err_card_mkdir=could not create the cards folder: %s
 # reflect
 reflect_head_what=What changed in this session?
 reflect_head_where=Where did the work happen?

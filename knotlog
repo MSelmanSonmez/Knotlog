@@ -492,6 +492,7 @@ usage() {
   _q_msg usage_digest
   _q_msg usage_import
   _q_msg usage_plan
+  _q_msg usage_card
   _q_msg usage_tone
   _q_msg usage_flair
   _q_msg usage_archive
@@ -8138,6 +8139,156 @@ _q_cmd_plan() {
   fi
 }
 
+# ---- card (Stage 2) ----------------------------------------------------------
+
+_q_cards_dir_path() {
+  # Same contract as _q_plans_dir_path: the cards directory's NAME follows
+  # the vault's language (i18n key `cards_dir`: `Kartlar` / `Cards`), an
+  # existing directory by either spelling wins, the localized name is only
+  # used (and created by the caller) when neither exists. $1: project
+  # folder.
+  _q_kd_local=$(_q_msg cards_dir)
+  [ -n "$_q_kd_local" ] || _q_kd_local=Cards
+  if [ -d "$1/$_q_kd_local" ]; then
+    printf '%s\n' "$1/$_q_kd_local"
+  else
+    _q_kd_other=$(_q_i18n_key "$_q_HOME/i18n/$(_q_lang_alt).txt" cards_dir)
+    if [ -n "$_q_kd_other" ] && [ -d "$1/$_q_kd_other" ]; then
+      printf '%s\n' "$1/$_q_kd_other"
+    else
+      printf '%s\n' "$1/$_q_kd_local"
+    fi
+  fi
+}
+
+_q_cmd_card() {
+  # knotlog card <ad> [--proje <Proje>] [--tur kod|icerik] -- open a numbered
+  # work card under <projects>/<Proje>/<cards_dir>/NNN-<ad>.md from the
+  # localized template. Same edges as `plan`: a MISSING project is an error,
+  # never auto-created, never guessed; the cards directory is created when
+  # absent; an existing file is never overwritten. NNN is the highest
+  # number already in the directory + 1, so two calls never share one.
+  _q_v=$(_q_vault)
+  [ -n "$_q_v" ] || _q_die err_no_vault
+  _q_cd_name=
+  _q_cd_proj=
+  _q_cd_type=kod
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --proje)
+        [ "$#" -ge 2 ] || _q_die err_missing_arg 2
+        case "$2" in
+          -*) _q_die err_unknown_flag 2 "$2" ;;
+        esac
+        _q_cd_proj=$2; shift 2 ;;
+      --tur)
+        [ "$#" -ge 2 ] || _q_die err_missing_arg 2
+        case "$2" in
+          kod|icerik) ;;
+          *) _q_die err_card_type 2 "$2" ;;
+        esac
+        _q_cd_type=$2; shift 2 ;;
+      -*) _q_die err_unknown_flag 2 "$1" ;;
+      *)
+        [ -z "$_q_cd_name" ] || _q_die err_card_extra_arg 2 "$1"
+        _q_cd_name=$1; shift ;;
+    esac
+  done
+  [ -n "$_q_cd_name" ] || _q_die err_missing_arg 2
+  case "$_q_cd_name" in
+    */*|.|..) _q_die err_card_name 2 "$_q_cd_name" ;;
+  esac
+  _q_cd_name=${_q_cd_name%.md}
+  [ -n "$_q_cd_name" ] || _q_die err_card_name 2 ".md"
+
+  # Project resolution is `plan`'s: --proje wins, else the project folder
+  # the caller is working in, else an error.
+  _q_cd_tab=$(printf '\t')
+  _q_cd_lay=$(awk -F= -v k=layout '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_v/$_q_SD/config" 2>/dev/null || true)
+  _q_layout_ok "$_q_cd_lay" || _q_cd_lay=emoji
+  _q_cd_pdir=$(awk -F"$_q_cd_tab" -v k=projects '$1==k{print $2;exit}' "$_q_HOME/layout/$_q_cd_lay.txt" 2>/dev/null || true)
+  if [ -z "$_q_cd_proj" ]; then
+    case "$PWD" in
+      "$_q_v"/"$_q_cd_pdir"/*)
+        _q_cd_rel=${PWD#"$_q_v/$_q_cd_pdir/"}
+        _q_cd_proj=${_q_cd_rel%%/*}
+        ;;
+    esac
+  fi
+  if [ -z "$_q_cd_proj" ] || [ -z "$_q_cd_pdir" ]; then
+    _q_die err_plan_project_required 2
+  fi
+  _q_cd_projdir="$_q_v/$_q_cd_pdir/$_q_cd_proj"
+  if [ ! -d "$_q_cd_projdir" ]; then
+    _q_die err_plan_project_missing 2 "$_q_cd_projdir"
+  fi
+
+  _q_cd_dir=$(_q_cards_dir_path "$_q_cd_projdir")
+  _q_safe_target "$_q_v" "$_q_cd_dir/$_q_cd_name.md" || _q_die err_unsafe_write 1 "$_q_cd_dir/$_q_cd_name.md"
+  if [ ! -d "$_q_cd_dir" ]; then
+    mkdir -p "$_q_cd_dir" || _q_die err_card_mkdir 2 "$_q_cd_dir"
+  fi
+
+  # Next number: the highest leading digit run among NNN-*.md files + 1.
+  # A leading zero must not read as octal, so it is stripped by hand.
+  _q_cd_max=0
+  for _q_cd_f in "$_q_cd_dir"/[0-9][0-9][0-9]*-*.md; do
+    [ -e "$_q_cd_f" ] || continue
+    _q_cd_n=${_q_cd_f##*/}
+    _q_cd_n=${_q_cd_n%%-*}
+    case "$_q_cd_n" in *[!0-9]*) continue ;; esac
+    while :; do
+      case "$_q_cd_n" in
+        0?*) _q_cd_n=${_q_cd_n#0} ;;
+        *) break ;;
+      esac
+    done
+    [ "$_q_cd_n" -le "$_q_cd_max" ] || _q_cd_max=$_q_cd_n
+  done
+  _q_cd_title=$(printf '%03d-%s' "$((_q_cd_max + 1))" "$_q_cd_name")
+  _q_cd_file="$_q_cd_dir/$_q_cd_title.md"
+  _q_safe_target "$_q_v" "$_q_cd_file" || _q_die err_unsafe_write 1 "$_q_cd_file"
+  if [ -e "$_q_cd_file" ]; then
+    _q_die err_card_exists 1 "$_q_cd_file"
+  fi
+
+  _q_cd_lang=$(_q_lang)
+  if [ ! -f "$_q_HOME/templates/$_q_cd_lang/card.md" ]; then
+    _q_cd_lang=en
+  fi
+  if [ ! -f "$_q_HOME/templates/$_q_cd_lang/card.md" ]; then
+    _q_die err_card_template 2 "$_q_HOME/templates/$_q_cd_lang/card.md"
+  fi
+  # Values travel through ENVIRON, not awk -v: -v interprets backslash
+  # escapes, a card name must land verbatim. gsub() would read & in a
+  # value, so the placeholders are replaced with index()/substr().
+  Q_CARD_TITLE=$_q_cd_title Q_CARD_DATE=$(date +%Y-%m-%d) Q_CARD_TYPE=$_q_cd_type Q_CARD_PROJ=$_q_cd_proj awk '
+    function rep(s, tok, val,   i, o) {
+      o = ""
+      while ((i = index(s, tok)) > 0) {
+        o = o substr(s, 1, i - 1) val
+        s = substr(s, i + length(tok))
+      }
+      return o s
+    }
+    BEGIN {
+      t = ENVIRON["Q_CARD_TITLE"]; d = ENVIRON["Q_CARD_DATE"]
+      k = ENVIRON["Q_CARD_TYPE"]; p = ENVIRON["Q_CARD_PROJ"]
+    }
+    $0 == "title: " { print "title: " t; next }
+    $0 == "# " { print "# " t; next }
+    {
+      $0 = rep($0, "YYYY-MM-DD", d)
+      $0 = rep($0, "{type}", k)
+      $0 = rep($0, "{project}", p)
+      print
+    }
+  ' "$_q_HOME/templates/$_q_cd_lang/card.md" > "$_q_cd_file" || _q_die err_card_template 2 "$_q_HOME/templates/$_q_cd_lang/card.md"
+
+  # shellcheck disable=SC2059
+  printf "$(_q_msg plan_written)\n" "$_q_cd_file"
+}
+
 # ---- archive ----------------------------------------------------------------
 
 _q_cmd_archive() {
@@ -9051,6 +9202,7 @@ case "$_q_cmd" in
   search) shift; _q_cmd_search "$@" ;;
   links) shift; _q_cmd_links "$@" ;;
   plan) shift; _q_cmd_plan "$@" ;;
+  card) shift; _q_cmd_card "$@" ;;
   tone) shift; _q_cmd_tone "$@" ;;
   flair) shift; _q_cmd_flair "$@" ;;
   archive) shift; _q_cmd_archive "$@" ;;
