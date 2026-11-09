@@ -149,7 +149,7 @@ Gerçekten elle yazacakların; tam tablo [docs/REFERENCE.md](docs/REFERENCE.md#c
 | `knotlog context` | ajanın oturum açılışında gördüğünü yazdırır |
 | `knotlog tui` | en yeni oturum notlarına terminalde göz atar |
 | `knotlog plan <ad> --proje <Proje>` | bir projenin içinde plan notu açar |
-| `knotlog card <ad> --proje <Proje>` | bir projenin içinde numaralı iş kartı (`NNN-<ad>.md`) açar |
+| `knotlog card <ad> --project <Proje>` | bir projenin içinde numaralı iş kartı (`NNN-<ad>.md`) açar |
 | `knotlog help [--<kod>]` | İngilizce yardım; `--<kod>` ile gönderilen başka bir dilde (örn. `--tr`) |
 
 ## İlk oturum
