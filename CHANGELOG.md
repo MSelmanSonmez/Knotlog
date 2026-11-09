@@ -10,7 +10,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `knotlog card <name> [--project <Project>] [--type code|content]` opens a numbered work card `NNN-<name>.md` under `<projects>/<Project>/<Cards>/` from the new `templates/<lang>/card.md` (all six languages; fields in the vault language, `status: draft` in the front matter, the type word in the vault language too). `--proje` and `--tur kod|icerik` are aliases. It resolves the project like `plan`, takes the next number in the folder, never overwrites a file, rejects names with a slash, backslash or control character (exit 2) and never enters `knotlog context`. New i18n keys `usage_card`, `cards_dir`, `err_card_type`, `err_card_name`, `err_card_project`, `err_card_extra_arg`, `err_card_exists`, `err_card_template`, `err_card_mkdir`, `err_card_write` in all six languages.
 - `knotlog plan` accepts `--project` as an alias of `--proje`; nothing else about it changes.
 
-
 - `knotlog doctor` prints one information row (`worktree`) when the vault root's `.git` is a file, i.e. the vault is a linked git worktree: writes go to that copy, and `KNOTLOG_VAULT=<main vault path>` sends them to the main vault. It moves no counter and no exit code. New i18n key `doc_worktree` in all six languages. The new REFERENCE section "Worktrees and parallel agents" records what was measured with a live Claude Code session.
 
 ### Fixed

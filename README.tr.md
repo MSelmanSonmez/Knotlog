@@ -148,7 +148,7 @@ Gerçekten elle yazacakların; tam tablo [docs/REFERENCE.md](docs/REFERENCE.md#c
 | `knotlog pending` | kuyruktaki not ve önerileri yazılmadan önce onaylar (notlar `write_approval=on` iken kuyruğa girer; `propose` her zaman kuyruğa alır; `--approve N`, `--reject N`; `--approve N --to note\|facts\|thread [--dry-run]` hedefi seçer; Claude Code'da `/learn` bir dersi kuyruğa alır) |
 | `knotlog context` | ajanın oturum açılışında gördüğünü yazdırır |
 | `knotlog tui` | en yeni oturum notlarına terminalde göz atar |
-| `knotlog plan <ad> --proje <Proje>` | bir projenin içinde plan notu açar |
+| `knotlog plan <ad> --project <Proje>` | bir projenin içinde plan notu açar |
 | `knotlog card <ad> --project <Proje>` | bir projenin içinde numaralı iş kartı (`NNN-<ad>.md`) açar |
 | `knotlog help [--<kod>]` | İngilizce yardım; `--<kod>` ile gönderilen başka bir dilde (örn. `--tr`) |
 

@@ -151,7 +151,7 @@ Claude Code 读取 `CLAUDE.md`，其他大多数智能体读取 `AGENTS.md`；Kn
 | `knotlog pending` | 在写入前审核队列中的笔记和提案（笔记在 `write_approval=on` 时入队；`propose` 总是入队；`--approve N`、`--reject N`；`--approve N --to note\|facts\|thread [--dry-run]` 选择写入目标；Claude Code 的 `/learn` 会把一条经验放入队列） |
 | `knotlog context` | 打印智能体在会话开始时看到的内容 |
 | `knotlog tui` | 在终端中浏览最新的会话笔记 |
-| `knotlog plan <name> --proje <Project>` | 在项目内打开一份计划笔记 |
+| `knotlog plan <name> --project <Project>` | 在项目内打开一份计划笔记 |
 | `knotlog card <name> --project <Project>` | 在项目内创建带编号的工作卡片 (`NNN-<name>.md`) |
 | `knotlog help [--<代码>]` | 显示英文帮助，加 `--<代码>` 显示其他随附语言的帮助（例如 `--tr`） |
 

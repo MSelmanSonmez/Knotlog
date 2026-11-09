@@ -148,7 +148,7 @@ The ones you will actually type; the full table is in [docs/REFERENCE.md](docs/R
 | `knotlog pending` | review queued notes and proposals before they are written (notes queue when `write_approval=on`; `propose` always queues; `--approve N`, `--reject N`; `--approve N --to note\|facts\|thread [--dry-run]` picks the target; `/learn` in Claude Code queues a lesson) |
 | `knotlog context` | print what the agent sees at session start |
 | `knotlog tui` | browse the newest session notes in the terminal |
-| `knotlog plan <name> --proje <Project>` | open a plan note inside a project |
+| `knotlog plan <name> --project <Project>` | open a plan note inside a project |
 | `knotlog card <name> --project <Project>` | open a numbered work card (`NNN-<name>.md`) inside a project |
 | `knotlog help [--<code>]` | help in English, or in another shipped language with `--<code>` (e.g. `--tr`) |
 
