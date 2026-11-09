@@ -151,6 +151,7 @@ Los que realmente vas a escribir; la tabla completa está en [docs/REFERENCE.md]
 | `knotlog context` | muestra lo que ve el agente al inicio de la sesión |
 | `knotlog tui` | explora en la terminal las notas de sesión más recientes |
 | `knotlog plan <name> --proje <Project>` | abre una nota de plan dentro de un proyecto |
+| `knotlog card <name> --proje <Project>` | abre una tarjeta de trabajo numerada (`NNN-<name>.md`) dentro de un proyecto |
 | `knotlog help [--<código>]` | ayuda en inglés, o en otro idioma incluido con `--<código>` (p. ej. `--tr`) |
 
 ## Una primera sesión

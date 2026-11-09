@@ -152,6 +152,7 @@ Claude Code 读取 `CLAUDE.md`，其他大多数智能体读取 `AGENTS.md`；Kn
 | `knotlog context` | 打印智能体在会话开始时看到的内容 |
 | `knotlog tui` | 在终端中浏览最新的会话笔记 |
 | `knotlog plan <name> --proje <Project>` | 在项目内打开一份计划笔记 |
+| `knotlog card <name> --proje <Project>` | 在项目内创建带编号的工作卡片 (`NNN-<name>.md`) |
 | `knotlog help [--<代码>]` | 显示英文帮助，加 `--<代码>` 显示其他随附语言的帮助（例如 `--tr`） |
 
 ## 第一次会话
