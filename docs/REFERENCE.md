@@ -252,6 +252,7 @@ Choose per task. Separate copies keep "what I did on this branch" with the branc
 - **Config not tracked.** A worktree that does not carry `.knotlog/config` is no vault: outside the main vault's folder `knotlog` reports `no vault found` and exits 1; inside the main vault's folder the walk-up reaches the main vault and writes there. This follows from the lookup above; it was measured by an earlier card, not repeated here.
 - **Other agents** (Codex, omp, Gemini CLI, Cursor, Antigravity, Windsurf, OpenCode, Copilot CLI): not measured. Whether their hooks run in the worktree, and how an environment variable reaches them, is unknown.
 - **Linux and macOS:** not measured; only Git Bash on Windows 11 was.
+- **`claude -p` and the session end.** In both measured calls the `SessionEnd` hook was cancelled (`claude -p` exits at once), so `remember` was killed part-way: it writes the day note, then `Threads.md`, then `Last-Session.md`, then `.knotlog/remembered`, and the second call stopped before the last two. That is the cancelled hook, not `KNOTLOG_VAULT`. The `.knotlog/remember.lock/pid` left behind is harmless; the next lock takes it over with `kill -0`. A full interactive session (full `SessionEnd`): not measured.
 
 ## Checkpoint signal (mid-session memory guard)
 
