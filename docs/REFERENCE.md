@@ -237,6 +237,22 @@ When `remember` runs from a hook, it reads the hook payload on stdin and writes 
 
 `init`, `install` and `migrate --apply` add `merge=union` lines to the vault's `.gitattributes` (created if missing, never duplicated, your lines kept) for the files that only grow by appending: the last-session file and, if present, the journal. The threads file and the `AGENTS.md`/`CLAUDE.md` blocks are rewritten in place, so union would duplicate or resurrect lines there. If the same card was edited on both machines, a merge keeps both copies; the next `remember` of that session collapses them. `doctor` warns once when a git vault lacks the line.
 
+## Worktrees and parallel agents
+
+A `git worktree` checks out the vault's tracked files, and `.knotlog/config` is one of them. Knotlog finds its vault by walking up from the current directory to the nearest `.knotlog/config`, so a worktree is a vault of its own and every command run inside it writes to **that copy**, not to the main checkout. Measured with Claude Code (a fake vault, a worktree of it, a real `claude -p` call started inside the worktree, Windows 11 with Git Bash):
+
+- **Without `KNOTLOG_VAULT`.** All six hooks of the Claude Code adapter ran with the worktree as their working directory (`CLAUDE_PROJECT_DIR` was the worktree too). `.knotlog/activity.log`, the day note, `Threads.md` and `Last-Session.md` changed in the worktree; no file of the main vault changed.
+- **With `KNOTLOG_VAULT=<main vault path>`** in the environment of the `claude` process (`KNOTLOG_VAULT=/path/to/vault claude`). Every hook inherited it, and `activity.log`, the day note and `Threads.md` changed in the main vault; the worktree was left alone. The variable is not written into `settings.json`; only the environment of the process was tried.
+- `doctor` run inside a worktree adds a `worktree` information row when the vault root's `.git` is a file; it changes no count and no exit code.
+
+Choose per task. Separate copies keep "what I did on this branch" with the branch, so a discarded branch discards its notes. If every agent should write into one place, give them the variable. Agents write into one vault one after another: `remember`, `note` and `note --thread` share the vault's `.knotlog/remember.lock`.
+
+- **Merging.** Two worktrees that write the same day each add to that day's note and to `Threads.md` (an in-place rewrite, so no `merge=union` line covers it). Merging both branches can conflict in those two files; `Last-Session.md` has the `union` line and merges. Measured by an earlier card with two worktrees and a merge; resolve by hand or point the agents at one vault with `KNOTLOG_VAULT`.
+- **`note --thread` needs an active section.** It adds one line at the end of the active section of the `<!-- knotlog:threads:start/end -->` block in `Threads.md`. Without that file, or without that section, it writes nothing and exits 1. A plain `note` is not affected.
+- **Config not tracked.** A worktree that does not carry `.knotlog/config` is no vault: outside the main vault's folder `knotlog` reports `no vault found` and exits 1; inside the main vault's folder the walk-up reaches the main vault and writes there. This follows from the lookup above; it was measured by an earlier card, not repeated here.
+- **Other agents** (Codex, omp, Gemini CLI, Cursor, Antigravity, Windsurf, OpenCode, Copilot CLI): not measured. Whether their hooks run in the worktree, and how an environment variable reaches them, is unknown.
+- **Linux and macOS:** not measured; only Git Bash on Windows 11 was.
+
 ## Checkpoint signal (mid-session memory guard)
 
 When agents work across multiple turns without writing a session note, memory can be lost if a session ends abruptly. Knotlog includes a git-aware checkpoint signal:
