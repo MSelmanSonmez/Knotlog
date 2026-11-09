@@ -565,6 +565,8 @@ Resolution goes through three stages, stopping at the first match: literal vault
 
 **Comparison.** agentmemory's BM25 on the same set at @5 reports any-hit 452/470 = 96.2% and strict recall-all 398/470 = 84.7% (`github.com/rohitg00/agentmemory`, `docs/benchmarks/2026-10-28-retrieval-evaluation.md`, commit `3f8784d`). Knotlog is still behind. agentmemory also uses stemming, synonyms and prefix expansion, which Knotlog does not; part of the gap may come from that, but this was not measured.
 
+**Stemming and synonyms (partial run).** Turkish suffix stemming (`stem=`) and the TR-EN synonym list (`synonyms=`) are on by default only for `lang=tr` vaults, so the English LongMemEval-S numbers above are unchanged by default. To check that turning stemming on for English would hurt, the first 100 questions of the file (file order, 94 scored after the 6 abstention questions) were run on Windows 11 with Git Bash (not the Linux laptop above), once with the default (`main`, stemming off) and once with `stem=tr` forced on. Default: recall_any@5 87/94 = 92.6%, recall_all@5 67/94 = 71.3%. Stemming forced on: recall_any@5 86/94 = 91.5%, recall_all@5 67/94 = 71.3%. One question lost, none gained, so stemming stays off outside `lang=tr`. This is a 100-question subset, not the full 470; one full run on that Windows machine takes hours (every index and search starts hundreds of sh/awk processes), so the full run was not repeated. The synonym list is off for English and was not measured on LongMemEval.
+
 **Reproduce:**
 
 ```
