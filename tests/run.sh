@@ -14798,7 +14798,7 @@ t; assert_eq "T-1424: note --thread without an active section exits 1 and change
 # overwritten, and the number is the highest in the folder plus one.
 cdrun() { # lang dir args... -> $CDRC, output in $CDOUT
   _cd_l=$1; _cd_d=$2; shift 2
-  CDOUT=$(cd "$_cd_d" && env -u QUIPU_VAULT -u KNOTLOG_VAULT QUIPU_LANG=$_cd_l sh "$ROOT/knotlog" card "$@" </dev/null 2>&1)
+  CDOUT=$(cd "$_cd_d" && env -u QUIPU_VAULT -u KNOTLOG_VAULT QUIPU_LANG="$_cd_l" sh "$ROOT/knotlog" card "$@" </dev/null 2>&1)
   CDRC=$?
 }
 cdhas() { # file line... -> yes when every line is present as a whole line
@@ -14936,10 +14936,10 @@ mkdir -p "$TMP/cdstub"
 cd_realawk=$(command -v awk)
 printf '#!/bin/sh\nif [ -n "${Q_CARD_TITLE:-}" ]; then echo partial; exit 1; fi\nexec %s "$@"\n' "$cd_realawk" > "$TMP/cdstub/awk"
 chmod +x "$TMP/cdstub/awk"
-cd_before=$(ls "$CDE" | wc -l)
+cd_before=$(cdfiles "$CDE")
 CDOUT=$(cd "$TMP/cdven" && env -u QUIPU_VAULT PATH="$TMP/cdstub:$PATH" QUIPU_LANG=en sh "$ROOT/knotlog" card halfway --project Demo </dev/null 2>&1); CDRC=$?
 t; assert_eq "T-1443: a failing write exits 1 with err_card_write, leaves no file and the next card takes the same number" '1 yes yes' \
-  "$CDRC $(cdsaw en err_card_write "$CDE/004-halfway.md") $([ "$(ls "$CDE" | wc -l)" = "$cd_before" ] && printf yes || printf no)"
+  "$CDRC $(cdsaw en err_card_write "$CDE/004-halfway.md") $([ "$(cdfiles "$CDE")" = "$cd_before" ] && printf yes || printf no)"
 cdrun en "$TMP/cdven" halfway --project Demo
 t; assert_eq "T-1443: the retry without the failure writes 004-halfway.md" '0 yes' \
   "$CDRC $([ -f "$CDE/004-halfway.md" ] && printf yes || printf no)"
