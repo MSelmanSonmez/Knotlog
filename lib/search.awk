@@ -142,11 +142,20 @@ BEGIN {
   # deduplicated so df counts each term once per note, not once per repeat.
   nraw = split(terms, rawq, " ")
   qc = 0
+  # Stemming (lib/stem.awk, loaded with its own -f): -v stem_mode=tr turns it
+  # on, anything else is off. qw[] holds the term as it is MATCHED against
+  # the (stemmed) document words and keys df[]; qraw[] keeps the unstemmed
+  # normalized term for everything that compares against raw text -- the
+  # title/tag/alias boosts and the substring fallback behave as before.
+  stem_on = (stem_mode == "tr") ? 1 : 0
   for (t = 1; t <= nraw; t++) {
     term = norm_term(rawq[t])
-    if (term == "" || (term in qseen)) continue
-    qseen[term] = 1
-    qw[++qc] = term
+    if (term == "") continue
+    sterm = stem_on ? stem_word(term) : term
+    if (sterm in qseen) continue
+    qseen[sterm] = 1
+    qw[++qc] = sterm
+    qraw[qc] = term
   }
   fallback = 0
   avgdl = 1
@@ -164,7 +173,7 @@ mode == "bm25count" && blocksfile != "" && FILENAME == blocksfile {
   # fallback. Once something matched, the rest of the file is skipped.
   if (total > 0) next
   if (!filter_ok()) next
-  pad = " " $5 " "
+  pad = dpad($5)
   for (t = 1; t <= qc; t++) {
     term = qw[t]
     if (term == "") continue
@@ -179,7 +188,7 @@ mode == "bm25count" {
   if (!filter_ok()) next
   n++
   sumlen += split($5, w, " ")
-  pad = " " $5 " "
+  pad = dpad($5)
   for (t = 1; t <= qc; t++) {
     term = qw[t]
     if (term == "") continue
@@ -205,9 +214,9 @@ END {
         if (nfc < 7) continue
         if (!filter_ok_cols(fcol[3], fcol[6], fcol[8])) continue
         for (t = 1; t <= qc; t++) {
-          term = qw[t]
+          term = qraw[t]
           if (term == "") continue
-          if (index(fcol[5], term) > 0) df[term]++
+          if (index(fcol[5], term) > 0) df[qw[t]]++
         }
       }
       close(idxfile)
@@ -245,7 +254,8 @@ mode == "bm25score" {
   isblk = (blocksfile != "" && FILENAME == blocksfile) ? 1 : 0
   if (!filter_ok()) next
   dl = split($5, w, " ")
-  pad = " " $5 " "
+  pad = dpad($5)
+  rpad = stem_on ? " " $5 " " : pad
   ptitle = " " $2 " "
   ntag = split($3, ta, ",")
   # Aliases (see lib/index.awk): a note row whose search field starts with
@@ -260,19 +270,23 @@ mode == "bm25score" {
     term = qw[t]
     if (term == "") continue
     if (fallback) {
-      tf = count_occ($5, term)
+      tf = count_occ($5, qraw[t])
     } else {
       tf = count_occ_bounded(pad, term)
     }
     if (tf == 0) continue
     matched = 1
     if (isblk) {
-      # Earliest match inside the block, for the --brief snippet window.
-      fp = fallback ? index($5, term) : index(pad, " " term)
+      # Earliest match inside the block, for the --brief snippet window. The
+      # offset must index the RAW field (the snippet is cut from it), so with
+      # stemming on it comes from the unstemmed padded copy.
+      fp = fallback ? index($5, qraw[t]) : index(rpad, " " term)
       if (fp > 0 && (fpos == 0 || fp < fpos)) fpos = fp
     }
     idf = log((n - df[term] + 0.5) / (df[term] + 0.5))
     contrib = idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * (dl / avgdl)))
+    # Boosts compare the unstemmed term with the raw title/tag/alias text.
+    term = qraw[t]
     if (fallback) {
       if (index($2, term) > 0) contrib *= 2
       else if (ap > 0 && index(areg, term) > 0) contrib *= 2
@@ -334,6 +348,37 @@ function filter_ok_cols(tag3, stat6, valid,   tagok, ntg, tgi, tg) {
   if (statf != "" && stat6 != statf) return 0
   if (valid == "rejected" && !showall) return 0
   return 1
+}
+
+# The space-padded field the word matcher searches. Without stemming it is the
+# folded field itself. With stemming it is the same field with every word
+# stemmed (trailing punctuation kept, so count_occ_bounded still sees it).
+# stem_word() always returns a prefix of its input, so a row that holds no word
+# starting with any query stem cannot match: it keeps its raw padding and the
+# per-word loop runs only for candidate rows. Stemmed words are cached.
+function dpad(s,   rp, t, hit, nt, tk, i, out) {
+  rp = " " s " "
+  if (!stem_on) return rp
+  hit = 0
+  for (t = 1; t <= qc; t++) {
+    if (qw[t] != "" && index(rp, " " qw[t]) > 0) { hit = 1; break }
+  }
+  if (!hit) return rp
+  nt = split(s, tk, " ")
+  out = ""
+  for (i = 1; i <= nt; i++) out = out " " stem_tok(tk[i])
+  return out " "
+}
+
+# Stem one padded-field word: split off the run of trailing punctuation, stem
+# the rest, put the punctuation back.
+function stem_tok(tok,   k, core) {
+  if (tok in stcache) return stcache[tok]
+  k = length(tok)
+  while (k > 0 && is_trail_punct(substr(tok, k, 1))) k--
+  core = substr(tok, 1, k)
+  stcache[tok] = stem_word(core) substr(tok, k + 1)
+  return stcache[tok]
 }
 
 function count_occ(s, needle,   pos, cnt, len, rest) {

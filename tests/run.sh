@@ -14976,6 +14976,64 @@ t; assert_eq "T-1443: the retry without the failure writes 004-halfway.md" '0 ye
 t; assert_eq "T-1444: err_card_type names code, content and both aliases in every language" '' \
   "$(cdtypehint)"
 
+# ---- search: Turkish suffix stemming (stem=), T-1440..T-1449 ----
+# Synthetic notes; one vault, indexed once. The index is folded with fold=tr
+# whatever lang says, so the config is rewritten per case and only the search
+# side changes. st_s LANG STEM ARGS... -> sorted result paths on one line.
+mkdir -p "$TMP/stv/.knotlog"
+printf 'fold=tr\nlang=tr\n' > "$TMP/stv/.knotlog/config"
+printf '# Sürüm\nSürümün güncelleme notları burada.\n' > "$TMP/stv/guncelleme.md"
+printf '# Sürüm\nYeni sürümün güncellemesi bekliyor.\n' > "$TMP/stv/guncellemesi.md"
+printf '# Kahve\nKahve döker kupa.\n' > "$TMP/stv/doker.md"
+printf '# Boru\nSıvı döken boru.\n' > "$TMP/stv/doken.md"
+printf '# Demir\nDökme demir parça.\n' > "$TMP/stv/dokme.md"
+printf '# Kutu\nKutuyu çıkar hemen.\n' > "$TMP/stv/cikar.md"
+printf '# Islem\nÇıkarma işlemi tamam.\n' > "$TMP/stv/cikarma.md"
+printf '# Sunucu\nnode.js sunucusu çalışıyor.\n' > "$TMP/stv/nodejs.md"
+printf '# Derleyici\nc++ derleyicisi kuruldu.\n' > "$TMP/stv/cpp.md"
+printf '# Konu\nKonu #etiket altında.\n' > "$TMP/stv/tag.md"
+printf '# Meyve\nElma armut sepeti.\n' > "$TMP/stv/elma.md"
+printf '# Adim\nKurulum adımları ve rapor.\n' > "$TMP/stv/kurulum.md"
+printf '# Bitti\nKurulumu bitirdik raporu yazdık.\n' > "$TMP/stv/kurulumu.md"
+QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" index >/dev/null 2>&1
+st_cfg() { # LANG STEM(empty = no stem= line)
+  printf 'fold=tr\nlang=%s\n' "$1" > "$TMP/stv/.knotlog/config"
+  [ -z "$2" ] || printf 'stem=%s\n' "$2" >> "$TMP/stv/.knotlog/config"
+}
+st_s() { # LANG STEM search-args... -> result paths, sorted, one line
+  st_cfg "$1" "$2"; shift 2
+  env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" search "$@" --paths 2>/dev/null | sort | tr '\n' ' '
+}
+t; assert_eq "T-1440: lang=tr without stem=, stemming is on: the endings of güncelleme, döker and çıkar meet" \
+  'guncelleme.md guncellemesi.md |doken.md doker.md dokme.md |cikar.md cikarma.md ' \
+  "$(st_s tr '' güncellemesi)|$(st_s tr '' dökme)|$(st_s tr '' çıkarma)"
+t; assert_eq "T-1441: stem=off: only the exact word is found" \
+  'guncellemesi.md |dokme.md |cikarma.md ' \
+  "$(st_s tr off güncellemesi)|$(st_s tr off dökme)|$(st_s tr off çıkarma)"
+t; assert_eq "T-1442: lang=en without stem= is off; stem=tr turns it on for lang=en; unknown values are off" \
+  'guncellemesi.md |guncelleme.md guncellemesi.md |guncellemesi.md |guncellemesi.md ' \
+  "$(st_s en '' güncellemesi)|$(st_s en tr güncellemesi)|$(st_s tr bogus güncellemesi)|$(st_s tr 'x ' güncellemesi)"
+t; assert_eq "T-1443: node.js, c++ and #etiket find the same notes with stemming on and off" 'same same same' \
+  "$([ "$(st_s tr '' node.js)" = "$(st_s tr off node.js)" ] && [ "$(st_s tr '' node.js)" = 'nodejs.md ' ] && printf same || printf differ) $([ "$(st_s tr '' 'c++')" = "$(st_s tr off 'c++')" ] && [ "$(st_s tr '' 'c++')" = 'cpp.md ' ] && printf same || printf differ) $([ "$(st_s tr '' '#etiket')" = "$(st_s tr off '#etiket')" ] && [ "$(st_s tr '' '#etiket')" = 'tag.md ' ] && printf same || printf differ)"
+st_cfg tr ''
+ST1=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" search güncelleme 2>/dev/null)
+ST2=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" search 'güncelleme güncelleme' 2>/dev/null)
+ST3=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" search '"güncelleme"' 2>/dev/null)
+ST4=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" search 'güncelleme güncellemesi' 2>/dev/null)
+t; assert_eq "T-1444: a repeated, a quoted and a same-stem second term score like the single term" 'yes yes yes' \
+  "$([ -n "$ST1" ] && [ "$ST1" = "$ST2" ] && printf yes || printf no) $([ "$ST1" = "$ST3" ] && printf yes || printf no) $([ "$ST1" = "$ST4" ] && printf yes || printf no)"
+# Golden output taken from the engine before stemming existed: stem=off must reproduce it byte for byte.
+st_cfg tr off
+ST5=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" search 'kurulum raporu' 2>/dev/null)
+t; assert_eq "T-1445: stem=off ranks and scores exactly like the engine without stemming" \
+  "2.013${TAB}kurulum.md${TAB}Adim${TAB}
+2.013${TAB}kurulumu.md${TAB}Bitti${TAB}" "$ST5"
+st_cfg tr ''
+ST6=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" search güncellemesi --brief 2>/dev/null | awk -F "$TAB" '$2 == "guncelleme.md" { print $5 }')
+t; assert_eq "T-1446: --brief shows the raw folded text, not the stemmed words" '# surum surumun guncelleme notlari burada.' "$ST6"
+t; assert_eq "T-1447: stemming leaves the index file alone: the same index.tsv with stem on and off" 'yes' \
+  "$(a=$(cksum < "$TMP/stv/.knotlog/index.tsv"); st_s tr '' güncellemesi >/dev/null; [ "$a" = "$(cksum < "$TMP/stv/.knotlog/index.tsv")" ] && printf yes || printf no)"
+# ---- end stemming tests ----
 
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
