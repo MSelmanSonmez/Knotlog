@@ -8198,8 +8198,10 @@ _q_cmd_card() {
   done
   [ -n "$_q_cd_name" ] || _q_die err_missing_arg 2
   _q_cd_name=${_q_cd_name%.md}
+  # Reject what is not a plain file name on every platform: separators, the
+  # characters Windows forbids in a file name, and control characters.
   case "$_q_cd_name" in
-    ""|.|..|*/*|*\\*|*[[:cntrl:]]*) _q_die err_card_name 2 "$_q_cd_name" ;;
+    ""|.|..|*/*|*\\*|*:*|*\**|*\?*|*\<*|*\>*|*\|*|*\"*|*[[:cntrl:]]*) _q_die err_card_name 2 "$_q_cd_name" ;;
   esac
 
   # Project resolution is `plan`'s: --project wins, else the project folder
@@ -8294,7 +8296,12 @@ _q_cmd_card() {
       $0 = rep($0, "{project}", p)
       print
     }
-  ' "$_q_HOME/templates/$_q_cd_lang/card.md" > "$_q_cd_file" || _q_die err_card_write 1 "$_q_cd_file"
+  ' "$_q_HOME/templates/$_q_cd_lang/card.md" > "$_q_cd_file" || {
+    # Only the file this call just opened (the exists check above ran first):
+    # a half-written card would take a number for nothing.
+    rm -f "$_q_cd_file"
+    _q_die err_card_write 1 "$_q_cd_file"
+  }
 
   # shellcheck disable=SC2059
   printf "$(_q_msg plan_written)\n" "$_q_cd_file"
