@@ -5430,6 +5430,7 @@ _q_ctx_text() {
   # fixed part at all; otherwise nothing is reserved and the whole-drop
   # below still applies, so ctx_max stays the hard cap.
   _q_rul=
+  _q_rul_hint=
   _q_rul_path=$(_q_rules_path "$_q_v")
   _q_safe_target "$_q_v" "$_q_rul_path" || _q_rul_path=
   if [ -f "$_q_rul_path" ]; then
@@ -5438,6 +5439,11 @@ _q_ctx_text() {
       _q_rul="$(_q_msg ctx_rules)
 $_q_rul_h
 "
+      # Headings only, so one line names the file that holds the full text.
+      # It is added at the end, from the slack every section left (below).
+      # ctx_rules_hint is the controlled i18n template (one %s: the file name).
+      # shellcheck disable=SC2059
+      _q_rul_hint=$(printf "$(_q_msg ctx_rules_hint)" "${_q_rul_path##*/}")
     fi
   fi
   _q_rul_rez=0
@@ -5562,6 +5568,18 @@ $_q_fts_h
   # Variable part 4 (lessons): approved lesson/fix/skill proposals, last of the
   # variable sections so it only rides the slack the others leave.
   _q_lessons_build
+
+  # The rules hint (read above) rides only the slack every section left, so
+  # it never costs a thread, rule, fact or lesson line. The measure counts
+  # the threads separator even when there is none: it can only overestimate.
+  if [ -n "$_q_rul" ] && [ -n "$_q_rul_hint" ]; then
+    _q_used=$(printf '%s%s%s%s%s%s\n%s%s%s%s' "$_q_now" "$_q_id" "$_q_purp" "$_q_tone" "$_q_act" "$_q_thr" "$_q_rul" "$_q_fts" "$_q_lsn" "$_q_idx" | LC_ALL=C wc -c | tr -d ' ')
+    _q_hint_len=$(printf '%s\n' "$_q_rul_hint" | LC_ALL=C wc -c | tr -d ' ')
+    if [ $((_q_used + _q_hint_len)) -le "$_q_max" ]; then
+      _q_rul="$_q_rul$_q_rul_hint
+"
+    fi
+  fi
 
   if [ -n "$_q_thr" ]; then
     _q_text="$_q_now$_q_id$_q_purp$_q_tone$_q_act$_q_thr
