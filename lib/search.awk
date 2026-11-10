@@ -462,6 +462,7 @@ function syn_load(   line, p, nl, nr, i, nw, key, gs) {
     sg_m[sg_n] = gs
     for (i = 1; i <= nw; i++) {
       key = syn_key(lw[i])
+      sg_ex[lw[i]] = 1
       sg_idx[key] = sg_idx[key] " " sg_n
     }
   }
@@ -487,7 +488,10 @@ function syn_add(w,   term, sterm) {
 #     compound adds each left word as a term of its own ("opensource" -> open,
 #     source); those parts are not looked up further.
 #  2. group lines. A typed term (or compound from step 1) whose key is in a
-#     group adds every other word of that group. The added words do not expand
+#     group adds every other word of that group, but a typed term that stems
+#     to itself is looked up only if it is itself a listed word (sg_ex): the
+#     stem of "kurulum" is "kurul", and the different word "kurul" must not
+#     pull in setup/install. The added words do not expand
 #     again, so groups never chain.
 function syn_expand(   j, i, k, m, ok, ncc, cc, key, gl, ng, gi, nm, mw) {
   ncc = 0
@@ -511,6 +515,7 @@ function syn_expand(   j, i, k, m, ok, ncc, cc, key, gl, ng, gi, nm, mw) {
     }
   }
   for (i = 1; i <= qorig + ncc; i++) {
+    if (i <= qorig && qraw[i] == qw[i] && !(qraw[i] in sg_ex)) continue
     key = (i <= qorig) ? qw[i] : cc[i - qorig]
     gl = sg_idx[key]
     if (gl == "") continue

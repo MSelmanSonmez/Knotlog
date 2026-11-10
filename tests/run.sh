@@ -15004,8 +15004,8 @@ st_s() { # LANG STEM search-args... -> result paths, sorted, one line
   st_cfg "$1" "$2"; shift 2
   env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" search "$@" --paths 2>/dev/null | sort | tr '\n' ' '
 }
-t; assert_eq "T-1440: lang=tr without stem=, stemming is on: the endings of güncelleme, döker and çıkar meet" \
-  'guncelleme.md guncellemesi.md |doken.md doker.md dokme.md |cikar.md cikarma.md ' \
+t; assert_eq "T-1440: lang=tr without stem=, stemming is on: the endings of güncelleme and çıkar meet; dökme (five letters, two-letter ending) is not cut" \
+  'guncelleme.md guncellemesi.md |dokme.md |cikar.md cikarma.md ' \
   "$(st_s tr '' güncellemesi)|$(st_s tr '' dökme)|$(st_s tr '' çıkarma)"
 t; assert_eq "T-1441: stem=off: only the exact word is found" \
   'guncellemesi.md |dokme.md |cikarma.md ' \
@@ -15147,6 +15147,28 @@ t; assert_eq "T-1467: three-letter stems are not softened: kod finds kodlar, kod
   'kd1.md kd2.md |kd3.md ' \
   "$(s2_s kod)|$(s2_s kodu)"
 # ---- end stemming edge tests ----
+
+# ---- search: synonym lookup rules, T-1468.. ----
+# Synthetic notes; one vault, indexed once, lang=tr (synonyms on by default).
+mkdir -p "$TMP/s3v/.knotlog"
+printf 'fold=tr\nlang=tr\n' > "$TMP/s3v/.knotlog/config"
+printf '# Not\ninstall\n' > "$TMP/s3v/ku1.md"
+printf '# Not\nkurulum\n' > "$TMP/s3v/ku2.md"
+printf '# Not\nopensource\n' > "$TMP/s3v/ak1.md"
+printf '# Not\nopen source\n' > "$TMP/s3v/ak2.md"
+printf '# Not\naçık kaynak\n' > "$TMP/s3v/ak3.md"
+QUIPU_VAULT="$TMP/s3v" sh "$ROOT/knotlog" index >/dev/null 2>&1
+s3_s() { # search-args... -> result paths, sorted, one line
+  env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/s3v" sh "$ROOT/knotlog" search "$@" --paths 2>/dev/null | sort | tr '\n' ' '
+}
+t; assert_eq "T-1468: kurul (another word with the stem of kurulum) is not expanded; kurulumu and kurulum are" \
+  'ku2.md |ku1.md ku2.md |ku1.md ku2.md ' \
+  "$(s3_s kurul)|$(s3_s kurulumu)|$(s3_s kurulum)"
+t; assert_eq "T-1469: acik kaynak finds notes that say opensource, open source and acik kaynak" \
+  'ak1.md ak2.md ak3.md ' "$(s3_s açık kaynak)"
+t; assert_eq "T-1470: opensource finds a note that only says acik kaynak" \
+  'ak1.md ak2.md ak3.md ' "$(s3_s opensource)"
+# ---- end synonym lookup tests ----
 
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1

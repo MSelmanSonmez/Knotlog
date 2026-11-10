@@ -15,6 +15,9 @@
 #                query word that equals one of them (after stemming) also
 #                searches for all the others. Groups never chain: a word that
 #                is only in the expansion does not expand again.
+#                A word is looked up only if it is listed as written or is an
+#                inflected form of one: "kurulum" and "kurulumu" count, a
+#                different word with the same stem ("kurul") does not.
 #                    kurulum setup install
 #
 #   join line    "words = compound": the words written apart mean what the one
@@ -22,6 +25,7 @@
 #                the left side add the compound; the compound alone adds each
 #                of the left words as its own term.
 #                    open source = opensource
+#                    acik kaynak = opensource   (one compound, several spellings)
 #
 # Lines starting with # and empty lines are comments.
 #
@@ -104,6 +108,7 @@ mesaj message
 
 # ---- written together or apart ----------------------------------------------
 open source = opensource
+acik kaynak = opensource
 set up = setup
 back up = backup
 web site = website
