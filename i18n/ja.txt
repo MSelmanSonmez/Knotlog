@@ -21,7 +21,8 @@ usage_note_thread=  note --thread  進行中スレッドのセクションに 1 
 usage_pending=  pending   レビュー待ちのノートを一覧表示します (write_approval=on); --approve N [--to note|facts|thread] [--dry-run] で1件を書き込み、--reject N で破棄します
 usage_propose=  propose   レビューで得た知見を承認待ちに入れる (propose --kind lesson|skill|fix "テキスト"、knotlog pending)
 usage_import=  import    ローカルの JSON 会話エクスポートをセッションノートに変換 (FILE, --date YYYY-MM-DD; claude [--project DIR] [--apply]: Claude Code のトランスクリプト)
-usage_plan=  plan      フロントマター付きテンプレートから <Projects>/<Project>/<Plans>/ にプロジェクト計画を作成 (--proje <Project>)
+usage_plan=  plan      フロントマター付きテンプレートから <Projects>/<Project>/<Plans>/ にプロジェクト計画を作成 (--project <Project>)
+usage_card=  card      番号付きの作業カードを <Projects>/<Project>/<Cards>/NNN-<name>.md に作成 (--project <Project>, --type code|content)
 usage_tone=  tone      有効なトーンプリセットを表示/設定 (--list: 一覧; スラッグだけ指定すると config に tone= を書き込み)
 usage_archive=  archive   完了した見出しを Threads.md からアーカイブへ移動 (--list: 見出しを表示; --dry-run: プレビューのみ)
 usage_compact=  compact   Threads.md の古い "Closed threads" エントリを欠損なくアーカイブへ移動 (既定はドライラン; --apply で書き込み; --keep N: 新しい N 件を残す、既定 20; 最終セッションファイルも新しい N 個のセッションブロックを残す、既定 5)
@@ -426,6 +427,15 @@ err_plan_name=無効な計画名: %s
 err_plan_extra_arg=plan に余分な引数があります: %s
 err_plan_template=計画テンプレートがないか読み取れません: %s
 err_plan_mkdir=計画フォルダーを作成できませんでした: %s
+cards_dir=Cards
+err_card_type=無効なカード種別: %s (code か content を使用。別名の kod と icerik も使用可)
+err_card_name=無効なカード名: %s
+err_card_extra_arg=予期しないカード引数: %s
+err_card_exists=カードは既に存在します（上書きしません）: %s
+err_card_template=カードのテンプレートが見つからないか読めません: %s
+err_card_mkdir=カードフォルダを作成できませんでした: %s
+err_card_write=カードを書き込めませんでした: %s
+err_card_project=無効なプロジェクト名: %s
 # reflect
 reflect_head_what=このセッションで何が変わりましたか?
 reflect_head_where=作業はどこで行われましたか?

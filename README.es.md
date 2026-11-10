@@ -150,7 +150,8 @@ Los que realmente vas a escribir; la tabla completa está en [docs/REFERENCE.md]
 | `knotlog pending` | revisa las notas y propuestas en cola antes de escribirlas (las notas se encolan con `write_approval=on`; `propose` siempre encola; `--approve N`, `--reject N`; `--approve N --to note\|facts\|thread [--dry-run]` elige el destino; `/learn` en Claude Code encola una lección) |
 | `knotlog context` | muestra lo que ve el agente al inicio de la sesión |
 | `knotlog tui` | explora en la terminal las notas de sesión más recientes |
-| `knotlog plan <name> --proje <Project>` | abre una nota de plan dentro de un proyecto |
+| `knotlog plan <name> --project <Project>` | abre una nota de plan dentro de un proyecto |
+| `knotlog card <name> --project <Project>` | abre una tarjeta de trabajo numerada (`NNN-<name>.md`) dentro de un proyecto |
 | `knotlog help [--<código>]` | ayuda en inglés, o en otro idioma incluido con `--<código>` (p. ej. `--tr`) |
 
 ## Una primera sesión
@@ -178,7 +179,7 @@ note.md
 $ knotlog context --json SessionStart
 {"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"…"}}
 $ knotlog doctor; echo $?
-summary: 151 ok, 3 warn, 0 fail
+summary: 157 ok, 3 warn, 0 fail
 0
 ```
 

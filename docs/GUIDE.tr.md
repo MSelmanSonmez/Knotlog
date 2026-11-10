@@ -378,7 +378,7 @@ Neyin taşınacağını görmek için `knotlog distill` çalıştır (hiçbir ş
 uyarı varsa 0, bir şey başarısızsa 1 ile çıkar.
 
 ```
-özet: 151 ok, 3 uyarı, 0 hata
+özet: 157 ok, 3 uyarı, 0 hata
 ```
 
 **Hafızanın hangi kısmı denetlenir?** Kasadaki her dosya aynı standartta
