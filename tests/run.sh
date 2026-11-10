@@ -15111,6 +15111,19 @@ printf '# Not\nliste\n' > "$TMP/s2v/liste.md"
 printf '# Not\nlisteler\n' > "$TMP/s2v/listeler.md"
 printf '# Not\nevd\n' > "$TMP/s2v/evd.md"
 printf '# Not\nevden\n' > "$TMP/s2v/evden.md"
+printf '# Not\nkitap\n' > "$TMP/s2v/kt1.md"
+printf '# Not\nkitabı\n' > "$TMP/s2v/kt2.md"
+printf '# Not\nkitapta\n' > "$TMP/s2v/kt3.md"
+printf '# Not\nkitaplar\n' > "$TMP/s2v/kt4.md"
+printf '# Not\nrenk\n' > "$TMP/s2v/rk1.md"
+printf '# Not\nrengi\n' > "$TMP/s2v/rk2.md"
+printf '# Not\nsokak\n' > "$TMP/s2v/sk1.md"
+printf '# Not\nsokağı\n' > "$TMP/s2v/sk2.md"
+printf '# Not\nayak\n' > "$TMP/s2v/ay1.md"
+printf '# Not\nayağı\n' > "$TMP/s2v/ay2.md"
+printf '# Not\nkod\n' > "$TMP/s2v/kd1.md"
+printf '# Not\nkodlar\n' > "$TMP/s2v/kd2.md"
+printf '# Not\nkodu\n' > "$TMP/s2v/kd3.md"
 QUIPU_VAULT="$TMP/s2v" sh "$ROOT/knotlog" index >/dev/null 2>&1
 s2_s() { # search-args... -> result paths, sorted, one line (lang=tr, stemming on by default)
   env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/s2v" sh "$ROOT/knotlog" search "$@" --paths 2>/dev/null | sort | tr '\n' ' '
@@ -15124,6 +15137,15 @@ t; assert_eq "T-1463: liste and listeler meet" 'liste.md listeler.md |liste.md l
   "$(s2_s liste)|$(s2_s listeler)"
 t; assert_eq "T-1464: evden is left whole: it does not find evd and evd does not find evden" 'evden.md |evd.md ' \
   "$(s2_s evden)|$(s2_s evd)"
+t; assert_eq "T-1465: final-consonant softening is undone: kitap, kitabi, kitapta and kitaplar meet" \
+  'kt1.md kt2.md kt3.md kt4.md |kt1.md kt2.md kt3.md kt4.md ' \
+  "$(s2_s kitap)|$(s2_s kitabı)"
+t; assert_eq "T-1466: renk/rengi, sokak/sokağı and ayak/ayağı meet" \
+  'rk1.md rk2.md |rk1.md rk2.md |sk1.md sk2.md |sk1.md sk2.md |ay1.md ay2.md |ay1.md ay2.md ' \
+  "$(s2_s renk)|$(s2_s rengi)|$(s2_s sokak)|$(s2_s sokağı)|$(s2_s ayak)|$(s2_s ayağı)"
+t; assert_eq "T-1467: three-letter stems are not softened: kod finds kodlar, kodu finds only itself" \
+  'kd1.md kd2.md |kd3.md ' \
+  "$(s2_s kod)|$(s2_s kodu)"
 # ---- end stemming edge tests ----
 
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"

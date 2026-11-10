@@ -19,8 +19,15 @@
 #     one- or two-letter suffix, at least 3 for a longer one (okulu -> okul;
 #     dosya and dosta stay whole, evden is not cut to evd). A suffix that
 #     would leave too little is skipped and a shorter one is tried;
-#   - the result is always a PREFIX of w. search.awk relies on this to skip the
-#     stemming of rows that cannot contain a query stem at all.
+#   - softened stems are hardened again: when the last dropped (innermost)
+#     suffix starts with a vowel and the stem has at least four letters,
+#     a final b, d or g becomes p, t or k (kitabi -> kitap, rengi -> renk,
+#     sokagi -> sokak, ayagi -> ayak); kod and kodlar stay as they are.
+#     (c-cedilla and g-breve are already c and g in folded text, so agac and
+#     agaci meet without this.)
+#   - so the result is a PREFIX of w except for that last letter. search.awk
+#     relies on it, minus the last letter, to skip the stemming of rows that
+#     cannot contain a query stem at all.
 #
 # Suffix table (folded; i is also the folded dotless i, u also the folded u-
 # umlaut):
@@ -55,17 +62,29 @@ function stem_strip(w,   len, k, keep) {
   return w
 }
 
-function stem_word(w,   len, i, r, nw) {
+function stem_word(w,   len, i, r, nw, last, c, k) {
   len = length(w)
   if (len < 4) return w
   if (!ST_READY) stem_init()
   for (i = 1; i <= len; i++) {
     if (index(ST_AZ, substr(w, i, 1)) == 0) return w
   }
+  last = ""
   for (r = 1; r <= 2; r++) {
     nw = stem_strip(w)
     if (nw == w) break
+    last = substr(w, length(nw) + 1)
     w = nw
+  }
+  # Final-consonant softening: the innermost suffix is a vowel-initial one and
+  # the stem ends in b, d or g, so put the hard letter back (kitab -> kitap,
+  # reng -> renk). Stems under four letters are left alone (kod, kodlar).
+  if (last != "" && index("aeiou", substr(last, 1, 1)) > 0 && length(w) >= 4) {
+    k = length(w)
+    c = substr(w, k, 1)
+    if (c == "b") w = substr(w, 1, k - 1) "p"
+    else if (c == "d") w = substr(w, 1, k - 1) "t"
+    else if (c == "g") w = substr(w, 1, k - 1) "k"
   }
   return w
 }

@@ -362,15 +362,21 @@ function filter_ok_cols(tag3, stat6, valid,   tagok, ntg, tgi, tg) {
 # The space-padded field the word matcher searches. Without stemming it is the
 # folded field itself. With stemming it is the same field with every word
 # stemmed (trailing punctuation kept, so count_occ_bounded still sees it).
-# stem_word() always returns a prefix of its input, so a row that holds no word
-# starting with any query stem cannot match: it keeps its raw padding and the
-# per-word loop runs only for candidate rows. Stemmed words are cached.
-function dpad(s,   rp, t, hit, nt, tk, i, out) {
+# stem_word() returns a prefix of its input except that its last letter may be
+# hardened (kitab -> kitap), so a document word that stems to a query stem
+# starts with that stem minus its last letter (stems of four or more letters;
+# shorter ones are never changed). A row that holds no word starting with any
+# such start cannot match: it keeps its raw padding and the per-word loop runs
+# only for candidate rows. Stemmed words are cached.
+function dpad(s,   rp, t, hit, nt, tk, i, out, q) {
   rp = " " s " "
   if (!stem_on) return rp
   hit = 0
   for (t = 1; t <= qc; t++) {
-    if (qw[t] != "" && index(rp, " " qw[t]) > 0) { hit = 1; break }
+    q = qw[t]
+    if (q == "") continue
+    if (length(q) >= 4) q = substr(q, 1, length(q) - 1)
+    if (index(rp, " " q) > 0) { hit = 1; break }
   }
   if (!hit) return rp
   nt = split(s, tk, " ")
