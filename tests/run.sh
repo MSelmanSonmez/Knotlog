@@ -15157,6 +15157,8 @@ printf '# Not\nkurulum\n' > "$TMP/s3v/ku2.md"
 printf '# Not\nopensource\n' > "$TMP/s3v/ak1.md"
 printf '# Not\nopen source\n' > "$TMP/s3v/ak2.md"
 printf '# Not\naçık kaynak\n' > "$TMP/s3v/ak3.md"
+printf '# Not\npackage\n' > "$TMP/s3v/pk1.md"
+printf '# Not\nlist\n' > "$TMP/s3v/ls1.md"
 QUIPU_VAULT="$TMP/s3v" sh "$ROOT/knotlog" index >/dev/null 2>&1
 s3_s() { # search-args... -> result paths, sorted, one line
   env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/s3v" sh "$ROOT/knotlog" search "$@" --paths 2>/dev/null | sort | tr '\n' ' '
@@ -15168,6 +15170,16 @@ t; assert_eq "T-1469: acik kaynak finds notes that say opensource, open source a
   'ak1.md ak2.md ak3.md ' "$(s3_s açık kaynak)"
 t; assert_eq "T-1470: opensource finds a note that only says acik kaynak" \
   'ak1.md ak2.md ak3.md ' "$(s3_s opensource)"
+s3_has() { # file search-args... -> yes if the file is among the results
+  s3_f=$1; shift
+  case " $(s3_s "$@")" in *" $s3_f "*) printf yes ;; *) printf no ;; esac
+}
+t; assert_eq "T-1472: a note that only says install is found by kurulumda and kurulumu, not by kurulda or kurullar" \
+  'yes yes no no' \
+  "$(s3_has ku1.md kurulumda) $(s3_has ku1.md kurulumu) $(s3_has ku1.md kurulda) $(s3_has ku1.md kurullar)"
+t; assert_eq "T-1473: paketler finds a note that says package, listeler finds one that says list" \
+  'yes yes' \
+  "$(s3_has pk1.md paketler) $(s3_has ls1.md listeler)"
 # ---- end synonym lookup tests ----
 
 # ---- search: --brief window with stemming, T-1471 ----

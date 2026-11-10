@@ -460,6 +460,7 @@ function syn_key(w) {
 # Read synonyms/tr-en.txt (format: see the header of that file) into
 #   sg_m[g]    group g: its words, single-spaced
 #   sg_idx[k]  groups holding a word whose key is k, as " g g ..."
+#   sg_kw[k]   the listed words whose key is k, as " w w ..."
 #   sj_*[j]    join line j: nl left words (sj_lw), their keys (sj_lk[j,i]),
 #              the compound (sj_c) and its key (sj_ck)
 # A missing file reads as empty: no groups, search runs without expansion.
@@ -494,6 +495,7 @@ function syn_load(   line, p, nl, nr, i, nw, key, gs) {
     for (i = 1; i <= nw; i++) {
       key = syn_key(lw[i])
       sg_ex[lw[i]] = 1
+      sg_kw[key] = sg_kw[key] " " lw[i]
       sg_idx[key] = sg_idx[key] " " sg_n
     }
   }
@@ -512,6 +514,24 @@ function syn_add(w,   term, sterm) {
   qraw[qc] = term
 }
 
+# Does the typed word raw (whose key is key) really belong to a listed word of
+# that key? Yes if it is that word, or starts with it; a listed word of four or
+# more letters is compared without its last letter, since an ending may replace
+# or soften it ("kurulumda" and "kurulumu" start with "kurulu", "kitabi" starts
+# with "kitab"). "kurulda" and "kurullar" share the stem "kurul" but not that
+# start, so they are another word.
+function syn_ok(raw, key,   n, i, w, lwd) {
+  if (!stem_on) return 1
+  n = split(sg_kw[key], lwd, " ")
+  for (i = 1; i <= n; i++) {
+    w = lwd[i]
+    if (raw == w) return 1
+    if (length(w) >= 4) w = substr(w, 1, length(w) - 1)
+    if (substr(raw, 1, length(w)) == w) return 1
+  }
+  return 0
+}
+
 # Expansion, in two steps over the typed terms ot[1..no] / qw[1..qorig]:
 #  1. join lines. Consecutive typed terms equal to the left words add the
 #     compound ("open source" -> opensource), and that compound is looked up in
@@ -522,7 +542,11 @@ function syn_add(w,   term, sterm) {
 #     group adds every other word of that group, but a typed term that stems
 #     to itself is looked up only if it is itself a listed word (sg_ex): the
 #     stem of "kurulum" is "kurul", and the different word "kurul" must not
-#     pull in setup/install. The added words do not expand
+#     pull in setup/install. A typed word that is an inflected form (its
+#     raw form differs from its stem) is looked up only if syn_ok() says it
+#     starts with a listed word of that key: "kurulumu" does, "kurulda"
+#     (committee + locative, also stem "kurul") does not. The added words
+#     do not expand
 #     again, so groups never chain.
 function syn_expand(   j, i, k, m, ok, ncc, cc, key, gl, ng, gi, nm, mw) {
   ncc = 0
@@ -547,6 +571,7 @@ function syn_expand(   j, i, k, m, ok, ncc, cc, key, gl, ng, gi, nm, mw) {
   }
   for (i = 1; i <= qorig + ncc; i++) {
     if (i <= qorig && qraw[i] == qw[i] && !(qraw[i] in sg_ex)) continue
+    if (i <= qorig && qraw[i] != qw[i] && !syn_ok(qraw[i], qw[i])) continue
     key = (i <= qorig) ? qw[i] : cc[i - qorig]
     gl = sg_idx[key]
     if (gl == "") continue
