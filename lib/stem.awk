@@ -15,8 +15,10 @@
 #   - only tokens made of the letters a-z are touched, so numbers, node.js,
 #     c++, #tag, snake_case and anything with a non-ASCII letter (fold=default)
 #     pass through unchanged;
-#   - a suffix is dropped only if at least 3 letters remain (4 for the
-#     one-letter suffixes);
+#   - a suffix is dropped only if enough letters remain: at least 4 for a
+#     one- or two-letter suffix, at least 3 for a longer one (okulu -> okul;
+#     dosya and dosta stay whole, evden is not cut to evd). A suffix that
+#     would leave too little is skipped and a shorter one is tried;
 #   - the result is always a PREFIX of w. search.awk relies on this to skip the
 #     stemming of rows that cannot contain a query stem at all.
 #
@@ -47,7 +49,7 @@ function stem_strip(w,   len, k, keep) {
   len = length(w)
   for (k = ST_MAX; k >= 1; k--) {
     keep = len - k
-    if (keep < (k == 1 ? 4 : 3)) continue
+    if (keep < (k <= 2 ? 4 : 3)) continue
     if (substr(w, keep + 1) in ST_SUF) return substr(w, 1, keep)
   }
   return w

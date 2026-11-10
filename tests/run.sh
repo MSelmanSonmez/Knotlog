@@ -15097,6 +15097,35 @@ SY4=$(env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/syv" sh "$TMP/synroo
 t; assert_eq "T-1460: no synonyms/tr-en.txt in the checkout: search runs without expansion, no error" 'package.md ' "$SY4"
 # ---- end synonym tests ----
 
+# ---- search: Turkish stemming, short endings and stem edges, T-1461.. ----
+# Synthetic notes; one vault, indexed once, lang=tr, stemming on by default.
+mkdir -p "$TMP/s2v/.knotlog"
+printf 'fold=tr\nlang=tr\n' > "$TMP/s2v/.knotlog/config"
+printf '# Not\nokul\n' > "$TMP/s2v/ok1.md"
+printf '# Not\nokulu\n' > "$TMP/s2v/ok2.md"
+printf '# Not\nokullar\n' > "$TMP/s2v/ok3.md"
+printf '# Not\nokulda\n' > "$TMP/s2v/ok4.md"
+printf '# Not\ndosta\n' > "$TMP/s2v/dosta.md"
+printf '# Not\ndosyalar\n' > "$TMP/s2v/dosyalar.md"
+printf '# Not\nliste\n' > "$TMP/s2v/liste.md"
+printf '# Not\nlisteler\n' > "$TMP/s2v/listeler.md"
+printf '# Not\nevd\n' > "$TMP/s2v/evd.md"
+printf '# Not\nevden\n' > "$TMP/s2v/evden.md"
+QUIPU_VAULT="$TMP/s2v" sh "$ROOT/knotlog" index >/dev/null 2>&1
+s2_s() { # search-args... -> result paths, sorted, one line (lang=tr, stemming on by default)
+  env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/s2v" sh "$ROOT/knotlog" search "$@" --paths 2>/dev/null | sort | tr '\n' ' '
+}
+t; assert_eq "T-1461: okul, okulu, okullar and okulda meet: a two-letter ending leaves four letters, else the one-letter ending is used" \
+  'ok1.md ok2.md ok3.md ok4.md |ok1.md ok2.md ok3.md ok4.md ' \
+  "$(s2_s okulu)|$(s2_s okullar)"
+t; assert_eq "T-1462: dosya and dosta are not cut to dos: dosya finds dosyalar only, dosta finds itself only" 'dosyalar.md |dosyalar.md |dosta.md ' \
+  "$(s2_s dosya)|$(s2_s dosyalar)|$(s2_s dosta)"
+t; assert_eq "T-1463: liste and listeler meet" 'liste.md listeler.md |liste.md listeler.md ' \
+  "$(s2_s liste)|$(s2_s listeler)"
+t; assert_eq "T-1464: evden is left whole: it does not find evd and evd does not find evden" 'evden.md |evd.md ' \
+  "$(s2_s evden)|$(s2_s evd)"
+# ---- end stemming edge tests ----
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
