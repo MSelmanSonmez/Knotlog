@@ -289,7 +289,11 @@ mode == "bm25score" {
       # Earliest match inside the block, for the --brief snippet window. The
       # offset must index the RAW field (the snippet is cut from it), so with
       # stemming on it comes from the unstemmed padded copy.
-      fp = fallback ? index($5, qraw[t]) : index(rpad, " " term)
+      # With stemming on, the first word that STEMS to the term: a word that
+      # merely starts with the stem (kurulus for kurul) must not move the window.
+      if (fallback) fp = index($5, qraw[t])
+      else if (stem_on) fp = stem_pos($5, term)
+      else fp = index(rpad, " " term)
       if (fp > 0 && (fpos == 0 || fp < fpos)) fpos = fp
     }
     idf = log((n - df[term] + 0.5) / (df[term] + 0.5))
@@ -394,6 +398,33 @@ function stem_tok(tok,   k, core) {
   core = substr(tok, 1, k)
   stcache[tok] = stem_word(core) substr(tok, k + 1)
   return stcache[tok]
+}
+
+# Position (1-based, in the raw field s) of the first word whose stem is `term`
+# -- the same number index(" " s " ", " " word) gives for that word -- or 0.
+# Trailing punctuation on the word is ignored, as count_occ_bounded does.
+function stem_pos(s, term,   pos, len, e, word, st, rest, k, ok) {
+  pos = 1
+  len = length(s)
+  while (pos <= len) {
+    e = index(substr(s, pos), " ")
+    word = (e > 0) ? substr(s, pos, e - 1) : substr(s, pos)
+    if (word != "") {
+      st = stem_tok(word)
+      if (st == term) return pos
+      if (index(st, term) == 1) {
+        rest = substr(st, length(term) + 1)
+        ok = 1
+        for (k = 1; k <= length(rest); k++) {
+          if (!is_trail_punct(substr(rest, k, 1))) { ok = 0; break }
+        }
+        if (ok) return pos
+      }
+    }
+    if (e == 0) break
+    pos += e
+  }
+  return 0
 }
 
 function count_occ(s, needle,   pos, cnt, len, rest) {

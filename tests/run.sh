@@ -15170,6 +15170,27 @@ t; assert_eq "T-1470: opensource finds a note that only says acik kaynak" \
   'ak1.md ak2.md ak3.md ' "$(s3_s opensource)"
 # ---- end synonym lookup tests ----
 
+# ---- search: --brief window with stemming, T-1471 ----
+# A long synthetic note (past the 2000-character search field, so its tail is
+# searched through block rows) whose last section has "kurulus" early and
+# "kurulum" a few hundred characters later. The query stem is "kurul": the
+# --brief window must start near "kurulum", the first word that really stems
+# to it, not at "kurulus", which only starts with the same letters.
+mkdir -p "$TMP/s4v/.knotlog"
+printf 'fold=tr\nlang=tr\n' > "$TMP/s4v/.knotlog/config"
+awk 'BEGIN {
+  printf "# Uzun Not\n\nbaslangic metni.\n\n"
+  for (i = 1; i <= 400; i++) printf "dolgu%d%s", i, (i % 10 == 0 ? "\n" : " ")
+  printf "\n## Bolum\n\nkurulus basladi"
+  for (i = 1; i <= 70; i++) printf " aralik%d", i
+  printf " kurulum bitti.\n"
+}' > "$TMP/s4v/uzun.md"
+QUIPU_VAULT="$TMP/s4v" sh "$ROOT/knotlog" index >/dev/null 2>&1
+S4=$(env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/s4v" sh "$ROOT/knotlog" search kurulum --brief 2>/dev/null | awk -F "$TAB" '$2 == "uzun.md" { print $5 }')
+t; assert_eq "T-1471: --brief of a block hit starts near kurulum (the word that stems to the query), not at kurulus" 'yes no' \
+  "$(case $S4 in *kurulum*) printf yes ;; *) printf no ;; esac) $(case $S4 in *kurulus*) printf yes ;; *) printf no ;; esac)"
+# ---- end --brief window test ----
+
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
