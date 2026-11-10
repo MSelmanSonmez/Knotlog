@@ -14824,10 +14824,23 @@ done
 mkdir -p "$TMP/cdvtr/$cd_pdir_tr/Deneme" "$TMP/cdven/$cd_pdir_en/Demo"
 CDT="$TMP/cdvtr/$cd_pdir_tr/Deneme/Kartlar"
 CDE="$TMP/cdven/$cd_pdir_en/Demo/Cards"
+# knotlog prints physical paths; $TMP may sit behind a symlink (macOS /var), so messages are compared against these.
+cd_phys=$(cd "$TMP" && pwd -P)
+CDTp="$cd_phys/cdvtr/$cd_pdir_tr/Deneme/Kartlar"
+CDEp="$cd_phys/cdven/$cd_pdir_en/Demo/Cards"
+cdtypehint() { # -> the languages whose err_card_type misses code, content or an alias
+  for _f in "$ROOT"/i18n/*.txt; do
+    _l=${_f##*/}; _l=${_l%.txt}
+    case $(mi18n "$_l" err_card_type) in
+      *code*content*kod*icerik*) ;;
+      *) printf '%s ' "$_l" ;;
+    esac
+  done
+}
 
 cdrun tr "$TMP/cdvtr" ilk --proje Deneme; R1=$CDRC; O1=$CDOUT
 t; assert_eq "T-1430: card opens 001-<name>.md in the localized cards folder, prints the written path" '0 yes yes' \
-  "$R1 $([ -f "$CDT/001-ilk.md" ] && printf yes || printf no) $(printf '%s\n' "$O1" | grep -qxF "$(memfmt tr plan_written "$CDT/001-ilk.md")" && printf yes || printf no)"
+  "$R1 $([ -f "$CDT/001-ilk.md" ] && printf yes || printf no) $(printf '%s\n' "$O1" | grep -qxF "$(memfmt tr plan_written "$CDTp/001-ilk.md")" && printf yes || printf no)"
 cdrun en "$TMP/cdven" first --project Demo
 t; assert_eq "T-1430: the en vault gets Cards/ (not Kartlar/)" 'yes no' \
   "$([ -f "$CDE/001-first.md" ] && printf yes || printf no) $([ -d "$TMP/cdven/$cd_pdir_en/Demo/Kartlar" ] && printf yes || printf no)"
@@ -14859,7 +14872,7 @@ t; assert_eq "T-1434: a trailing .md in the name is not doubled" 'yes' \
 N1=$(cdfiles "$TMP/cdvtr")
 cdrun tr "$TMP/cdvtr" x --proje Yok
 t; assert_eq "T-1435: an unknown project exits 2, names the project decision, creates nothing" '2 yes yes' \
-  "$CDRC $(cdsaw tr err_plan_project_missing "$TMP/cdvtr/$cd_pdir_tr/Yok") $([ ! -d "$TMP/cdvtr/$cd_pdir_tr/Yok" ] && [ "$(cdfiles "$TMP/cdvtr")" = "$N1" ] && printf yes || printf no)"
+  "$CDRC $(cdsaw tr err_plan_project_missing "$cd_phys/cdvtr/$cd_pdir_tr/Yok") $([ ! -d "$TMP/cdvtr/$cd_pdir_tr/Yok" ] && [ "$(cdfiles "$TMP/cdvtr")" = "$N1" ] && printf yes || printf no)"
 cdrun tr "$TMP/cdvtr" x
 t; assert_eq "T-1435: no --project and no project folder as cwd exits 2" '2 yes' \
   "$CDRC $(cdsaw tr err_plan_project_required)"
@@ -14939,13 +14952,13 @@ chmod +x "$TMP/cdstub/awk"
 cd_before=$(cdfiles "$CDE")
 CDOUT=$(cd "$TMP/cdven" && env -u QUIPU_VAULT PATH="$TMP/cdstub:$PATH" QUIPU_LANG=en sh "$ROOT/knotlog" card halfway --project Demo </dev/null 2>&1); CDRC=$?
 t; assert_eq "T-1443: a failing write exits 1 with err_card_write, leaves no file and the next card takes the same number" '1 yes yes' \
-  "$CDRC $(cdsaw en err_card_write "$CDE/004-halfway.md") $([ "$(cdfiles "$CDE")" = "$cd_before" ] && printf yes || printf no)"
+  "$CDRC $(cdsaw en err_card_write "$CDEp/004-halfway.md") $([ "$(cdfiles "$CDE")" = "$cd_before" ] && printf yes || printf no)"
 cdrun en "$TMP/cdven" halfway --project Demo
 t; assert_eq "T-1443: the retry without the failure writes 004-halfway.md" '0 yes' \
   "$CDRC $([ -f "$CDE/004-halfway.md" ] && printf yes || printf no)"
 
 t; assert_eq "T-1444: err_card_type names code, content and both aliases in every language" '' \
-  "$(for _f in "$ROOT"/i18n/*.txt; do _l=${_f##*/}; _l=${_l%.txt}; v=$(mi18n "$_l" err_card_type); case "$v" in *code*content*kod*icerik*) ;; *) printf '%s ' "$_l" ;; esac; done)"
+  "$(cdtypehint)"
 
 
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
