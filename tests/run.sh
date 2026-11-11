@@ -15284,7 +15284,7 @@ mkvault bdvtr; printf 'lang=tr\nlayout=tr\n' > "$TMP/bdvtr/.knotlog/config"
 mkvault bdven; printf 'lang=en\nlayout=en\n' > "$TMP/bdven/.knotlog/config"
 BDK="$TMP/bdvtr/$bd_pdir_tr/Alpha/Kartlar"
 BDQ="$TMP/bdvtr/$bd_pdir_tr/Beta/Kartlar"
-bdmk "$BDK/001-sample.md" done '**Tür:** içerik' '**Bekliyor:** yok'
+bdmk "$BDK/001-sample.md" 'done' '**Tür:** içerik' '**Bekliyor:** yok'
 bdmk "$BDK/002-build.md" running '**Tür:** kod' '**Bekliyor:** `001-sample`'
 bdmk "$BDK/003-review.md" ready '**Tür:** kod' '**Bekliyor:** 002-build'
 bdmk "$BDQ/004-audit.md" stuck '**Tür:** içerik' '**Bekliyor:** yok'
@@ -15371,7 +15371,7 @@ t; assert_eq "T-1605: a waiting value that starts with yok and goes on stays who
 # An en vault: Cards/, English fields and the none word, other-language field
 # names on an old card, a card with no fields at all is a draft.
 BDE="$TMP/bdven/$bd_pdir_en/Demo/Cards"
-bdmk "$BDE/001-first.md" done '**Type:** code' '**Waiting on:** none'
+bdmk "$BDE/001-first.md" 'done' '**Type:** code' '**Waiting on:** none'
 bdmk "$BDE/002-second.md" review '**Type:** content' '**Waiting on:** 001-first'
 bdmk "$BDE/003-old-tr.md" draft '**Tür:** kod' '**Bekliyor:** yok'
 printf -- '---\ntitle: bare\n---\n\nno fields here\n' > "$BDE/004-bare.md"
