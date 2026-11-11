@@ -436,6 +436,7 @@ err_card_template=kart şablonu yok veya okunamıyor: %s
 err_card_mkdir=Kartlar klasörü oluşturulamadı: %s
 err_card_write=kart yazılamadı: %s
 err_card_project=geçersiz proje adı: %s
+err_plan_project=geçersiz proje adı: %s
 # reflect
 reflect_head_what=Bu oturumda ne değişti?
 reflect_head_where=İş nerede yapıldı?

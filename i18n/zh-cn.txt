@@ -436,6 +436,7 @@ err_card_template=卡片模板缺失或无法读取：%s
 err_card_mkdir=无法创建卡片文件夹：%s
 err_card_write=无法写入卡片：%s
 err_card_project=无效的项目名称：%s
+err_plan_project=无效的项目名称：%s
 # reflect
 reflect_head_what=这次会话改了什么？
 reflect_head_where=工作发生在哪里？

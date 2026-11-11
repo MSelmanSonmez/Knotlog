@@ -436,6 +436,7 @@ err_card_template=falta la plantilla de tarjeta o no se puede leer: %s
 err_card_mkdir=no se pudo crear la carpeta de tarjetas: %s
 err_card_write=no se pudo escribir la tarjeta: %s
 err_card_project=nombre de proyecto no válido: %s
+err_plan_project=nombre de proyecto no válido: %s
 # reflect
 reflect_head_what=¿Qué cambió en esta sesión?
 reflect_head_where=¿Dónde se hizo el trabajo?

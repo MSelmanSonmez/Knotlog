@@ -436,6 +436,7 @@ err_card_template=カードのテンプレートが見つからないか読め�
 err_card_mkdir=カードフォルダを作成できませんでした: %s
 err_card_write=カードを書き込めませんでした: %s
 err_card_project=無効なプロジェクト名: %s
+err_plan_project=無効なプロジェクト名: %s
 # reflect
 reflect_head_what=このセッションで何が変わりましたか?
 reflect_head_where=作業はどこで行われましたか?

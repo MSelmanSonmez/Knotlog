@@ -15210,6 +15210,52 @@ t; assert_eq "T-14111: --brief of a block hit starts near kurulum (the word that
   "$(case $S4 in (*kurulum*) printf yes ;; (*) printf no ;; esac) $(case $S4 in (*kurulus*) printf yes ;; (*) printf no ;; esac)"
 # ---- end --brief window test ----
 
+
+# ---- plan: name and project checked like card (T-1501..T-1505) ----
+# Depends on: mkvault, t, assert_eq, mi18n, memfmt, $TMP, $ROOT, $TAB.
+plrun() { # dir args... -> $PLRC, output in $PLOUT
+  _pl_d=$1; shift
+  PLOUT=$(cd "$_pl_d" && env -u QUIPU_VAULT -u KNOTLOG_VAULT QUIPU_LANG=en sh "$ROOT/knotlog" plan "$@" </dev/null 2>&1)
+  PLRC=$?
+}
+plsaw() { # key arg -> yes when $PLOUT holds that message as a whole line
+  if [ -n "$(mi18n en "$1")" ] && printf '%s\n' "$PLOUT" | grep -qxF -- "$(memfmt en "$1" "$2")"; then printf yes; else printf no; fi
+}
+plfiles() { find "$1" -print | sort | tr '\n' '|'; }
+mkvault plv
+printf 'lang=en\nlayout=en\n' > "$TMP/plv/.knotlog/config"
+pl_pdir=$(awk -F"$TAB" '$1=="projects"{print $2;exit}' "$ROOT/layout/en.txt")
+mkdir -p "$TMP/plv/$pl_pdir/Demo"
+PL0=$(plfiles "$TMP/plv")
+pl_nl=$(printf 'a\nb')
+pl_bad=
+pl_msg=yes
+for pl_n in 'x\y' 'x:y' "$pl_nl" '..' '.' 'a/b' 'a*b' 'a?b' 'a<b' 'a>b' 'a|b' 'a"b'; do
+  plrun "$TMP/plv" "$pl_n" --proje Demo
+  [ "$PLRC" = 2 ] || pl_bad="$pl_bad rc:$pl_n"
+  [ "$(plsaw err_plan_name "$pl_n")" = yes ] || pl_msg=no
+done
+t; assert_eq "T-1501: plan names with a separator, backslash, colon, newline, only dots or a Windows-forbidden character exit 2 with err_plan_name" ' yes' "$pl_bad $pl_msg"
+t; assert_eq "T-1501: a bare .md is no name either" '2' "$(plrun "$TMP/plv" .md --proje Demo; printf %s "$PLRC")"
+pl_bad=
+pl_msg=yes
+for pl_n in '..' 'a/b' 'a\b' "$pl_nl"; do
+  plrun "$TMP/plv" ok --proje "$pl_n"
+  [ "$PLRC" = 2 ] || pl_bad="$pl_bad rc:$pl_n"
+  [ "$(plsaw err_plan_project "$pl_n")" = yes ] || pl_msg=no
+done
+t; assert_eq "T-1502: --proje with dots, a separator or a newline exits 2 with err_plan_project" ' yes' "$pl_bad $pl_msg"
+t; assert_eq "T-1503: none of those calls wrote a file or folder in the vault" "$PL0" "$(plfiles "$TMP/plv")"
+t; assert_eq "T-1503: err_plan_project exists in every language" '' \
+  "$(for _f in "$ROOT"/i18n/*.txt; do _l=${_f##*/}; _l=${_l%.txt}; [ -n "$(mi18n "$_l" err_plan_project)" ] || printf '%s ' "$_l"; done)"
+plrun "$TMP/plv" roadmap --proje Demo; pl_r1=$PLRC
+plrun "$TMP/plv" notes.md --proje Demo; pl_r2=$PLRC
+t; assert_eq "T-1504: a clean name creates the plan; so does the name with .md, with one .md only" '0 0 yes yes no' \
+  "$pl_r1 $pl_r2 $([ -f "$TMP/plv/$pl_pdir/Demo/Plans/roadmap.md" ] && printf yes || printf no) $([ -f "$TMP/plv/$pl_pdir/Demo/Plans/notes.md" ] && printf yes || printf no) $([ -f "$TMP/plv/$pl_pdir/Demo/Plans/notes.md.md" ] && printf yes || printf no)"
+pl_pwd=$(cd "$TMP/plv/$pl_pdir/Demo" && env -u QUIPU_VAULT -u KNOTLOG_VAULT QUIPU_LANG=en sh "$ROOT/knotlog" plan fromcwd </dev/null >/dev/null 2>&1; printf %s $?)
+t; assert_eq "T-1505: the project taken from the working directory still works" '0 yes' \
+  "$pl_pwd $([ -f "$TMP/plv/$pl_pdir/Demo/Plans/fromcwd.md" ] && printf yes || printf no)"
+# ---- end plan name check ----
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
