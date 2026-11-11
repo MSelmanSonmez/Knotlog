@@ -15207,7 +15207,7 @@ awk 'BEGIN {
 QUIPU_VAULT="$TMP/s4v" sh "$ROOT/knotlog" index >/dev/null 2>&1
 S4=$(env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/s4v" sh "$ROOT/knotlog" search kurulum --brief 2>/dev/null | awk -F "$TAB" '$2 == "uzun.md" { print $5 }')
 t; assert_eq "T-14111: --brief of a block hit starts near kurulum (the word that stems to the query), not at kurulus" 'yes no' \
-  "$(case $S4 in *kurulum*) printf yes ;; *) printf no ;; esac) $(case $S4 in *kurulus*) printf yes ;; *) printf no ;; esac)"
+  "$(case $S4 in (*kurulum*) printf yes ;; (*) printf no ;; esac) $(case $S4 in (*kurulus*) printf yes ;; (*) printf no ;; esac)"
 # ---- end --brief window test ----
 
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
