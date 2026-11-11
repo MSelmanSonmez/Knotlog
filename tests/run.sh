@@ -15256,6 +15256,28 @@ pl_pwd=$(cd "$TMP/plv/$pl_pdir/Demo" && env -u QUIPU_VAULT -u KNOTLOG_VAULT QUIP
 t; assert_eq "T-1505: the project taken from the working directory still works" '0 yes' \
   "$pl_pwd $([ -f "$TMP/plv/$pl_pdir/Demo/Plans/fromcwd.md" ] && printf yes || printf no)"
 # ---- end plan name check ----
+# ---- knotlog mcp: answers while stdin stays open (T-1700..T-1702) ----
+# A real client keeps the server's stdin open and waits for the `initialize` reply. A server
+# that buffers its input until EOF (Debian/Ubuntu mawk reads a pipe in blocks) never answers,
+# and the client gives up (Glama's mcp-proxy: 60 s). The tests above close stdin at once, so
+# they cannot see this. Here the writer sends `initialize` and keeps stdin open until the reply
+# shows up in the server's output file, or until about 120 s have passed; only then it closes.
+OS="$TMP/mc170"; rm -rf "$OS"; mkdir -p "$OS"
+if sleep 0.1 2>/dev/null; then OS_STEP=0.1; else OS_STEP=1; fi
+{
+  printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}'
+  _os_end=$(( $(date +%s) + 120 ))   # wall clock: a process spawn costs far more than 0.1 s on Windows, a loop counter would run for minutes
+  while [ ! -s "$OS/out" ] && [ "$(date +%s)" -lt "$_os_end" ]; do sleep "$OS_STEP"; done
+  if [ -s "$OS/out" ]; then : > "$OS/seen-open"; else : > "$OS/timeout"; fi
+} | QUIPU_LANG=en sh "$ROOT/knotlog" mcp > "$OS/out" 2> "$OS/err"
+os_rc=$?   # the server is the last command of the pipeline, so this is its status after stdin closed
+t; assert_eq "T-1700: the initialize reply arrives while stdin is still open (seen open, no timeout)" 'yes no' \
+  "$([ -f "$OS/seen-open" ] && printf yes || printf no) $([ -f "$OS/timeout" ] && printf yes || printf no)"
+t; assert_eq "T-1701: that reply is the result of request id 1 (protocolVersion, tools capability, serverInfo)" 'yes' \
+  "$(sed -n 1p "$OS/out" | grep -qF '{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{}},"serverInfo":{"name":"knotlog","version":"' && printf yes || printf no)"
+t; assert_eq "T-1702: after stdin closes the server exits 0 with exactly one balanced JSON-RPC line and an empty stderr" '0 1 yes 0' \
+  "$os_rc $(wc -l < "$OS/out" | tr -d ' ') $(mc86_lines_ok "$OS/out") $(wc -c < "$OS/err" | tr -d ' ')"
+# ---- end mcp open stdin ----
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0
