@@ -528,6 +528,7 @@ usage() {
   _q_msg usage_import
   _q_msg usage_plan
   _q_msg usage_card
+  _q_msg usage_board
   _q_msg usage_tone
   _q_msg usage_flair
   _q_msg usage_archive
@@ -8355,6 +8356,169 @@ _q_cmd_card() {
   printf "$(_q_msg plan_written)\n" "$_q_cd_file"
 }
 
+# ---- board (Stage 3) ---------------------------------------------------------
+
+_q_cmd_board() {
+  # knotlog board [--project <Project>] [--status <status>] [--ready] -- a
+  # read-only board of the work cards under <projects>/*/<cards_dir>/*.md.
+  # Writes nothing: not a file, not the index, not .knotlog/ state. --proje is
+  # an alias of --project. The cards are read, not interpreted: `status:` from
+  # the front matter (draft when absent), the Type and Waiting on bold lines
+  # from the body, in every language the templates ship. The PROJECT column is
+  # the folder the card sits in.
+  _q_v=$(_q_vault)
+  [ -n "$_q_v" ] || _q_die err_no_vault
+  _q_bd_proj=
+  _q_bd_status=
+  _q_bd_ready=0
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --project|--proje)
+        [ "$#" -ge 2 ] || _q_die err_missing_arg 2
+        case "$2" in
+          -*) _q_die err_unknown_flag 2 "$2" ;;
+        esac
+        _q_bd_proj=$2; shift 2 ;;
+      --status)
+        [ "$#" -ge 2 ] || _q_die err_missing_arg 2
+        case "$2" in
+          draft|ready|running|review|done|stuck) _q_bd_status=$2 ;;
+          *) _q_die err_board_status 2 "$2" ;;
+        esac
+        shift 2 ;;
+      --ready) _q_bd_ready=1; shift ;;
+      *) _q_die err_unknown_flag 2 "$1" ;;
+    esac
+  done
+
+  _q_bd_tab=$(printf '\t')
+  _q_bd_lay=$(awk -F= -v k=layout '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_v/$_q_SD/config" 2>/dev/null || true)
+  _q_layout_ok "$_q_bd_lay" || _q_bd_lay=emoji
+  _q_bd_pdir=$(awk -F"$_q_bd_tab" -v k=projects '$1==k{print $2;exit}' "$_q_HOME/layout/$_q_bd_lay.txt" 2>/dev/null || true)
+  [ -n "$_q_bd_pdir" ] || _q_die err_plan_project_required 2
+  if [ -n "$_q_bd_proj" ]; then
+    case "$_q_bd_proj" in
+      .|..|*/*|*\*|*[[:cntrl:]]*) _q_die err_card_project 2 "$_q_bd_proj" ;;
+    esac
+    [ -d "$_q_v/$_q_bd_pdir/$_q_bd_proj" ] || _q_die err_plan_project_missing 2 "$_q_v/$_q_bd_pdir/$_q_bd_proj"
+  fi
+
+  # One "project<TAB>path" line per card file; awk reads the files itself.
+  {
+    for _q_bd_d in "$_q_v/$_q_bd_pdir"/*/; do
+      [ -d "$_q_bd_d" ] || continue
+      _q_bd_d=${_q_bd_d%/}
+      _q_bd_n=${_q_bd_d##*/}
+      [ -z "$_q_bd_proj" ] || [ "$_q_bd_n" = "$_q_bd_proj" ] || continue
+      _q_bd_cd=$(_q_cards_dir_path "$_q_bd_d")
+      for _q_bd_f in "$_q_bd_cd"/*.md; do
+        [ -f "$_q_bd_f" ] || continue
+        printf '%s\t%s\n' "$_q_bd_n" "$_q_bd_f"
+      done
+    done
+  } | awk -F"$_q_bd_tab" -v OFS="$_q_bd_tab" '
+    function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t]+$/, "", s); return s }
+    function val(s) {
+      sub(/^:/, "", s); gsub(/`/, "", s); gsub(/\t/, " ", s)
+      sub(/[ \t]+#.*$/, "", s)
+      return trim(s)
+    }
+    {
+      proj = $1; path = $2
+      name = path; sub(/^.*\//, "", name); sub(/\.md$/, "", name)
+      status = "draft"; type = ""; wait = ""
+      first = 1; fm = 0
+      while ((getline line < path) > 0) {
+        sub(/\r$/, "", line)
+        if (first) { first = 0; if (line == "---") { fm = 1; continue } }
+        if (fm) {
+          if (line == "---") fm = 0
+          else if (line ~ /^status:/) {
+            v = line; sub(/^status:/, "", v); v = val(v)
+            if (v != "") status = v
+          }
+          continue
+        }
+        if (substr(line, 1, 2) != "**") continue
+        rest = substr(line, 3); e = index(rest, "**")
+        if (e == 0) continue
+        key = trim(substr(rest, 1, e - 1)); sub(/:$/, "", key); key = tolower(key)
+        v = val(substr(rest, e + 2))
+        if (type == "" && (key == "type" || key == "tür" || key == "tipo" || key == "種別" || key == "类型")) type = v
+        else if (wait == "" && (key == "waiting on" || key == "bekliyor" || key == "esperando a" || key == "aguardando" || key == "待機中" || key == "等待")) wait = v
+      }
+      close(path)
+      lw = tolower(wait)
+      if (lw == "none" || lw == "yok" || lw == "ninguno" || lw == "nenhum" || lw == "なし" || lw == "无" || lw == "-") wait = ""
+      sub(/\.md$/, "", wait)
+      n++; N[n] = name; S[n] = status; T[n] = type; W[n] = wait; P[n] = proj
+      if (status == "done") done[name] = 1
+    }
+    END {
+      for (i = 1; i <= n; i++)
+        print N[i], S[i], T[i], W[i], P[i], (S[i] == "ready" && (W[i] == "" || (W[i] in done))) ? 1 : 0
+    }
+  ' | LC_ALL=C sort -t "$_q_bd_tab" -k1,1 -k5,5 | Q_B_STATUS=$_q_bd_status Q_B_READY=$_q_bd_ready \
+    Q_B_H1=$(_q_msg board_col_card) Q_B_H2=$(_q_msg board_col_status) Q_B_H3=$(_q_msg board_col_type) \
+    Q_B_H4=$(_q_msg board_col_waiting) Q_B_H5=$(_q_msg board_col_project) Q_B_NONE=$(_q_msg board_none) \
+    Q_B_SUM=$(_q_msg board_summary) Q_B_ATT=$(_q_msg board_attention) Q_B_MORE=$(_q_msg board_more) \
+    Q_B_EMPTY=$(_q_msg board_empty) awk -F"$_q_bd_tab" '
+    # Width in characters, not bytes: an awk that counts bytes (mawk, a
+    # gawk in the C locale) is detected once and told to skip UTF-8
+    # continuation bytes.
+    function clen(s,   k, i) {
+      if (!bytes) return length(s)
+      k = 0
+      for (i = 1; i <= length(s); i++) if (index(cont, substr(s, i, 1)) == 0) k++
+      return k
+    }
+    function pad(s, w,   k) {
+      k = clen(s)
+      while (k < w) { s = s " "; k++ }
+      return s
+    }
+    function rep(s, tok, v,   i) {
+      i = index(s, tok)
+      return i ? substr(s, 1, i - 1) v substr(s, i + length(tok)) : s
+    }
+    BEGIN {
+      bytes = (length("\303\251") == 2)
+      if (bytes) for (i = 128; i < 192; i++) cont = cont sprintf("%c", i)
+      st = ENVIRON["Q_B_STATUS"]; ready = ENVIRON["Q_B_READY"] + 0
+      split("draft ready running review done stuck", ORD, " ")
+    }
+    {
+      if (st != "" && $2 != st) next
+      if (ready) { if ($6 == 1) print $1; next }
+      n++; N[n] = $1; S[n] = $2; T[n] = ($3 == "" ? "-" : $3); W[n] = ($4 == "" ? ENVIRON["Q_B_NONE"] : $4); P[n] = $5
+      cnt[$2]++
+      if ($2 == "stuck") stuck[++ns] = $1
+    }
+    END {
+      if (ready) exit
+      if (n == 0) { print ENVIRON["Q_B_EMPTY"]; exit }
+      shown = (n > 200 ? 200 : n)
+      w1 = clen(ENVIRON["Q_B_H1"]); w2 = clen(ENVIRON["Q_B_H2"]); w3 = clen(ENVIRON["Q_B_H3"]); w4 = clen(ENVIRON["Q_B_H4"])
+      for (i = 1; i <= shown; i++) {
+        if (clen(N[i]) > w1) w1 = clen(N[i])
+        if (clen(S[i]) > w2) w2 = clen(S[i])
+        if (clen(T[i]) > w3) w3 = clen(T[i])
+        if (clen(W[i]) > w4) w4 = clen(W[i])
+      }
+      w1 += 2; w2 += 2; w3 += 2; w4 += 2
+      print pad(ENVIRON["Q_B_H1"], w1) pad(ENVIRON["Q_B_H2"], w2) pad(ENVIRON["Q_B_H3"], w3) pad(ENVIRON["Q_B_H4"], w4) ENVIRON["Q_B_H5"]
+      for (i = 1; i <= shown; i++)
+        print pad(N[i], w1) pad(S[i], w2) pad(T[i], w3) pad(W[i], w4) P[i]
+      if (n > shown) print rep(ENVIRON["Q_B_MORE"], "%s", n - shown)
+      sum = ""
+      for (i = 1; i <= 6; i++) if (cnt[ORD[i]] > 0) sum = sum (sum == "" ? "" : ", ") cnt[ORD[i]] " " ORD[i]
+      print ""
+      if (sum != "") print ENVIRON["Q_B_SUM"] " " sum
+      for (i = 1; i <= ns; i++) print rep(ENVIRON["Q_B_ATT"], "%s", stuck[i])
+    }
+  '
+}
+
 # ---- archive ----------------------------------------------------------------
 
 _q_cmd_archive() {
@@ -9269,6 +9433,7 @@ case "$_q_cmd" in
   links) shift; _q_cmd_links "$@" ;;
   plan) shift; _q_cmd_plan "$@" ;;
   card) shift; _q_cmd_card "$@" ;;
+  board) shift; _q_cmd_board "$@" ;;
   tone) shift; _q_cmd_tone "$@" ;;
   flair) shift; _q_cmd_flair "$@" ;;
   archive) shift; _q_cmd_archive "$@" ;;

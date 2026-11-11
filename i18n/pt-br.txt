@@ -23,6 +23,7 @@ usage_propose=  propose   deixa um achado da revisão aguardando aprovação (pr
 usage_import=  import    converte uma exportação local de conversa em JSON em uma nota de sessão (FILE, --date YYYY-MM-DD; claude [--project DIR] [--apply]: transcrições do Claude Code)
 usage_plan=  plan      abre um plano de projeto em <Projects>/<Project>/<Plans>/ a partir do modelo com front matter (--project <Project>)
 usage_card=  card      abre um cartão de trabalho numerado em <Projects>/<Project>/<Cards>/NNN-<name>.md (--project <Project>, --type code|content)
+usage_board=  board     painel somente leitura de todos os cartões em <Projects>/*/<Cards>/ (--project <Project>, --status <estado>, --ready)
 usage_tone=  tone      mostra/define o preset de tom ativo (--list para ver os disponíveis; um slug sozinho grava tone= na config)
 usage_archive=  archive   move um título encerrado do Threads.md para o arquivo (--list: mostra os títulos; --dry-run: só simula)
 usage_compact=  compact   move entradas antigas de "Closed threads" do Threads.md para o arquivo, sem perdas (simulação por padrão; --apply grava; --keep N mantém as N mais novas, padrão 20; o arquivo da última sessão também mantém seus N blocos de sessão mais novos, padrão 5)
@@ -437,6 +438,17 @@ err_card_mkdir=não foi possível criar a pasta de cartões: %s
 err_card_write=não foi possível gravar o cartão: %s
 err_card_project=nome de projeto inválido: %s
 err_plan_project=nome de projeto inválido: %s
+board_col_card=CARTÃO
+board_col_status=ESTADO
+board_col_type=TIPO
+board_col_waiting=AGUARDANDO
+board_col_project=PROJETO
+board_none=nenhum
+board_summary=resumo:
+board_attention=atenção: %s está travado, pergunte à sessão principal
+board_more=… mais %s cartões
+board_empty=sem cartões
+err_board_status=estado de cartão inválido: %s (use draft, ready, running, review, done ou stuck)
 # reflect
 reflect_head_what=O que mudou nesta sessão?
 reflect_head_where=Onde o trabalho aconteceu?

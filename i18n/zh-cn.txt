@@ -23,6 +23,7 @@ usage_propose=  propose   把一条审查发现放入待批准队列（propose -
 usage_import=  import    将本地 JSON 对话导出转换为会话笔记（FILE、--date YYYY-MM-DD；claude [--project DIR] [--apply]：Claude Code 记录）
 usage_plan=  plan      根据 front-matter 模板在 <Projects>/<Project>/<Plans>/ 下创建项目计划（--project <Project>）
 usage_card=  card      在 <Projects>/<Project>/<Cards>/NNN-<name>.md 创建带编号的工作卡片（--project <Project>, --type code|content）
+usage_board=  board     只读看板，列出 <Projects>/*/<Cards>/ 下所有工作卡片（--project <Project>, --status <状态>, --ready）
 usage_tone=  tone      显示/设置当前语气预设（--list 浏览；直接给出 slug 会把 tone= 写入配置）
 usage_archive=  archive   将已关闭的标题从 Threads.md 移入归档（--list：显示标题；--dry-run：仅预览）
 usage_compact=  compact   将 Threads.md 中旧的 "Closed threads" 条目无损移入归档（默认为试运行；--apply 写入；--keep N 保留最新的 N 条，默认 20；最近会话文件也保留最新的 N 个会话块，默认 5）
@@ -437,6 +438,17 @@ err_card_mkdir=无法创建卡片文件夹：%s
 err_card_write=无法写入卡片：%s
 err_card_project=无效的项目名称：%s
 err_plan_project=无效的项目名称：%s
+board_col_card=卡片
+board_col_status=状态
+board_col_type=类型
+board_col_waiting=等待
+board_col_project=项目
+board_none=无
+board_summary=摘要:
+board_attention=注意: %s 已卡住，请询问主会话
+board_more=… 还有 %s 张卡片
+board_empty=没有卡片
+err_board_status=无效的卡片状态: %s（请用 draft, ready, running, review, done 或 stuck）
 # reflect
 reflect_head_what=这次会话改了什么？
 reflect_head_where=工作发生在哪里？

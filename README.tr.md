@@ -150,6 +150,7 @@ Gerçekten elle yazacakların; tam tablo [docs/REFERENCE.md](docs/REFERENCE.md#c
 | `knotlog tui` | en yeni oturum notlarına terminalde göz atar |
 | `knotlog plan <ad> --project <Proje>` | bir projenin içinde plan notu açar |
 | `knotlog card <ad> --project <Proje>` | bir projenin içinde numaralı iş kartı (`NNN-<ad>.md`) açar |
+| `knotlog board [--project <Proje>] [--status <durum>] [--ready]` | bütün iş kartlarının salt okunur panosu, özet satırıyla |
 | `knotlog help [--<kod>]` | İngilizce yardım; `--<kod>` ile gönderilen başka bir dilde (örn. `--tr`) |
 
 ## İlk oturum

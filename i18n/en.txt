@@ -23,6 +23,7 @@ usage_propose=  propose   queue a review finding for approval (propose --kind le
 usage_import=  import    convert a local JSON conversation export into a session note (FILE, --date YYYY-MM-DD; claude [--project DIR] [--apply]: Claude Code transcripts)
 usage_plan=  plan      open a project plan under <Projects>/<Project>/<Plans>/ from the front-matter template (--project <Project>)
 usage_card=  card      open a numbered work card under <Projects>/<Project>/<Cards>/NNN-<name>.md (--project <Project>, --type code|content)
+usage_board=  board     read-only board of every work card under <Projects>/*/<Cards>/ (--project <Project>, --status <status>, --ready)
 usage_tone=  tone      show/set the active tone preset (--list to browse; a bare slug writes tone= to config)
 usage_archive=  archive   move a closed heading out of Threads.md into the archive (--list: show headings; --dry-run: preview only)
 usage_compact=  compact   move old "Closed threads" entries of Threads.md into the archive, losslessly (dry run by default; --apply writes; --keep N keeps the newest N, default 20; the last-session file also keeps its newest N session blocks, default 5)
@@ -437,6 +438,17 @@ err_card_mkdir=could not create the cards folder: %s
 err_card_write=could not write the card: %s
 err_card_project=invalid project name: %s
 err_plan_project=invalid project name: %s
+board_col_card=CARD
+board_col_status=STATUS
+board_col_type=TYPE
+board_col_waiting=WAITING ON
+board_col_project=PROJECT
+board_none=none
+board_summary=summary:
+board_attention=attention: %s is stuck, ask the main session
+board_more=… %s more cards
+board_empty=no cards
+err_board_status=invalid card status: %s (use draft, ready, running, review, done or stuck)
 # reflect
 reflect_head_what=What changed in this session?
 reflect_head_where=Where did the work happen?

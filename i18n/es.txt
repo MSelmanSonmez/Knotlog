@@ -23,6 +23,7 @@ usage_propose=  propose   pone en espera de aprobación un hallazgo de revisión
 usage_import=  import    convierte una exportación JSON local de una conversación en una nota de sesión (FILE, --date YYYY-MM-DD; claude [--project DIR] [--apply]: transcripciones de Claude Code)
 usage_plan=  plan      abre un plan de proyecto en <Projects>/<Project>/<Plans>/ a partir de la plantilla con front matter (--project <Project>)
 usage_card=  card      abre una tarjeta de trabajo numerada en <Projects>/<Project>/<Cards>/NNN-<name>.md (--project <Project>, --type code|content)
+usage_board=  board     panel de solo lectura de todas las tarjetas bajo <Projects>/*/<Cards>/ (--project <Project>, --status <estado>, --ready)
 usage_tone=  tone      muestra o fija el preset de tono activo (--list para verlos; un slug solo escribe tone= en la configuración)
 usage_archive=  archive   mueve un encabezado cerrado de Threads.md al archivo (--list: muestra los encabezados; --dry-run: solo previsualiza)
 usage_compact=  compact   mueve al archivo, sin pérdidas, las entradas antiguas de "Closed threads" de Threads.md (simulación por defecto; --apply escribe; --keep N conserva las N más recientes, por defecto 20; el archivo de última sesión también conserva sus N bloques de sesión más recientes, por defecto 5)
@@ -437,6 +438,17 @@ err_card_mkdir=no se pudo crear la carpeta de tarjetas: %s
 err_card_write=no se pudo escribir la tarjeta: %s
 err_card_project=nombre de proyecto no válido: %s
 err_plan_project=nombre de proyecto no válido: %s
+board_col_card=TARJETA
+board_col_status=ESTADO
+board_col_type=TIPO
+board_col_waiting=ESPERANDO
+board_col_project=PROYECTO
+board_none=ninguno
+board_summary=resumen:
+board_attention=atención: %s está atascada, pregunta a la sesión principal
+board_more=… %s tarjetas más
+board_empty=sin tarjetas
+err_board_status=estado de tarjeta no válido: %s (usa draft, ready, running, review, done o stuck)
 # reflect
 reflect_head_what=¿Qué cambió en esta sesión?
 reflect_head_where=¿Dónde se hizo el trabajo?

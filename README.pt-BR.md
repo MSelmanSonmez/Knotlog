@@ -152,6 +152,7 @@ Os que você realmente vai digitar; a tabela completa está em [docs/REFERENCE.m
 | `knotlog tui` | navega pelas notas de sessão mais recentes no terminal |
 | `knotlog plan <name> --project <Project>` | abre uma nota de plano dentro de um projeto |
 | `knotlog card <name> --project <Project>` | abre um cartão de trabalho numerado (`NNN-<name>.md`) dentro de um projeto |
+| `knotlog board [--project <Project>] [--status <status>] [--ready]` | painel somente leitura de todos os cartões de trabalho, com uma linha de resumo |
 | `knotlog help [--<código>]` | ajuda em inglês, ou em outro idioma incluído com `--<código>` (ex.: `--tr`) |
 
 ## Uma primeira sessão

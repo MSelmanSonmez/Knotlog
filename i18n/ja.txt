@@ -23,6 +23,7 @@ usage_propose=  propose   レビューで得た知見を承認待ちに入れる
 usage_import=  import    ローカルの JSON 会話エクスポートをセッションノートに変換 (FILE, --date YYYY-MM-DD; claude [--project DIR] [--apply]: Claude Code のトランスクリプト)
 usage_plan=  plan      フロントマター付きテンプレートから <Projects>/<Project>/<Plans>/ にプロジェクト計画を作成 (--project <Project>)
 usage_card=  card      番号付きの作業カードを <Projects>/<Project>/<Cards>/NNN-<name>.md に作成 (--project <Project>, --type code|content)
+usage_board=  board     <Projects>/*/<Cards>/ 以下の全作業カードを表示する読み取り専用ボード (--project <Project>, --status <状態>, --ready)
 usage_tone=  tone      有効なトーンプリセットを表示/設定 (--list: 一覧; スラッグだけ指定すると config に tone= を書き込み)
 usage_archive=  archive   完了した見出しを Threads.md からアーカイブへ移動 (--list: 見出しを表示; --dry-run: プレビューのみ)
 usage_compact=  compact   Threads.md の古い "Closed threads" エントリを欠損なくアーカイブへ移動 (既定はドライラン; --apply で書き込み; --keep N: 新しい N 件を残す、既定 20; 最終セッションファイルも新しい N 個のセッションブロックを残す、既定 5)
@@ -437,6 +438,17 @@ err_card_mkdir=カードフォルダを作成できませんでした: %s
 err_card_write=カードを書き込めませんでした: %s
 err_card_project=無効なプロジェクト名: %s
 err_plan_project=無効なプロジェクト名: %s
+board_col_card=カード
+board_col_status=状態
+board_col_type=種別
+board_col_waiting=待機中
+board_col_project=プロジェクト
+board_none=なし
+board_summary=概要:
+board_attention=要確認: %s が停止中です。メインセッションに確認してください
+board_more=… ほか %s 枚
+board_empty=カードなし
+err_board_status=無効なカード状態: %s (draft, ready, running, review, done, stuck のいずれか)
 # reflect
 reflect_head_what=このセッションで何が変わりましたか?
 reflect_head_where=作業はどこで行われましたか?

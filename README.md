@@ -150,6 +150,7 @@ The ones you will actually type; the full table is in [docs/REFERENCE.md](docs/R
 | `knotlog tui` | browse the newest session notes in the terminal |
 | `knotlog plan <name> --project <Project>` | open a plan note inside a project |
 | `knotlog card <name> --project <Project>` | open a numbered work card (`NNN-<name>.md`) inside a project |
+| `knotlog board [--project <Project>] [--status <status>] [--ready]` | read-only board of every work card, with a summary line |
 | `knotlog help [--<code>]` | help in English, or in another shipped language with `--<code>` (e.g. `--tr`) |
 
 ## A first session
