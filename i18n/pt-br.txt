@@ -436,6 +436,7 @@ err_card_template=modelo de cartão ausente ou ilegível: %s
 err_card_mkdir=não foi possível criar a pasta de cartões: %s
 err_card_write=não foi possível gravar o cartão: %s
 err_card_project=nome de projeto inválido: %s
+err_plan_project=nome de projeto inválido: %s
 # reflect
 reflect_head_what=O que mudou nesta sessão?
 reflect_head_where=Onde o trabalho aconteceu?

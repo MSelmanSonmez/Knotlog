@@ -8118,13 +8118,13 @@ _q_cmd_plan() {
     esac
   done
   [ -n "$_q_pl_name" ] || _q_die err_missing_arg 2
+  _q_pl_name=${_q_pl_name%.md}
+  # Same rule as `card`: reject what is not a plain file name on every
+  # platform (separators, characters Windows forbids, control characters).
   case "$_q_pl_name" in
-    */*|.|..) _q_die err_plan_name 2 "$_q_pl_name" ;;
+    ""|.|..|*/*|*\\*|*:*|*\**|*\?*|*\<*|*\>*|*\|*|*\"*|*[[:cntrl:]]*) _q_die err_plan_name 2 "$_q_pl_name" ;;
   esac
-  case "$_q_pl_name" in
-    *.md) ;;
-    *) _q_pl_name="$_q_pl_name.md" ;;
-  esac
+  _q_pl_name="$_q_pl_name.md"
 
   # Project resolution: --proje wins; otherwise the project folder the
   # caller is currently working in (inside the vault's projects folder)
@@ -8145,6 +8145,9 @@ _q_cmd_plan() {
   if [ -z "$_q_pl_proj" ] || [ -z "$_q_pl_pdir" ]; then
     _q_die err_plan_project_required 2
   fi
+  case "$_q_pl_proj" in
+    .|..|*/*|*\\*|*[[:cntrl:]]*) _q_die err_plan_project 2 "$_q_pl_proj" ;;
+  esac
   _q_pl_projdir="$_q_v/$_q_pl_pdir/$_q_pl_proj"
   if [ ! -d "$_q_pl_projdir" ]; then
     _q_die err_plan_project_missing 2 "$_q_pl_projdir"

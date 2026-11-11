@@ -436,6 +436,7 @@ err_card_template=card template missing or unreadable: %s
 err_card_mkdir=could not create the cards folder: %s
 err_card_write=could not write the card: %s
 err_card_project=invalid project name: %s
+err_plan_project=invalid project name: %s
 # reflect
 reflect_head_what=What changed in this session?
 reflect_head_where=Where did the work happen?
