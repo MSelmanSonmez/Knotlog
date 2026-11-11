@@ -278,20 +278,14 @@ _q_fold_prof() {
 
 _q_stem_prof() {
   # Stemming for `search`: tr (Turkish suffix stemming, lib/stem.awk) or off.
-  # Chain: vault config stem= (tr = on, off = off, anything else = off) ->
-  # no stem= key at all: language tr -> tr, every other language -> off.
+  # Only the vault config turns it on: stem=tr is on; stem=off, anything else
+  # and no stem= key at all are off, whatever the language says.
   # Search-time only; the index is not touched. $1 = vault path.
   _q_sp_v=$1
   _q_sp=
   if [ -n "$_q_sp_v" ] && [ -f "$_q_sp_v/$_q_SD/config" ]; then
     # "k:" + value of the first stem= line; empty when the key is absent.
     _q_sp=$(awk -F= -v k=stem '$1==k{sub(/^[^=]*=/,"");print "k:" $0;exit}' "$_q_sp_v/$_q_SD/config" 2>/dev/null || true)
-  fi
-  if [ -z "$_q_sp" ]; then
-    case "$(_q_lang)" in
-      tr) _q_sp=k:tr ;;
-      *) _q_sp=k:off ;;
-    esac
   fi
   case "$_q_sp" in
     k:tr) printf 'tr\n' ;;
@@ -301,21 +295,15 @@ _q_stem_prof() {
 
 _q_syn_prof() {
   # Synonym expansion for `search`: tr-en (synonyms/tr-en.txt) or off.
-  # Chain: vault config synonyms= (tr-en = on, off = off, anything else =
-  # off) -> no synonyms= key at all: language tr -> tr-en, every other
-  # language -> off. Search-time only; the index is not touched.
+  # Only the vault config turns it on: synonyms=tr-en is on; synonyms=off,
+  # anything else and no synonyms= key at all are off, whatever the language
+  # says. Search-time only; the index is not touched.
   # $1 = vault path.
   _q_yp_v=$1
   _q_yp=
   if [ -n "$_q_yp_v" ] && [ -f "$_q_yp_v/$_q_SD/config" ]; then
     # "k:" + value of the first synonyms= line; empty when the key is absent.
     _q_yp=$(awk -F= -v k=synonyms '$1==k{sub(/^[^=]*=/,"");print "k:" $0;exit}' "$_q_yp_v/$_q_SD/config" 2>/dev/null || true)
-  fi
-  if [ -z "$_q_yp" ]; then
-    case "$(_q_lang)" in
-      tr) _q_yp=k:tr-en ;;
-      *) _q_yp=k:off ;;
-    esac
   fi
   case "$_q_yp" in
     k:tr-en) printf 'tr-en\n' ;;
