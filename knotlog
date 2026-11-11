@@ -276,6 +276,41 @@ _q_fold_prof() {
   printf '%s\n' "$_q_fp"
 }
 
+_q_stem_prof() {
+  # Stemming for `search`: tr (Turkish suffix stemming, lib/stem.awk) or off.
+  # Only the vault config turns it on: stem=tr is on; stem=off, anything else
+  # and no stem= key at all are off, whatever the language says.
+  # Search-time only; the index is not touched. $1 = vault path.
+  _q_sp_v=$1
+  _q_sp=
+  if [ -n "$_q_sp_v" ] && [ -f "$_q_sp_v/$_q_SD/config" ]; then
+    # "k:" + value of the first stem= line; empty when the key is absent.
+    _q_sp=$(awk -F= -v k=stem '$1==k{sub(/^[^=]*=/,"");print "k:" $0;exit}' "$_q_sp_v/$_q_SD/config" 2>/dev/null || true)
+  fi
+  case "$_q_sp" in
+    k:tr) printf 'tr\n' ;;
+    *) printf 'off\n' ;;
+  esac
+}
+
+_q_syn_prof() {
+  # Synonym expansion for `search`: tr-en (synonyms/tr-en.txt) or off.
+  # Only the vault config turns it on: synonyms=tr-en is on; synonyms=off,
+  # anything else and no synonyms= key at all are off, whatever the language
+  # says. Search-time only; the index is not touched.
+  # $1 = vault path.
+  _q_yp_v=$1
+  _q_yp=
+  if [ -n "$_q_yp_v" ] && [ -f "$_q_yp_v/$_q_SD/config" ]; then
+    # "k:" + value of the first synonyms= line; empty when the key is absent.
+    _q_yp=$(awk -F= -v k=synonyms '$1==k{sub(/^[^=]*=/,"");print "k:" $0;exit}' "$_q_yp_v/$_q_SD/config" 2>/dev/null || true)
+  fi
+  case "$_q_yp" in
+    k:tr-en) printf 'tr-en\n' ;;
+    *) printf 'off\n' ;;
+  esac
+}
+
 _q_profile() {
   # Global setter: $_q_prof = normal|economical|manual (anything else, or no
   # profile= key, is normal); $_q_prof_raw = the raw config value (doctor).
@@ -7490,6 +7525,14 @@ _q_cmd_search() {
 
   # V1-DUZELTME R-4: same single helper as `quipu index` (was a copy, P-2).
   _q_prof=$(_q_fold_prof "$_q_v")
+  _q_stem=$(_q_stem_prof "$_q_v")
+  # Synonyms: -v syn_file= names the list ($_q_HOME/synonyms/tr-en.txt), empty
+  # means off. A missing list file also means off: search just runs unexpanded.
+  _q_syn=$(_q_syn_prof "$_q_v")
+  _q_synf=
+  if [ "$_q_syn" = tr-en ] && [ -f "$_q_HOME/synonyms/tr-en.txt" ]; then
+    _q_synf="$_q_HOME/synonyms/tr-en.txt"
+  fi
 
   # Fold the query with the same profile and order as the index (PLAN 4.3):
   # sed -f fold/PROFIL.sed, THEN tr 'A-Z' 'a-z'. SC2018/SC2019 suggest
@@ -7555,8 +7598,9 @@ _q_cmd_search() {
     -v tagf="$_q_tagf" -v statf="$_q_statf" \
     -v showall="$_q_all" \
     -v idxfile="$_q_v/$_q_SD/index.tsv" -v dfout="$_q_df" \
-    -v blocksfile="$_q_bf" \
-    -f "$_q_HOME/lib/search.awk" "$_q_v/$_q_SD/index.tsv" "$_q_bf"
+    -v blocksfile="$_q_bf" -v stem_mode="$_q_stem" \
+    -v syn_file="$_q_synf" \
+    -f "$_q_HOME/lib/stem.awk" -f "$_q_HOME/lib/search.awk" "$_q_v/$_q_SD/index.tsv" "$_q_bf"
 
   # Pass 2 (mode=bm25score): dfout first (FNR==NR join, same idiom as
   # lib/index.awk's mode=plan oldfile/allfile and mode=assemble joinfile),
@@ -7567,8 +7611,9 @@ _q_cmd_search() {
   awk -v mode=bm25score -v terms="$_q_terms" -v brief="$_q_brief" -v snip=120 \
     -v tagf="$_q_tagf" -v statf="$_q_statf" \
     -v showall="$_q_all" \
-    -v blocksfile="$_q_bf" -v blocks="$_q_blk" \
-    -f "$_q_HOME/lib/search.awk" "$_q_df" "$_q_v/$_q_SD/index.tsv" "$_q_bf" \
+    -v blocksfile="$_q_bf" -v blocks="$_q_blk" -v stem_mode="$_q_stem" \
+    -v syn_file="$_q_synf" \
+    -f "$_q_HOME/lib/stem.awk" -f "$_q_HOME/lib/search.awk" "$_q_df" "$_q_v/$_q_SD/index.tsv" "$_q_bf" \
     | sort $_q_sortk \
     | CUTOUT="$_q_df.cut" LC_ALL=C awk -v n="$_q_limit" -v p="$_q_paths" -v blk="$_q_blk" -v mb="$_q_maxb" -F "$_q_tab" '
         # The limit lives HERE, not in `head -n`: head closes the pipe as soon

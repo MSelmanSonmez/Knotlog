@@ -1,0 +1,121 @@
+# knotlog synonyms/tr-en.txt -- Turkish <-> English word equivalents for search.
+#
+# Read at search time by lib/search.awk (see "Synonyms" in docs/REFERENCE.md).
+# Index files are untouched. Active when the vault config says synonyms=tr-en,
+# or has no synonyms= line and lang=tr; synonyms=off turns it off.
+#
+# Every word is written FOLDED: ASCII, lower case, exactly what
+# fold/tr.sed + tr 'A-Z' 'a-z' produce (c for c-cedilla, g for g-breve,
+# i for dotless i, o, s, u for the umlaut/cedilla letters). The search folds
+# and stems the query the same way, so "kurulumu" finds the "kurulum" line.
+#
+# Two kinds of line (anything else is ignored):
+#
+#   group line   words separated by spaces. All words mean the same thing: a
+#                query word that equals one of them (after stemming) also
+#                searches for all the others. Groups never chain: a word that
+#                is only in the expansion does not expand again.
+#                A word is looked up only if it is listed as written or is an
+#                inflected form of one: "kurulum" and "kurulumu" count, a
+#                different word with the same stem ("kurul") does not.
+#                    kurulum setup install
+#
+#   join line    "words = compound": the words written apart mean what the one
+#                compound word means. Two consecutive query words that match
+#                the left side add the compound; the compound alone adds each
+#                of the left words as its own term.
+#                    open source = opensource
+#                    acik kaynak = opensource   (one compound, several spellings)
+#
+# Lines starting with # and empty lines are comments.
+#
+# Rules for adding a line: both sides must be genuinely interchangeable in
+# ordinary software and everyday text. Words with several meanings are left
+# out on purpose, because a wrong synonym buries the right notes:
+#   kayit (record / log / registration), gunluk (daily / journal / log),
+#   yukleme (upload / install / loading), dal (branch / twig), not (note, and
+#   the English word "not"), arac (tool / vehicle), dizin (index / directory).
+# Words whose stem is very short are mostly left out too (karar, yorum, sorun,
+# bakim, cozum, tema ...): the stem would also match unrelated words, and
+# English "theme" would stem to the common word "the". The few that stay
+# (dosya, surum, arama, ekran) are core software words and worth it.
+# Words must not be vault specific: no note names, project names or tool names.
+
+# ---- core pairs -------------------------------------------------------------
+kurulum setup install installation
+paket package packages
+liste list lists
+yukseltme upgrade
+agirlik weight weights
+siralama ranking
+piksel pixel pixels
+
+# ---- software ---------------------------------------------------------------
+dosya file files
+klasor folder folders
+ayar setting settings
+yapilandirma configuration config
+surum version versions
+hata error errors
+uyari warning warnings
+arama search
+sorgu query queries
+guncelleme update updates
+yedek yedekleme backup backups
+indirme download downloads
+akis feed stream
+tarayici browser
+bellek memory
+onbellek cache
+hiz speed
+performans performance
+guvenlik security
+gizlilik privacy
+sablon template templates
+kullanici user users
+sifre parola password
+ekran screen
+sunucu server
+istemci client
+veritabani database
+depo repository
+birlestirme merge
+oturum session
+bildirim notification
+izin permission
+sayfa page
+baglanti connection
+dil language
+arayuz interface
+kod code
+komut command
+belge document documents
+kaynak source
+etiket tag tags label
+gelistirici developer
+proje project projects
+gorev task tasks
+
+# ---- everyday ---------------------------------------------------------------
+ornek example sample
+ozet summary
+analiz analysis
+rapor report
+toplanti meeting
+hedef target goal
+oneri suggestion recommendation
+mesaj message
+
+# ---- written together or apart ----------------------------------------------
+open source = opensource
+acik kaynak = opensource
+set up = setup
+back up = backup
+web site = website
+data base = database
+user name = username
+file name = filename
+time stamp = timestamp
+work flow = workflow
+key word = keyword
+log in = login

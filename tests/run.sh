@@ -14976,6 +14976,239 @@ t; assert_eq "T-1443: the retry without the failure writes 004-halfway.md" '0 ye
 t; assert_eq "T-1444: err_card_type names code, content and both aliases in every language" '' \
   "$(cdtypehint)"
 
+# ---- search: Turkish suffix stemming (stem=), T-1480..T-1489 ----
+# Synthetic notes; one vault, indexed once. The index is folded with fold=tr
+# whatever lang says, so the config is rewritten per case and only the search
+# side changes. st_s LANG STEM ARGS... -> sorted result paths on one line.
+mkdir -p "$TMP/stv/.knotlog"
+printf 'fold=tr\nlang=tr\n' > "$TMP/stv/.knotlog/config"
+printf '# Sürüm\nSürümün güncelleme notları burada.\n' > "$TMP/stv/guncelleme.md"
+printf '# Sürüm\nYeni sürümün güncellemesi bekliyor.\n' > "$TMP/stv/guncellemesi.md"
+printf '# Kahve\nKahve döker kupa.\n' > "$TMP/stv/doker.md"
+printf '# Boru\nSıvı döken boru.\n' > "$TMP/stv/doken.md"
+printf '# Demir\nDökme demir parça.\n' > "$TMP/stv/dokme.md"
+printf '# Kutu\nKutuyu çıkar hemen.\n' > "$TMP/stv/cikar.md"
+printf '# Islem\nÇıkarma işlemi tamam.\n' > "$TMP/stv/cikarma.md"
+printf '# Sunucu\nnode.js sunucusu çalışıyor.\n' > "$TMP/stv/nodejs.md"
+printf '# Derleyici\nc++ derleyicisi kuruldu.\n' > "$TMP/stv/cpp.md"
+printf '# Konu\nKonu #etiket altında.\n' > "$TMP/stv/tag.md"
+printf '# Meyve\nElma armut sepeti.\n' > "$TMP/stv/elma.md"
+printf '# Adim\nKurulum adımları ve rapor.\n' > "$TMP/stv/kurulum.md"
+printf '# Bitti\nKurulumu bitirdik raporu yazdık.\n' > "$TMP/stv/kurulumu.md"
+QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" index >/dev/null 2>&1
+st_cfg() { # LANG STEM(empty = no stem= line)
+  printf 'fold=tr\nlang=%s\n' "$1" > "$TMP/stv/.knotlog/config"
+  [ -z "$2" ] || printf 'stem=%s\n' "$2" >> "$TMP/stv/.knotlog/config"
+}
+st_s() { # LANG STEM search-args... -> result paths, sorted, one line
+  st_cfg "$1" "$2"; shift 2
+  env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" search "$@" --paths 2>/dev/null | sort | tr '\n' ' '
+}
+t; assert_eq "T-1480: with stem=tr, stemming is on: the endings of güncelleme and çıkar meet; dökme (five letters, two-letter ending) is not cut" \
+  'guncelleme.md guncellemesi.md |dokme.md |cikar.md cikarma.md ' \
+  "$(st_s tr tr güncellemesi)|$(st_s tr tr dökme)|$(st_s tr tr çıkarma)"
+t; assert_eq "T-1481: stem=off: only the exact word is found" \
+  'guncellemesi.md |dokme.md |cikarma.md ' \
+  "$(st_s tr off güncellemesi)|$(st_s tr off dökme)|$(st_s tr off çıkarma)"
+t; assert_eq "T-1482: stem=tr turns it on for lang=en too; unknown values are off" \
+  'guncellemesi.md |guncelleme.md guncellemesi.md |guncellemesi.md |guncellemesi.md ' \
+  "$(st_s en '' güncellemesi)|$(st_s en tr güncellemesi)|$(st_s tr bogus güncellemesi)|$(st_s tr 'x ' güncellemesi)"
+t; assert_eq "T-1483: node.js, c++ and #etiket find the same notes with stemming on and off" 'same same same' \
+  "$([ "$(st_s tr tr node.js)" = "$(st_s tr off node.js)" ] && [ "$(st_s tr tr node.js)" = 'nodejs.md ' ] && printf same || printf differ) $([ "$(st_s tr tr 'c++')" = "$(st_s tr off 'c++')" ] && [ "$(st_s tr tr 'c++')" = 'cpp.md ' ] && printf same || printf differ) $([ "$(st_s tr tr '#etiket')" = "$(st_s tr off '#etiket')" ] && [ "$(st_s tr tr '#etiket')" = 'tag.md ' ] && printf same || printf differ)"
+st_cfg tr tr
+ST1=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" search güncelleme 2>/dev/null)
+ST2=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" search 'güncelleme güncelleme' 2>/dev/null)
+ST3=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" search '"güncelleme"' 2>/dev/null)
+ST4=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" search 'güncelleme güncellemesi' 2>/dev/null)
+t; assert_eq "T-1484: a repeated, a quoted and a same-stem second term score like the single term" 'yes yes yes' \
+  "$([ -n "$ST1" ] && [ "$ST1" = "$ST2" ] && printf yes || printf no) $([ "$ST1" = "$ST3" ] && printf yes || printf no) $([ "$ST1" = "$ST4" ] && printf yes || printf no)"
+# Golden output taken from the engine before stemming existed: stem=off must reproduce it byte for byte.
+st_cfg tr off
+ST5=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" search 'kurulum raporu' 2>/dev/null)
+t; assert_eq "T-1485: stem=off ranks and scores exactly like the engine without stemming" \
+  "2.013${TAB}kurulum.md${TAB}Adim${TAB}
+2.013${TAB}kurulumu.md${TAB}Bitti${TAB}" "$ST5"
+st_cfg tr tr
+ST6=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/stv" sh "$ROOT/knotlog" search güncellemesi --brief 2>/dev/null | awk -F "$TAB" '$2 == "guncelleme.md" { print $5 }')
+t; assert_eq "T-1486: --brief shows the raw folded text, not the stemmed words" '# surum surumun guncelleme notlari burada.' "$ST6"
+t; assert_eq "T-1487: stemming leaves the index file alone: the same index.tsv with stem on and off" 'yes' \
+  "$(a=$(cksum < "$TMP/stv/.knotlog/index.tsv"); st_s tr tr güncellemesi >/dev/null; [ "$a" = "$(cksum < "$TMP/stv/.knotlog/index.tsv")" ] && printf yes || printf no)"
+t; assert_eq "T-1488: with no stem= line stemming is off, for lang=tr as for lang=en; stem=tr turns it on" \
+  'guncellemesi.md |guncellemesi.md |guncelleme.md guncellemesi.md ' \
+  "$(st_s tr '' güncellemesi)|$(st_s en '' güncellemesi)|$(st_s tr tr güncellemesi)"
+# ---- end stemming tests ----
+
+# ---- search: Turkish/English synonyms (synonyms=), T-1490..T-1499 ----
+# Synthetic notes; one vault, indexed once, config rewritten per case.
+mkdir -p "$TMP/syv/.knotlog"
+printf 'fold=tr\nlang=tr\n' > "$TMP/syv/.knotlog/config"
+printf '# Paket\nPaket listesi güncel tutuldu.\n' > "$TMP/syv/paket.md"
+printf '# Package\nThe package list and the guide.\n' > "$TMP/syv/package.md"
+printf '# Kurulum\nKurulumu tamamladık, notlar ekte.\n' > "$TMP/syv/kurulum.md"
+printf '# Install\nInstall steps for the tool.\n' > "$TMP/syv/install.md"
+printf '# Lisans\nopensource lisans metni.\n' > "$TMP/syv/os1.md"
+printf '# License\nThe open source license text.\n' > "$TMP/syv/os2.md"
+printf '# Login\nWe set up the login page.\n' > "$TMP/syv/login.md"
+printf '# Kurulus\nKurulus ayarlari yapildi.\n' > "$TMP/syv/ayar.md"
+printf '# Meyve\nElma armut sepeti.\n' > "$TMP/syv/elma.md"
+QUIPU_VAULT="$TMP/syv" sh "$ROOT/knotlog" index >/dev/null 2>&1
+sy_cfg() { # LANG SYN(empty = no synonyms= line); lang=tr also gets stem=tr
+  printf 'fold=tr\nlang=%s\n' "$1" > "$TMP/syv/.knotlog/config"
+  [ -z "$2" ] || printf 'synonyms=%s\n' "$2" >> "$TMP/syv/.knotlog/config"
+  [ "$1" != tr ] || printf 'stem=tr\n' >> "$TMP/syv/.knotlog/config"
+}
+sy_s() { # LANG SYN search-args... -> result paths, sorted, one line
+  sy_cfg "$1" "$2"; shift 2
+  env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/syv" sh "$ROOT/knotlog" search "$@" --paths 2>/dev/null | sort | tr '\n' ' '
+}
+t; assert_eq "T-1490: with synonyms=tr-en, an English query also finds the Turkish note" \
+  'package.md paket.md |install.md kurulum.md |' \
+  "$(sy_s tr tr-en package list)|$(sy_s tr tr-en kurulumu)|"
+t; assert_eq "T-1491: synonyms=off: only the typed words are found" \
+  'package.md |kurulum.md ' \
+  "$(sy_s tr off package list)|$(sy_s tr off kurulumu)"
+t; assert_eq "T-1492: synonyms=tr-en turns it on for lang=en too; unknown values are off" \
+  'package.md |package.md paket.md |package.md |package.md ' \
+  "$(sy_s en '' package list)|$(sy_s en tr-en package list)|$(sy_s tr bogus package list)|$(sy_s tr 'x ' package list)"
+t; assert_eq "T-1493: open source and opensource find each other; a typed compound or pair finds both spellings" \
+  'os1.md os2.md |os1.md os2.md ' \
+  "$(sy_s tr tr-en open source)|$(sy_s tr tr-en opensource)"
+t; assert_eq "T-1494: set up (apart) reaches setup and, through the groups, kurulum and install; off does not" \
+  'install.md kurulum.md login.md |login.md ' \
+  "$(sy_s tr tr-en set up)|$(sy_s tr off set up)"
+sy_cfg tr tr-en
+SY1=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/syv" sh "$ROOT/knotlog" search kurulum 2>/dev/null)
+SY2=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/syv" sh "$ROOT/knotlog" search 'kurulum install kurulum' 2>/dev/null)
+t; assert_eq "T-1495: a word already in the query is not added twice: a member typed next to its group scores like the one word" 'yes' \
+  "$([ -n "$SY1" ] && [ "$SY1" = "$SY2" ] && printf yes || printf no)"
+sy_cfg tr off
+SY3=$(env -u QUIPU_LANG QUIPU_VAULT="$TMP/syv" sh "$ROOT/knotlog" search 'package list' 2>/dev/null)
+t; assert_eq "T-1496: synonyms=off ranks and scores exactly like the engine without synonyms" \
+  "3.787${TAB}package.md${TAB}Package${TAB}" "$SY3"
+t; assert_eq "T-1497: a word that is only a stem-neighbour of a list word (kurulus) is not expanded" 'ayar.md ' \
+  "$(sy_s tr tr-en kurulus)"
+t; assert_eq "T-1498: synonyms leave the index file alone: the same index.tsv with synonyms on and off" 'yes' \
+  "$(a=$(cksum < "$TMP/syv/.knotlog/index.tsv"); sy_s tr tr-en package list >/dev/null; [ "$a" = "$(cksum < "$TMP/syv/.knotlog/index.tsv")" ] && printf yes || printf no)"
+# The list file: every line is a comment, a group (folded words) or "words = compound".
+t; assert_eq "T-1499: synonyms/tr-en.txt holds only folded ASCII words" 'clean' \
+  "$(awk 'substr($0, 1, 1) == "#" || NF == 0 { next } { for (i = 1; i <= NF; i++) { w = $i; if (w == "=") continue; for (j = 1; j <= length(w); j++) { c = substr(w, j, 1); if (index("abcdefghijklmnopqrstuvwxyz0123456789", c) == 0) bad++ } } } END { print (bad + 0 == 0) ? "clean" : "dirty" }' "$ROOT/synonyms/tr-en.txt")"
+t; assert_eq "T-1489: with no synonyms= line the synonym list is off, for lang=tr as for lang=en; synonyms=tr-en turns it on" \
+  'package.md |package.md |package.md paket.md ' \
+  "$(sy_s tr '' package list)|$(sy_s en '' package list)|$(sy_s tr tr-en package list)"
+# A checkout without synonyms/tr-en.txt: search still runs, just without expansion.
+mkdir -p "$TMP/synroot"
+cp "$ROOT/knotlog" "$TMP/synroot/knotlog"
+cp -R "$ROOT/lib" "$ROOT/fold" "$ROOT/i18n" "$ROOT/layout" "$TMP/synroot/"
+sy_cfg tr tr-en
+SY4=$(env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/syv" sh "$TMP/synroot/knotlog" search package list --paths 2>&1 | sort | tr '\n' ' ')
+t; assert_eq "T-14100: no synonyms/tr-en.txt in the checkout: search runs without expansion, no error" 'package.md ' "$SY4"
+# ---- end synonym tests ----
+
+# ---- search: Turkish stemming, short endings and stem edges, T-14101.. ----
+# Synthetic notes; one vault, indexed once, lang=tr, stem=tr and synonyms=tr-en set in the config.
+mkdir -p "$TMP/s2v/.knotlog"
+printf 'fold=tr\nlang=tr\nstem=tr\nsynonyms=tr-en\n' > "$TMP/s2v/.knotlog/config"
+printf '# Not\nokul\n' > "$TMP/s2v/ok1.md"
+printf '# Not\nokulu\n' > "$TMP/s2v/ok2.md"
+printf '# Not\nokullar\n' > "$TMP/s2v/ok3.md"
+printf '# Not\nokulda\n' > "$TMP/s2v/ok4.md"
+printf '# Not\ndosta\n' > "$TMP/s2v/dosta.md"
+printf '# Not\ndosyalar\n' > "$TMP/s2v/dosyalar.md"
+printf '# Not\nliste\n' > "$TMP/s2v/liste.md"
+printf '# Not\nlisteler\n' > "$TMP/s2v/listeler.md"
+printf '# Not\nevd\n' > "$TMP/s2v/evd.md"
+printf '# Not\nevden\n' > "$TMP/s2v/evden.md"
+printf '# Not\nkitap\n' > "$TMP/s2v/kt1.md"
+printf '# Not\nkitabı\n' > "$TMP/s2v/kt2.md"
+printf '# Not\nkitapta\n' > "$TMP/s2v/kt3.md"
+printf '# Not\nkitaplar\n' > "$TMP/s2v/kt4.md"
+printf '# Not\nrenk\n' > "$TMP/s2v/rk1.md"
+printf '# Not\nrengi\n' > "$TMP/s2v/rk2.md"
+printf '# Not\nsokak\n' > "$TMP/s2v/sk1.md"
+printf '# Not\nsokağı\n' > "$TMP/s2v/sk2.md"
+printf '# Not\nayak\n' > "$TMP/s2v/ay1.md"
+printf '# Not\nayağı\n' > "$TMP/s2v/ay2.md"
+printf '# Not\nkod\n' > "$TMP/s2v/kd1.md"
+printf '# Not\nkodlar\n' > "$TMP/s2v/kd2.md"
+printf '# Not\nkodu\n' > "$TMP/s2v/kd3.md"
+QUIPU_VAULT="$TMP/s2v" sh "$ROOT/knotlog" index >/dev/null 2>&1
+s2_s() { # search-args... -> result paths, sorted, one line (lang=tr, stem=tr and synonyms=tr-en set in the config)
+  env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/s2v" sh "$ROOT/knotlog" search "$@" --paths 2>/dev/null | sort | tr '\n' ' '
+}
+t; assert_eq "T-14101: okul, okulu, okullar and okulda meet: a two-letter ending leaves four letters, else the one-letter ending is used" \
+  'ok1.md ok2.md ok3.md ok4.md |ok1.md ok2.md ok3.md ok4.md ' \
+  "$(s2_s okulu)|$(s2_s okullar)"
+t; assert_eq "T-14102: dosya and dosta are not cut to dos: dosya finds dosyalar only, dosta finds itself only" 'dosyalar.md |dosyalar.md |dosta.md ' \
+  "$(s2_s dosya)|$(s2_s dosyalar)|$(s2_s dosta)"
+t; assert_eq "T-14103: liste and listeler meet" 'liste.md listeler.md |liste.md listeler.md ' \
+  "$(s2_s liste)|$(s2_s listeler)"
+t; assert_eq "T-14104: evden is left whole: it does not find evd and evd does not find evden" 'evden.md |evd.md ' \
+  "$(s2_s evden)|$(s2_s evd)"
+t; assert_eq "T-14105: final-consonant softening is undone: kitap, kitabi, kitapta and kitaplar meet" \
+  'kt1.md kt2.md kt3.md kt4.md |kt1.md kt2.md kt3.md kt4.md ' \
+  "$(s2_s kitap)|$(s2_s kitabı)"
+t; assert_eq "T-14106: renk/rengi, sokak/sokağı and ayak/ayağı meet" \
+  'rk1.md rk2.md |rk1.md rk2.md |sk1.md sk2.md |sk1.md sk2.md |ay1.md ay2.md |ay1.md ay2.md ' \
+  "$(s2_s renk)|$(s2_s rengi)|$(s2_s sokak)|$(s2_s sokağı)|$(s2_s ayak)|$(s2_s ayağı)"
+t; assert_eq "T-14107: three-letter stems are not softened: kod finds kodlar, kodu finds only itself" \
+  'kd1.md kd2.md |kd3.md ' \
+  "$(s2_s kod)|$(s2_s kodu)"
+# ---- end stemming edge tests ----
+
+# ---- search: synonym lookup rules, T-14108.. ----
+# Synthetic notes; one vault, indexed once, lang=tr with stem=tr and synonyms=tr-en.
+mkdir -p "$TMP/s3v/.knotlog"
+printf 'fold=tr\nlang=tr\nstem=tr\nsynonyms=tr-en\n' > "$TMP/s3v/.knotlog/config"
+printf '# Not\ninstall\n' > "$TMP/s3v/ku1.md"
+printf '# Not\nkurulum\n' > "$TMP/s3v/ku2.md"
+printf '# Not\nopensource\n' > "$TMP/s3v/ak1.md"
+printf '# Not\nopen source\n' > "$TMP/s3v/ak2.md"
+printf '# Not\naçık kaynak\n' > "$TMP/s3v/ak3.md"
+printf '# Not\npackage\n' > "$TMP/s3v/pk1.md"
+printf '# Not\nlist\n' > "$TMP/s3v/ls1.md"
+QUIPU_VAULT="$TMP/s3v" sh "$ROOT/knotlog" index >/dev/null 2>&1
+s3_s() { # search-args... -> result paths, sorted, one line
+  env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/s3v" sh "$ROOT/knotlog" search "$@" --paths 2>/dev/null | sort | tr '\n' ' '
+}
+t; assert_eq "T-14108: kurul (another word with the stem of kurulum) is not expanded; kurulumu and kurulum are" \
+  'ku2.md |ku1.md ku2.md |ku1.md ku2.md ' \
+  "$(s3_s kurul)|$(s3_s kurulumu)|$(s3_s kurulum)"
+t; assert_eq "T-14109: acik kaynak finds notes that say opensource, open source and acik kaynak" \
+  'ak1.md ak2.md ak3.md ' "$(s3_s açık kaynak)"
+t; assert_eq "T-14110: opensource finds a note that only says acik kaynak" \
+  'ak1.md ak2.md ak3.md ' "$(s3_s opensource)"
+s3_has() { # file search-args... -> yes if the file is among the results
+  s3_f=$1; shift
+  case " $(s3_s "$@")" in *" $s3_f "*) printf yes ;; *) printf no ;; esac
+}
+t; assert_eq "T-14112: a note that only says install is found by kurulumda and kurulumu, not by kurulda or kurullar" \
+  'yes yes no no' \
+  "$(s3_has ku1.md kurulumda) $(s3_has ku1.md kurulumu) $(s3_has ku1.md kurulda) $(s3_has ku1.md kurullar)"
+t; assert_eq "T-14113: paketler finds a note that says package, listeler finds one that says list" \
+  'yes yes' \
+  "$(s3_has pk1.md paketler) $(s3_has ls1.md listeler)"
+# ---- end synonym lookup tests ----
+
+# ---- search: --brief window with stemming, T-14111 ----
+# A long synthetic note (past the 2000-character search field, so its tail is
+# searched through block rows) whose last section has "kurulus" early and
+# "kurulum" a few hundred characters later. The query stem is "kurul": the
+# --brief window must start near "kurulum", the first word that really stems
+# to it, not at "kurulus", which only starts with the same letters.
+mkdir -p "$TMP/s4v/.knotlog"
+printf 'fold=tr\nlang=tr\nstem=tr\nsynonyms=tr-en\n' > "$TMP/s4v/.knotlog/config"
+awk 'BEGIN {
+  printf "# Uzun Not\n\nbaslangic metni.\n\n"
+  for (i = 1; i <= 400; i++) printf "dolgu%d%s", i, (i % 10 == 0 ? "\n" : " ")
+  printf "\n## Bolum\n\nkurulus basladi"
+  for (i = 1; i <= 70; i++) printf " aralik%d", i
+  printf " kurulum bitti.\n"
+}' > "$TMP/s4v/uzun.md"
+QUIPU_VAULT="$TMP/s4v" sh "$ROOT/knotlog" index >/dev/null 2>&1
+S4=$(env -u QUIPU_LANG -u LANG -u LC_ALL QUIPU_VAULT="$TMP/s4v" sh "$ROOT/knotlog" search kurulum --brief 2>/dev/null | awk -F "$TAB" '$2 == "uzun.md" { print $5 }')
+t; assert_eq "T-14111: --brief of a block hit starts near kurulum (the word that stems to the query), not at kurulus" 'yes no' \
+  "$(case $S4 in (*kurulum*) printf yes ;; (*) printf no ;; esac) $(case $S4 in (*kurulus*) printf yes ;; (*) printf no ;; esac)"
+# ---- end --brief window test ----
 
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1

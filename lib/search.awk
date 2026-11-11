@@ -142,11 +142,29 @@ BEGIN {
   # deduplicated so df counts each term once per note, not once per repeat.
   nraw = split(terms, rawq, " ")
   qc = 0
+  # Stemming (lib/stem.awk, loaded with its own -f): -v stem_mode=tr turns it
+  # on, anything else is off. qw[] holds the term as it is MATCHED against
+  # the (stemmed) document words and keys df[]; qraw[] keeps the unstemmed
+  # normalized term for everything that compares against raw text -- the
+  # title/tag/alias boosts and the substring fallback behave as before.
+  stem_on = (stem_mode == "tr") ? 1 : 0
+  no = 0
   for (t = 1; t <= nraw; t++) {
     term = norm_term(rawq[t])
-    if (term == "" || (term in qseen)) continue
-    qseen[term] = 1
-    qw[++qc] = term
+    if (term == "") continue
+    ot[++no] = term
+    sterm = stem_on ? stem_word(term) : term
+    if (sterm in qseen) continue
+    qseen[sterm] = 1
+    qw[++qc] = sterm
+    qraw[qc] = term
+  }
+  # Synonyms (synonyms/tr-en.txt): -v syn_file=<path> turns it on, empty is
+  # off. Extra terms are appended after the typed ones and count as normal terms.
+  qorig = qc
+  if (syn_file != "") {
+    syn_load()
+    syn_expand()
   }
   fallback = 0
   avgdl = 1
@@ -164,7 +182,7 @@ mode == "bm25count" && blocksfile != "" && FILENAME == blocksfile {
   # fallback. Once something matched, the rest of the file is skipped.
   if (total > 0) next
   if (!filter_ok()) next
-  pad = " " $5 " "
+  pad = dpad($5)
   for (t = 1; t <= qc; t++) {
     term = qw[t]
     if (term == "") continue
@@ -179,7 +197,7 @@ mode == "bm25count" {
   if (!filter_ok()) next
   n++
   sumlen += split($5, w, " ")
-  pad = " " $5 " "
+  pad = dpad($5)
   for (t = 1; t <= qc; t++) {
     term = qw[t]
     if (term == "") continue
@@ -205,9 +223,9 @@ END {
         if (nfc < 7) continue
         if (!filter_ok_cols(fcol[3], fcol[6], fcol[8])) continue
         for (t = 1; t <= qc; t++) {
-          term = qw[t]
+          term = qraw[t]
           if (term == "") continue
-          if (index(fcol[5], term) > 0) df[term]++
+          if (index(fcol[5], term) > 0) df[qw[t]]++
         }
       }
       close(idxfile)
@@ -245,7 +263,8 @@ mode == "bm25score" {
   isblk = (blocksfile != "" && FILENAME == blocksfile) ? 1 : 0
   if (!filter_ok()) next
   dl = split($5, w, " ")
-  pad = " " $5 " "
+  pad = dpad($5)
+  rpad = stem_on ? " " $5 " " : pad
   ptitle = " " $2 " "
   ntag = split($3, ta, ",")
   # Aliases (see lib/index.awk): a note row whose search field starts with
@@ -260,19 +279,27 @@ mode == "bm25score" {
     term = qw[t]
     if (term == "") continue
     if (fallback) {
-      tf = count_occ($5, term)
+      tf = count_occ($5, qraw[t])
     } else {
       tf = count_occ_bounded(pad, term)
     }
     if (tf == 0) continue
     matched = 1
     if (isblk) {
-      # Earliest match inside the block, for the --brief snippet window.
-      fp = fallback ? index($5, term) : index(pad, " " term)
+      # Earliest match inside the block, for the --brief snippet window. The
+      # offset must index the RAW field (the snippet is cut from it), so with
+      # stemming on it comes from the unstemmed padded copy.
+      # With stemming on, the first word that STEMS to the term: a word that
+      # merely starts with the stem (kurulus for kurul) must not move the window.
+      if (fallback) fp = index($5, qraw[t])
+      else if (stem_on) fp = stem_pos($5, term)
+      else fp = index(rpad, " " term)
       if (fp > 0 && (fpos == 0 || fp < fpos)) fpos = fp
     }
     idf = log((n - df[term] + 0.5) / (df[term] + 0.5))
     contrib = idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * (dl / avgdl)))
+    # Boosts compare the unstemmed term with the raw title/tag/alias text.
+    term = qraw[t]
     if (fallback) {
       if (index($2, term) > 0) contrib *= 2
       else if (ap > 0 && index(areg, term) > 0) contrib *= 2
@@ -336,6 +363,70 @@ function filter_ok_cols(tag3, stat6, valid,   tagok, ntg, tgi, tg) {
   return 1
 }
 
+# The space-padded field the word matcher searches. Without stemming it is the
+# folded field itself. With stemming it is the same field with every word
+# stemmed (trailing punctuation kept, so count_occ_bounded still sees it).
+# stem_word() returns a prefix of its input except that its last letter may be
+# hardened (kitab -> kitap), so a document word that stems to a query stem
+# starts with that stem minus its last letter (stems of four or more letters;
+# shorter ones are never changed). A row that holds no word starting with any
+# such start cannot match: it keeps its raw padding and the per-word loop runs
+# only for candidate rows. Stemmed words are cached.
+function dpad(s,   rp, t, hit, nt, tk, i, out, q) {
+  rp = " " s " "
+  if (!stem_on) return rp
+  hit = 0
+  for (t = 1; t <= qc; t++) {
+    q = qw[t]
+    if (q == "") continue
+    if (length(q) >= 4) q = substr(q, 1, length(q) - 1)
+    if (index(rp, " " q) > 0) { hit = 1; break }
+  }
+  if (!hit) return rp
+  nt = split(s, tk, " ")
+  out = ""
+  for (i = 1; i <= nt; i++) out = out " " stem_tok(tk[i])
+  return out " "
+}
+
+# Stem one padded-field word: split off the run of trailing punctuation, stem
+# the rest, put the punctuation back.
+function stem_tok(tok,   k, core) {
+  if (tok in stcache) return stcache[tok]
+  k = length(tok)
+  while (k > 0 && is_trail_punct(substr(tok, k, 1))) k--
+  core = substr(tok, 1, k)
+  stcache[tok] = stem_word(core) substr(tok, k + 1)
+  return stcache[tok]
+}
+
+# Position (1-based, in the raw field s) of the first word whose stem is `term`
+# -- the same number index(" " s " ", " " word) gives for that word -- or 0.
+# Trailing punctuation on the word is ignored, as count_occ_bounded does.
+function stem_pos(s, term,   pos, len, e, word, st, rest, k, ok) {
+  pos = 1
+  len = length(s)
+  while (pos <= len) {
+    e = index(substr(s, pos), " ")
+    word = (e > 0) ? substr(s, pos, e - 1) : substr(s, pos)
+    if (word != "") {
+      st = stem_tok(word)
+      if (st == term) return pos
+      if (index(st, term) == 1) {
+        rest = substr(st, length(term) + 1)
+        ok = 1
+        for (k = 1; k <= length(rest); k++) {
+          if (!is_trail_punct(substr(rest, k, 1))) { ok = 0; break }
+        }
+        if (ok) return pos
+      }
+    }
+    if (e == 0) break
+    pos += e
+  }
+  return 0
+}
+
 function count_occ(s, needle,   pos, cnt, len, rest) {
   cnt = 0
   len = length(needle)
@@ -356,6 +447,140 @@ function count_occ(s, needle,   pos, cnt, len, rest) {
 # the punctuation the index side never strips.
 function is_trail_punct(c) {
   return (c == "." || c == "," || c == ";" || c == ":" || c == "!" || c == "?" || c == ")" || c == "'" || c == sprintf("%c", 34))
+}
+
+# ---- synonyms -----------------------------------------------------------------
+
+# Compare/lookup form of a folded word: stemmed when stemming is on, so a
+# query word and a list word meet at the same stem ("kurulumu" -> "kurulum").
+function syn_key(w) {
+  return stem_on ? stem_word(w) : w
+}
+
+# Read synonyms/tr-en.txt (format: see the header of that file) into
+#   sg_m[g]    group g: its words, single-spaced
+#   sg_idx[k]  groups holding a word whose key is k, as " g g ..."
+#   sg_kw[k]   the listed words whose key is k, as " w w ..."
+#   sj_*[j]    join line j: nl left words (sj_lw), their keys (sj_lk[j,i]),
+#              the compound (sj_c) and its key (sj_ck)
+# A missing file reads as empty: no groups, search runs without expansion.
+function syn_load(   line, p, nl, nr, i, nw, key, gs) {
+  sg_n = 0
+  sj_n = 0
+  while ((getline line < syn_file) > 0) {
+    if (substr(line, length(line), 1) == CR) line = substr(line, 1, length(line) - 1)
+    p = index(line, " = ")
+    if (p > 0) {
+      nl = split(substr(line, 1, p - 1), lw, " ")
+      nr = split(substr(line, p + 3), rw, " ")
+      if (nl < 2 || nr != 1 || substr(lw[1], 1, 1) == "#") continue
+      sj_n++
+      sj_len[sj_n] = nl
+      sj_lw[sj_n] = lw[1]
+      sj_lk[sj_n, 1] = syn_key(lw[1])
+      for (i = 2; i <= nl; i++) {
+        sj_lw[sj_n] = sj_lw[sj_n] " " lw[i]
+        sj_lk[sj_n, i] = syn_key(lw[i])
+      }
+      sj_c[sj_n] = rw[1]
+      sj_ck[sj_n] = syn_key(rw[1])
+      continue
+    }
+    nw = split(line, lw, " ")
+    if (nw < 2 || substr(lw[1], 1, 1) == "#") continue
+    sg_n++
+    gs = lw[1]
+    for (i = 2; i <= nw; i++) gs = gs " " lw[i]
+    sg_m[sg_n] = gs
+    for (i = 1; i <= nw; i++) {
+      key = syn_key(lw[i])
+      sg_ex[lw[i]] = 1
+      sg_kw[key] = sg_kw[key] " " lw[i]
+      sg_idx[key] = sg_idx[key] " " sg_n
+    }
+  }
+  close(syn_file)
+}
+
+# Append one extra query term, normalized and stemmed like a typed one. A term
+# already in the query (typed, or added before) is not added twice.
+function syn_add(w,   term, sterm) {
+  term = norm_term(w)
+  if (term == "") return
+  sterm = syn_key(term)
+  if (sterm in qseen) return
+  qseen[sterm] = 1
+  qw[++qc] = sterm
+  qraw[qc] = term
+}
+
+# Does the typed word raw (whose key is key) really belong to a listed word of
+# that key? Yes if it is that word, or starts with it; a listed word of four or
+# more letters is compared without its last letter, since an ending may replace
+# or soften it ("kurulumda" and "kurulumu" start with "kurulu", "kitabi" starts
+# with "kitab"). "kurulda" and "kurullar" share the stem "kurul" but not that
+# start, so they are another word.
+function syn_ok(raw, key,   n, i, w, lwd) {
+  if (!stem_on) return 1
+  n = split(sg_kw[key], lwd, " ")
+  for (i = 1; i <= n; i++) {
+    w = lwd[i]
+    if (raw == w) return 1
+    if (length(w) >= 4) w = substr(w, 1, length(w) - 1)
+    if (substr(raw, 1, length(w)) == w) return 1
+  }
+  return 0
+}
+
+# Expansion, in two steps over the typed terms ot[1..no] / qw[1..qorig]:
+#  1. join lines. Consecutive typed terms equal to the left words add the
+#     compound ("open source" -> opensource), and that compound is looked up in
+#     the groups below too ("set up" -> setup -> kurulum, install). A typed
+#     compound adds each left word as a term of its own ("opensource" -> open,
+#     source); those parts are not looked up further.
+#  2. group lines. A typed term (or compound from step 1) whose key is in a
+#     group adds every other word of that group, but a typed term that stems
+#     to itself is looked up only if it is itself a listed word (sg_ex): the
+#     stem of "kurulum" is "kurul", and the different word "kurul" must not
+#     pull in setup/install. A typed word that is an inflected form (its
+#     raw form differs from its stem) is looked up only if syn_ok() says it
+#     starts with a listed word of that key: "kurulumu" does, "kurulda"
+#     (committee + locative, also stem "kurul") does not. The added words
+#     do not expand
+#     again, so groups never chain.
+function syn_expand(   j, i, k, m, ok, ncc, cc, key, gl, ng, gi, nm, mw) {
+  ncc = 0
+  for (j = 1; j <= sj_n; j++) {
+    m = sj_len[j]
+    for (i = 1; i + m - 1 <= no; i++) {
+      ok = 1
+      for (k = 1; k <= m; k++) {
+        if (syn_key(ot[i + k - 1]) != sj_lk[j, k]) { ok = 0; break }
+      }
+      if (ok) {
+        syn_add(sj_c[j])
+        cc[++ncc] = sj_ck[j]
+      }
+    }
+    for (i = 1; i <= no; i++) {
+      if (syn_key(ot[i]) == sj_ck[j]) {
+        nm = split(sj_lw[j], mw, " ")
+        for (k = 1; k <= nm; k++) syn_add(mw[k])
+      }
+    }
+  }
+  for (i = 1; i <= qorig + ncc; i++) {
+    if (i <= qorig && qraw[i] == qw[i] && !(qraw[i] in sg_ex)) continue
+    if (i <= qorig && qraw[i] != qw[i] && !syn_ok(qraw[i], qw[i])) continue
+    key = (i <= qorig) ? qw[i] : cc[i - qorig]
+    gl = sg_idx[key]
+    if (gl == "") continue
+    ng = split(gl, gi, " ")
+    for (k = 1; k <= ng; k++) {
+      nm = split(sg_m[gi[k]], mw, " ")
+      for (m = 1; m <= nm; m++) syn_add(mw[m])
+    }
+  }
 }
 
 # Query-side word normalization, the mirror of the document-side boundary
