@@ -15282,28 +15282,28 @@ bd_pdir_tr=$(awk -F"$(printf '\t')" '$1=="projects"{print $2;exit}' "$ROOT/layou
 bd_pdir_en=$(awk -F"$(printf '\t')" '$1=="projects"{print $2;exit}' "$ROOT/layout/en.txt")
 mkvault bdvtr; printf 'lang=tr\nlayout=tr\n' > "$TMP/bdvtr/.knotlog/config"
 mkvault bdven; printf 'lang=en\nlayout=en\n' > "$TMP/bdven/.knotlog/config"
-BDK="$TMP/bdvtr/$bd_pdir_tr/Knotlog/Kartlar"
-BDQ="$TMP/bdvtr/$bd_pdir_tr/Quipu/Kartlar"
-bdmk "$BDK/001-worktree-olcum.md" done '**Tür:** içerik' '**Bekliyor:** yok'
-bdmk "$BDK/002-card-komutu.md" running '**Tür:** kod' '**Bekliyor:** `001-worktree-olcum`'
-bdmk "$BDK/003-board-komutu.md" ready '**Tür:** kod' '**Bekliyor:** 002-card-komutu'
-bdmk "$BDQ/004-sizinti-denetimi.md" stuck '**Tür:** içerik' '**Bekliyor:** yok'
+BDK="$TMP/bdvtr/$bd_pdir_tr/Alpha/Kartlar"
+BDQ="$TMP/bdvtr/$bd_pdir_tr/Beta/Kartlar"
+bdmk "$BDK/001-sample.md" done '**Tür:** içerik' '**Bekliyor:** yok'
+bdmk "$BDK/002-build.md" running '**Tür:** kod' '**Bekliyor:** `001-sample`'
+bdmk "$BDK/003-review.md" ready '**Tür:** kod' '**Bekliyor:** 002-build'
+bdmk "$BDQ/004-audit.md" stuck '**Tür:** içerik' '**Bekliyor:** yok'
 cat > "$TMP/bd.exp.tr" <<'BDEOF'
-KART                  DURUM    TÜR     BEKLİYOR            PROJE
-001-worktree-olcum    done     içerik  yok                 Knotlog
-002-card-komutu       running  kod     001-worktree-olcum  Knotlog
-003-board-komutu      ready    kod     002-card-komutu     Knotlog
-004-sizinti-denetimi  stuck    içerik  yok                 Quipu
+KART        DURUM    TÜR     BEKLİYOR    PROJE
+001-sample  done     içerik  yok         Alpha
+002-build   running  kod     001-sample  Alpha
+003-review  ready    kod     002-build   Alpha
+004-audit   stuck    içerik  yok         Beta
 
 özet: 1 ready, 1 running, 1 done, 1 stuck
-dikkat: 004-sizinti-denetimi takıldı, ana oturuma sor
+dikkat: 004-audit takıldı, ana oturuma sor
 BDEOF
 cat > "$TMP/bd.exp.q" <<'BDEOF'
-KART                  DURUM  TÜR     BEKLİYOR  PROJE
-004-sizinti-denetimi  stuck  içerik  yok       Quipu
+KART       DURUM  TÜR     BEKLİYOR  PROJE
+004-audit  stuck  içerik  yok       Beta
 
 özet: 1 stuck
-dikkat: 004-sizinti-denetimi takıldı, ana oturuma sor
+dikkat: 004-audit takıldı, ana oturuma sor
 BDEOF
 bdrun "$TMP/bdvtr"
 t; assert_eq "T-1600: four cards across two projects give the table, the summary and the attention line, byte for byte" '0 yes' \
@@ -15312,10 +15312,10 @@ t; assert_eq "T-1600: four cards across two projects give the table, the summary
 # still characters, so the columns after içerik and BEKLİYOR do not slide.
 BDOUT=$(cd "$TMP/bdvtr" && env -u QUIPU_VAULT -u KNOTLOG_VAULT LC_ALL=C sh "$ROOT/knotlog" board </dev/null 2>&1)
 t; assert_eq "T-1601: the table is identical in the C locale" 'yes' "$(bdsame "$TMP/bd.exp.tr")"
-bdrun "$TMP/bdvtr" --proje Quipu
+bdrun "$TMP/bdvtr" --proje Beta
 t; assert_eq "T-1602: --proje limits the board to one project, summary and attention follow" '0 yes' \
   "$BDRC $(bdsame "$TMP/bd.exp.q")"
-bdrun "$TMP/bdvtr" --project Quipu
+bdrun "$TMP/bdvtr" --project Beta
 t; assert_eq "T-1602: --project is the same as --proje" 'yes' "$(bdsame "$TMP/bd.exp.q")"
 bdrun "$TMP/bdvtr" --status stuck
 t; assert_eq "T-1603: --status stuck lists the stuck card only" '0 yes' "$BDRC $(bdsame "$TMP/bd.exp.q")"
@@ -15348,25 +15348,25 @@ t; assert_eq "T-1604: an unknown flag exits 2" '2' "$BDRC"
 # --ready: ready and not waiting, or waiting on a scanned card that is done.
 BDR="$TMP/bdvtr/$bd_pdir_tr/Hazir/Kartlar"
 bdmk "$BDR/010-serbest.md" ready '**Tür:** kod' '**Bekliyor:** yok'
-bdmk "$BDR/011-bitmis-bekler.md" ready '**Tür:** kod' '**Bekliyor:** `001-worktree-olcum`'
-bdmk "$BDR/012-surenle-bekler.md" ready '**Tür:** kod' '**Bekliyor:** 002-card-komutu'
+bdmk "$BDR/011-bitmis-bekler.md" ready '**Tür:** kod' '**Bekliyor:** `001-sample`'
+bdmk "$BDR/012-surenle-bekler.md" ready '**Tür:** kod' '**Bekliyor:** 002-build'
 bdmk "$BDR/013-kayip-bekler.md" ready '**Tür:** kod' '**Bekliyor:** 999-yok-boyle-kart'
 bdmk "$BDR/014-taslak.md" draft '**Tür:** kod' '**Bekliyor:** yok'
 bdmk "$BDR/015-bos-bekler.md" ready '**Tür:** kod' '**Bekliyor:**'
-bdmk "$BDR/016-yorumlu.md" ready '**Tür:** kod' "**Bekliyor:** yok (Aşama 2 card, PR #9 ile main'de)"
-bdmk "$BDR/017-diyezli.md" ready '**Tür:** kod' '**Bekliyor:** 001-worktree-olcum # not'
+bdmk "$BDR/016-commented.md" ready '**Tür:** kod' "**Bekliyor:** yok (see card 001)"
+bdmk "$BDR/017-hashed.md" ready '**Tür:** kod' '**Bekliyor:** 001-sample # not'
 bdrun "$TMP/bdvtr" --ready
 t; assert_eq "T-1605: --ready prints card names only: ready and free, or waiting on a done card; not missing, not running, not draft" '0 yes' \
-  "$BDRC $(bdis "$(printf '%s\n%s\n%s\n%s' 010-serbest 011-bitmis-bekler 015-bos-bekler 016-yorumlu)")"
+  "$BDRC $(bdis "$(printf '%s\n%s\n%s\n%s' 010-serbest 011-bitmis-bekler 015-bos-bekler 016-commented)")"
 bdrun "$TMP/bdvtr" --ready --proje Hazir
 t; assert_eq "T-1605: --ready with --proje scans that project only, so a card waiting on another project's done card is not ready" '0 yes' \
-  "$BDRC $(bdis "$(printf '%s\n%s\n%s' 010-serbest 015-bos-bekler 016-yorumlu)")"
+  "$BDRC $(bdis "$(printf '%s\n%s\n%s' 010-serbest 015-bos-bekler 016-commented)")"
 bdrun "$TMP/bdvtr" --ready --status draft
 t; assert_eq "T-1605: --ready with a status other than ready prints nothing" '0 empty' \
   "$BDRC $([ -z "$BDOUT" ] && printf empty || printf other)"
 bdrun "$TMP/bdvtr" --proje Hazir
 t; assert_eq "T-1605: a waiting value that starts with yok and goes on stays whole in the table; a # is not a comment" 'yes yes' \
-  "$(printf '%s\n' "$BDOUT" | grep -qF "yok (Aşama 2 card, PR #9 ile main'de)" && printf yes || printf no) $(printf '%s\n' "$BDOUT" | grep -qF '001-worktree-olcum # not' && printf yes || printf no)"
+  "$(printf '%s\n' "$BDOUT" | grep -qF "yok (see card 001)" && printf yes || printf no) $(printf '%s\n' "$BDOUT" | grep -qF '001-sample # not' && printf yes || printf no)"
 
 # An en vault: Cards/, English fields and the none word, other-language field
 # names on an old card, a card with no fields at all is a draft.
@@ -15404,7 +15404,7 @@ t; assert_eq "T-1607: no vault is err_no_vault, exit 1" '1 yes' \
 
 # Read-only: the vault tree (paths and contents, .knotlog/ too) is the same after.
 bd_before=$(bdsnap "$TMP/bdvtr")
-bdrun "$TMP/bdvtr"; bdrun "$TMP/bdvtr" --ready; bdrun "$TMP/bdvtr" --status stuck --proje Quipu; bdrun "$TMP/bdvtr" --status bogus
+bdrun "$TMP/bdvtr"; bdrun "$TMP/bdvtr" --ready; bdrun "$TMP/bdvtr" --status stuck --proje Beta; bdrun "$TMP/bdvtr" --status bogus
 bd_after=$(bdsnap "$TMP/bdvtr")
 t; assert_eq "T-1608: board leaves the vault byte-identical: same paths, same checksums, no index, no state file" 'yes' \
   "$([ "$bd_before" = "$bd_after" ] && printf yes || printf no)"
