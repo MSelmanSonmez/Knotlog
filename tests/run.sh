@@ -15333,6 +15333,15 @@ t; assert_eq "T-1604: a project name with a slash exits 2 with the project messa
   "$BDRC $(bdis "$(memfmt tr err_card_project 'a/b')")"
 bdrun "$TMP/bdvtr" --proje '..'
 t; assert_eq "T-1604: a project name of .. exits 2" '2' "$BDRC"
+bdrun "$TMP/bdvtr" --proje 'a\b'
+t; assert_eq "T-1604: a project name with a backslash exits 2 with the project message" '2 yes' \
+  "$BDRC $(bdis "$(memfmt tr err_card_project 'a\b')")"
+bdrun "$TMP/bdvtr" --proje 'x*'
+t; assert_eq "T-1604: a name that only ends in * is not a bad name, it is a missing folder" '2 yes' \
+  "$BDRC $(printf '%s\n' "$BDOUT" | grep -qF 'x*' && ! printf '%s\n' "$BDOUT" | grep -qxF "$(memfmt tr err_card_project 'x*')" && printf yes || printf no)"
+bdrun "$TMP/bdvtr" --proje ''
+t; assert_eq "T-1604: an empty --proje exits 2 like card, and prints no board" '2 yes' \
+  "$BDRC $(bdis "$(mi18n tr err_plan_project_required)")"
 bdrun "$TMP/bdvtr" --nope
 t; assert_eq "T-1604: an unknown flag exits 2" '2' "$BDRC"
 
@@ -15344,15 +15353,20 @@ bdmk "$BDR/012-surenle-bekler.md" ready '**Tür:** kod' '**Bekliyor:** 002-card-
 bdmk "$BDR/013-kayip-bekler.md" ready '**Tür:** kod' '**Bekliyor:** 999-yok-boyle-kart'
 bdmk "$BDR/014-taslak.md" draft '**Tür:** kod' '**Bekliyor:** yok'
 bdmk "$BDR/015-bos-bekler.md" ready '**Tür:** kod' '**Bekliyor:**'
+bdmk "$BDR/016-yorumlu.md" ready '**Tür:** kod' "**Bekliyor:** yok (Aşama 2 card, PR #9 ile main'de)"
+bdmk "$BDR/017-diyezli.md" ready '**Tür:** kod' '**Bekliyor:** 001-worktree-olcum # not'
 bdrun "$TMP/bdvtr" --ready
 t; assert_eq "T-1605: --ready prints card names only: ready and free, or waiting on a done card; not missing, not running, not draft" '0 yes' \
-  "$BDRC $(bdis "$(printf '%s\n%s\n%s' 010-serbest 011-bitmis-bekler 015-bos-bekler)")"
+  "$BDRC $(bdis "$(printf '%s\n%s\n%s\n%s' 010-serbest 011-bitmis-bekler 015-bos-bekler 016-yorumlu)")"
 bdrun "$TMP/bdvtr" --ready --proje Hazir
 t; assert_eq "T-1605: --ready with --proje scans that project only, so a card waiting on another project's done card is not ready" '0 yes' \
-  "$BDRC $(bdis "$(printf '%s\n%s' 010-serbest 015-bos-bekler)")"
+  "$BDRC $(bdis "$(printf '%s\n%s\n%s' 010-serbest 015-bos-bekler 016-yorumlu)")"
 bdrun "$TMP/bdvtr" --ready --status draft
 t; assert_eq "T-1605: --ready with a status other than ready prints nothing" '0 empty' \
   "$BDRC $([ -z "$BDOUT" ] && printf empty || printf other)"
+bdrun "$TMP/bdvtr" --proje Hazir
+t; assert_eq "T-1605: a waiting value that starts with yok and goes on stays whole in the table; a # is not a comment" 'yes yes' \
+  "$(printf '%s\n' "$BDOUT" | grep -qF "yok (Aşama 2 card, PR #9 ile main'de)" && printf yes || printf no) $(printf '%s\n' "$BDOUT" | grep -qF '001-worktree-olcum # not' && printf yes || printf no)"
 
 # An en vault: Cards/, English fields and the none word, other-language field
 # names on an old card, a card with no fields at all is a draft.

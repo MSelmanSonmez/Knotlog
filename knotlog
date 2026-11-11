@@ -8378,6 +8378,7 @@ _q_cmd_board() {
         case "$2" in
           -*) _q_die err_unknown_flag 2 "$2" ;;
         esac
+        [ -n "$2" ] || _q_die err_plan_project_required 2
         _q_bd_proj=$2; shift 2 ;;
       --status)
         [ "$#" -ge 2 ] || _q_die err_missing_arg 2
@@ -8398,7 +8399,7 @@ _q_cmd_board() {
   [ -n "$_q_bd_pdir" ] || _q_die err_plan_project_required 2
   if [ -n "$_q_bd_proj" ]; then
     case "$_q_bd_proj" in
-      .|..|*/*|*\*|*[[:cntrl:]]*) _q_die err_card_project 2 "$_q_bd_proj" ;;
+      .|..|*/*|*\\*|*[[:cntrl:]]*) _q_die err_card_project 2 "$_q_bd_proj" ;;
     esac
     [ -d "$_q_v/$_q_bd_pdir/$_q_bd_proj" ] || _q_die err_plan_project_missing 2 "$_q_v/$_q_bd_pdir/$_q_bd_proj"
   fi
@@ -8417,10 +8418,10 @@ _q_cmd_board() {
       done
     done
   } | awk -F"$_q_bd_tab" -v OFS="$_q_bd_tab" '
+    BEGIN { nn = split("none yok ninguno nenhum なし 无 -", NW, " ") }
     function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t]+$/, "", s); return s }
     function val(s) {
       sub(/^:/, "", s); gsub(/`/, "", s); gsub(/\t/, " ", s)
-      sub(/[ \t]+#.*$/, "", s)
       return trim(s)
     }
     {
@@ -8434,7 +8435,7 @@ _q_cmd_board() {
         if (fm) {
           if (line == "---") fm = 0
           else if (line ~ /^status:/) {
-            v = line; sub(/^status:/, "", v); v = val(v)
+            v = line; sub(/^status:/, "", v); v = val(v); sub(/[ \t]+#.*$/, "", v)
             if (v != "") status = v
           }
           continue
@@ -8448,15 +8449,17 @@ _q_cmd_board() {
         else if (wait == "" && (key == "waiting on" || key == "bekliyor" || key == "esperando a" || key == "aguardando" || key == "待機中" || key == "等待")) wait = v
       }
       close(path)
-      lw = tolower(wait)
-      if (lw == "none" || lw == "yok" || lw == "ninguno" || lw == "nenhum" || lw == "なし" || lw == "无" || lw == "-") wait = ""
+      lw = tolower(wait); nw = 0
+      for (j = 1; j <= nn; j++)
+        if (lw == NW[j]) { wait = ""; nw = 1 }
+        else if (substr(lw, 1, length(NW[j]) + 1) == NW[j] " " || substr(lw, 1, length(NW[j]) + 1) == NW[j] "(") nw = 1
       sub(/\.md$/, "", wait)
-      n++; N[n] = name; S[n] = status; T[n] = type; W[n] = wait; P[n] = proj
+      n++; N[n] = name; S[n] = status; T[n] = type; W[n] = wait; P[n] = proj; X[n] = nw
       if (status == "done") done[name] = 1
     }
     END {
       for (i = 1; i <= n; i++)
-        print N[i], S[i], T[i], W[i], P[i], (S[i] == "ready" && (W[i] == "" || (W[i] in done))) ? 1 : 0
+        print N[i], S[i], T[i], W[i], P[i], (S[i] == "ready" && (X[i] || W[i] == "" || (W[i] in done))) ? 1 : 0
     }
   ' | LC_ALL=C sort -t "$_q_bd_tab" -k1,1 -k5,5 | Q_B_STATUS=$_q_bd_status Q_B_READY=$_q_bd_ready \
     Q_B_H1=$(_q_msg board_col_card) Q_B_H2=$(_q_msg board_col_status) Q_B_H3=$(_q_msg board_col_type) \
