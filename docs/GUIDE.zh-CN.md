@@ -154,6 +154,27 @@ $ knotlog plan roadmap --proje Knotlog
 wrote: 🗂️ Projects/Knotlog/Plans/roadmap.md
 ```
 
+**`knotlog card <name> --project <Project>`** — 用本地化模板（`status: draft`）创建带编号的工作卡片
+`<projects>/<Project>/<Cards>/NNN-<name>.md`。`--type code|content` 指定类型
+（`--proje` 和 `--tur kod|icerik` 也可作为别名）。项目文件夹不存在时会报错，
+已有的卡片绝不会被覆盖。
+
+**`knotlog board [--project <Project>] [--status <status>] [--ready]`** — 读取这些卡片并打印带摘要行的表格；
+`--ready` 只打印可以开工的卡片名称。它从不写入。详情：[REFERENCE.md](REFERENCE.md#board)。
+
+```
+$ knotlog card login-fix --project Knotlog
+wrote: 🗂️ Projects/Knotlog/Cards/001-login-fix.md
+$ knotlog card docs --project Knotlog --type content
+wrote: 🗂️ Projects/Knotlog/Cards/002-docs.md
+$ knotlog board
+CARD           STATUS  TYPE     WAITING ON  PROJECT
+001-login-fix  draft   code     none        Knotlog
+002-docs       draft   content  none        Knotlog
+
+summary: 2 draft
+```
+
 **`knotlog tone [--list|<slug>]`** — 显示或设置语气预设。不带参数时，
 会打印当前生效的来源及原因（某个预设 slug、companion.md 自带的
 Tone 部分，或两者都没有）；`--list` 浏览随附的九个预设

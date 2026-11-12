@@ -166,6 +166,30 @@ $ knotlog plan roadmap --proje Knotlog
 wrote: 🗂️ Projects/Knotlog/Plans/roadmap.md
 ```
 
+**`knotlog card <name> --project <Project>`** — abre una tarjeta de trabajo
+numerada, `<projects>/<Project>/<Cards>/NNN-<name>.md`, a partir de la plantilla
+localizada (`status: draft`). `--type code|content` fija el tipo (`--proje` y
+`--tur kod|icerik` se aceptan como alias). Una carpeta de proyecto inexistente
+es un error y una tarjeta existente nunca se sobrescribe.
+
+**`knotlog board [--project <Project>] [--status <status>] [--ready]`** — lee
+esas tarjetas e imprime una tabla con una línea de resumen; `--ready` imprime
+solo los nombres de las tarjetas listas para empezar. Nunca escribe. Detalles:
+[REFERENCE.md](REFERENCE.md#board).
+
+```
+$ knotlog card login-fix --project Knotlog
+wrote: 🗂️ Projects/Knotlog/Cards/001-login-fix.md
+$ knotlog card docs --project Knotlog --type content
+wrote: 🗂️ Projects/Knotlog/Cards/002-docs.md
+$ knotlog board
+CARD           STATUS  TYPE     WAITING ON  PROJECT
+001-login-fix  draft   code     none        Knotlog
+002-docs       draft   content  none        Knotlog
+
+summary: 2 draft
+```
+
 **`knotlog tone [--list|<slug>]`** — muestra o fija el preset de tono. Sin
 argumentos imprime qué fuente está activa y por qué (un slug de preset, la
 propia sección Tone de companion.md, o ninguna); `--list` recorre los nueve

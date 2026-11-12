@@ -173,6 +173,30 @@ $ knotlog plan yol-haritasi --proje Knotlog
 yazıldı: 🗂️ Projeler/Knotlog/Planlar/yol-haritasi.md
 ```
 
+**`knotlog card <ad> --project <Proje>`** — numaralı bir iş kartı açar:
+`<Projeler>/<Proje>/<Kartlar>/NNN-<ad>.md`, yerelleştirilmiş şablondan doğar
+(`status: draft`). `--type code|content` türü belirler (`--proje` ve
+`--tur kod|icerik` takma ad olarak kabul edilir). Olmayan proje klasörü hata
+verir, olan kart da asla üzerine yazılmaz.
+
+**`knotlog board [--project <Proje>] [--status <durum>] [--ready]`** — bu
+kartları okur ve özet satırıyla bir pano basar; `--ready` yalnız başlanmaya
+hazır kartların adlarını basar. Hiçbir şey yazmaz. Ayrıntı:
+[REFERENCE.md](REFERENCE.md#board).
+
+```
+$ knotlog card giris-hatasi --proje Knotlog
+yazıldı: 🗂️ Projeler/Knotlog/Kartlar/001-giris-hatasi.md
+$ knotlog card belgeler --proje Knotlog --tur icerik
+yazıldı: 🗂️ Projeler/Knotlog/Kartlar/002-belgeler.md
+$ knotlog board
+KART              DURUM  TÜR     BEKLİYOR  PROJE
+001-giris-hatasi  draft  kod     yok       Knotlog
+002-belgeler      draft  icerik  yok       Knotlog
+
+özet: 2 draft
+```
+
 **`knotlog tone [--list|<slug>]`** — üslup presetini gösterir ya da ayarlar.
 Argümansız çağrı hangi kaynağın etkin olduğunu ve nedenini basar (bir preset
 slug'ı, ya da companion.md'nin kendi Üslup bölümü, ya da hiçbiri); `--list`
