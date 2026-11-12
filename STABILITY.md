@@ -27,14 +27,14 @@ These do not change meaning, lose a flag or change an exit code without a major 
 - **Commands and their flags** as listed in `knotlog help` and the [Commands](docs/REFERENCE.md#commands)
   table: `help`, `doctor`, `init`, `install`, `setup`, `migrate`, `uninstall`, `capture`, `index`,
   `compile`, `search`, `links`, `context`, `remember`, `note`, `note --thread`, `pending`, `propose`,
-  `digest`, `import`, `plan`, `card`, `board`, `tone`, `flair`, `archive`, `compact`, `distill`, `similar`, `tui`, `mcp`,
-  `update`, `rollback`.
-- **The work card format** that `card` writes and `board` reads: the `status:` line in the front matter,
-  the bold Type and Waiting on lines under their field names in each shipped language (`Type` and
-  `Waiting on`, `Tür` and `Bekliyor`, `Tipo` and `Esperando a` or `Aguardando`, `種別` and `待機中`,
-  `类型` and `等待`),
-  and the six `status:` values `draft`, `ready`, `running`, `review`, `done`, `stuck`. The values stay
-  English in every language.
+  `digest`, `import`, `plan`, `card`, `board`, `tone`, `flair`, `archive`, `compact`, `distill`,
+  `similar`, `tui`, `mcp`, `update`, `rollback`.
+- **The work card format** that `card` writes and `board` reads: the `status:` line in the front
+  matter, the six `status:` values `draft`, `ready`, `running`, `review`, `done`, `stuck` (English in
+  every language), and the field names of the bold lines in each shipped language: Type (`Type`,
+  `Tür`, `Tipo`, `種別`, `类型`), Waiting on (`Waiting on`, `Bekliyor`, `Esperando a`, `Aguardando`,
+  `待機中`, `等待`) and Project (`Project`, `Proje`, `Proyecto`, `Projeto`, `プロジェクト`, `项目`).
+  `board` takes its PROJECT column from the card's folder and does not read the Project line.
 - **Documented exit codes**, for example `note` exit 4 (refused) and 5 (queued for review), `note --thread`
   exit 3 (over the context budget), `pending --approve` exit 4 without a terminal.
 - **Dry run first:** `migrate`, `compact`, `distill` and `import claude` write nothing without `--apply`.
@@ -56,7 +56,7 @@ These can change in any minor release:
   wording may change (they are i18n data). The `ctx_max` cap above still holds. Use `--json EVENT` for
   the hook envelopes; the envelope shape each agent needs is stable, the text inside it is not.
 - **The look of `board`.** Column text, padding, and the wording of the summary and attention lines.
-  Which cards it lists, the six statuses and the flags are stable; the layout is not.
+  The flags and the card format above are stable.
 - **Human-facing messages and `doctor` rows**, in every language.
 - **Derived state** in `.knotlog/`: `index.tsv`, `blocks.tsv`, `links.tsv` and their schema. They are
   rebuilt from the vault, never edited by hand. An index built by another version or with another schema

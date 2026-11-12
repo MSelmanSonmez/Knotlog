@@ -180,7 +180,7 @@ yazıldı: 🗂️ Projeler/Knotlog/Planlar/yol-haritasi.md
 verir, olan kart da asla üzerine yazılmaz.
 
 **`knotlog board [--project <Proje>] [--status <durum>] [--ready]`** — bu
-kartları okur ve özet satırıyla bir tablo basar; `--ready` yalnız başlanmaya
+kartları okur ve özet satırıyla bir pano basar; `--ready` yalnız başlanmaya
 hazır kartların adlarını basar. Hiçbir şey yazmaz. Ayrıntı:
 [REFERENCE.md](REFERENCE.md#board).
 
