@@ -37,7 +37,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/mawk-bin"
           ln -sf "$(command -v mawk)" "$RUNNER_TEMP/mawk-bin/awk"
           export PATH="$RUNNER_TEMP/mawk-bin:$PATH"
-          v=$(awk -W version 2>&1 | head -1)
+          v=$(awk -W version 2>&1 </dev/null | sed -n 1p)
           echo "awk is: $v"
           case "$v" in mawk*) ;; *) echo "awk is not mawk"; exit 1 ;; esac
           # Build the runner from tests/run.sh by marker lines, not line numbers. An
