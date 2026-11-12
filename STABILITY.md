@@ -35,6 +35,7 @@ These do not change meaning, lose a flag or change an exit code without a major 
   `Tür`, `Tipo`, `種別`, `类型`), Waiting on (`Waiting on`, `Bekliyor`, `Esperando a`, `Aguardando`,
   `待機中`, `等待`) and Project (`Project`, `Proje`, `Proyecto`, `Projeto`, `プロジェクト`, `项目`).
   `board` takes its PROJECT column from the card's folder and does not read the Project line.
+  `board --ready` prints only card names, one per line, and is stable for scripts.
 - **Documented exit codes**, for example `note` exit 4 (refused) and 5 (queued for review), `note --thread`
   exit 3 (over the context budget), `pending --approve` exit 4 without a terminal.
 - **Dry run first:** `migrate`, `compact`, `distill` and `import claude` write nothing without `--apply`.
@@ -55,7 +56,8 @@ These can change in any minor release:
 - **The text of `context`.** It is written for a model, not for a parser: section order, headings and
   wording may change (they are i18n data). The `ctx_max` cap above still holds. Use `--json EVENT` for
   the hook envelopes; the envelope shape each agent needs is stable, the text inside it is not.
-- **The look of `board`.** Column text, padding, and the wording of the summary and attention lines.
+- **The look of `board` other than `--ready`.** Column text, padding, and the wording of the summary and
+  attention lines.
   The flags and the card format above are stable.
 - **Human-facing messages and `doctor` rows**, in every language.
 - **Derived state** in `.knotlog/`: `index.tsv`, `blocks.tsv`, `links.tsv` and their schema. They are
