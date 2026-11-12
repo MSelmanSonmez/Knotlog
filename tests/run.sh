@@ -15295,6 +15295,7 @@ rn_rc=; rn_got=
 for rn_n in CONSOLE nulx COM10 COM0 LPT con-notu auxiliary.md; do
   rnrun card "$TMP/rnv" "$rn_n" --proje Demo
   rn_rc="$rn_rc $RNRC"
+  # shellcheck disable=SC2012,SC2010
   rn_got="$rn_got $(ls "$TMP/rnv/$rn_pdir/Demo/Cards" 2>/dev/null | grep -c -- "^[0-9][0-9][0-9]-${rn_n%.md}\.md$")"
 done
 t; assert_eq "T-1515: card accepts names that only look like reserved ones (CONSOLE, nulx, COM10, COM0, LPT, con-notu, auxiliary.md)" ' 0 0 0 0 0 0 0' "$rn_rc"
