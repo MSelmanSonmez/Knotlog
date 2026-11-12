@@ -1441,7 +1441,12 @@ i18n() { awk -F= -v k="$1" '$1==k{sub(/^[^=]*=/,"");print;exit}' "$ROOT/i18n/en.
 mkrem() { QUIPU_VAULT="$TMP/$1" QUIPU_LANG=en sh "$ROOT/knotlog" init --plain >/dev/null 2>&1; }
 rem() { _r_v=$1; shift; QUIPU_VAULT="$TMP/$_r_v" QUIPU_LANG=en sh "$ROOT/knotlog" remember "$@"; }
 
-D=$(date +%Y-%m-%d)
+day_settle() { # sets D to today; first waits out the last 5 minutes before midnight, so D holds for a whole section
+  _ds_left=$(date +%H:%M:%S | awk -F: '{ print 86400 - ($1 * 3600 + $2 * 60 + $3) }')
+  [ "$_ds_left" -gt 300 ] || sleep $((_ds_left + 1))
+  D=$(date +%Y-%m-%d)
+}
+day_settle
 REM_EMPTY=$(i18n remember_empty)
 REM_GIT=$(i18n remember_git)
 REM_BUSY=$(i18n remember_busy)
@@ -10136,7 +10141,7 @@ t; assert_eq "T-673: git --apply refuses to overwrite a locally edited file the 
 
 # ---- note (T-674..T-690): one line into today's reflection block ----------
 # Each case builds its own vault; D is refreshed per section to avoid midnight skew.
-D=$(date +%Y-%m-%d)
+day_settle
 nte() { _n_v=$1; shift; QUIPU_VAULT="$TMP/$_n_v" QUIPU_LANG=en sh "$ROOT/knotlog" note "$@"; }
 # last byte of FILE line N (od spells CR as \r; $(...) is not trusted with CR)
 line_end() { tail -n "+$2" "$1" | head -n 1 | tr -d '\n' | tail -c 1 | od -An -c | tr -d ' '; }
@@ -10337,7 +10342,7 @@ t; assert_eq "T-692: CRLF source after archive -- the 12 kept lines keep their C
 # ---- doctor reflection nudge (T-693..T-701): one warn row when today's events
 # exceed note_nudge_events= and today's reflection block is empty or missing --
 # silent otherwise. Each case builds its own vault; D and YD are refreshed here.
-D=$(date +%Y-%m-%d)
+day_settle
 YD=$(date -d yesterday +%Y-%m-%d 2>/dev/null || date -v-1d +%Y-%m-%d)
 nudge_rows() { # vault lang -> number of doctor rows named as the nudge row (the name column is localized; the status word is not compared, so tr and en both count)
   _nr_n=$(awk -F= -v k=doc_reflect_name '$1==k{sub(/^[^=]*=/,"");print;exit}' "$ROOT/i18n/$2.txt")
@@ -12850,7 +12855,7 @@ t; assert_eq "T-1075: the vault's config and bridge file are untouched" 'yes' \
 # Each outside target is compared with cksum before and after; hook runs exit 0, manual runs 1.
 SO="$TMP/sec-out"
 mkdir -p "$SO"
-D=$(date +%Y-%m-%d)
+day_settle
 sec_vault() { # name -> vault with two activity rows, the second naming a hostile path
   mkvault "$1"
   printf '%s\n' '2026-10-27T01:00 | PostToolUse | Read | a.md' '2026-10-27T01:01 | PostToolUse | Read | x; touch pwned' > "$TMP/$1/.knotlog/activity.log"
