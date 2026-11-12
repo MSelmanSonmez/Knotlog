@@ -8124,6 +8124,14 @@ _q_cmd_plan() {
   case "$_q_pl_name" in
     ""|.|..|*/*|*\\*|*:*|*\**|*\?*|*\<*|*\>*|*\|*|*\"*|*[[:cntrl:]]*) _q_die err_plan_name 2 "$_q_pl_name" ;;
   esac
+  # Windows device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9) are reserved with or without an
+  # extension, and a trailing dot or space is dropped there: refuse both everywhere.
+  case "${_q_pl_name%%.*}" in
+    [Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9]) _q_die err_plan_name 2 "$_q_pl_name" ;;
+  esac
+  case "$_q_pl_name" in
+    *.|*" ") _q_die err_plan_name 2 "$_q_pl_name" ;;
+  esac
   _q_pl_name="$_q_pl_name.md"
 
   # Project resolution: --proje wins; otherwise the project folder the
@@ -8147,6 +8155,13 @@ _q_cmd_plan() {
   fi
   case "$_q_pl_proj" in
     .|..|*/*|*\\*|*[[:cntrl:]]*) _q_die err_plan_project 2 "$_q_pl_proj" ;;
+  esac
+  # Same two Windows rules as the name: a reserved device name and a trailing dot or space.
+  case "${_q_pl_proj%%.*}" in
+    [Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9]) _q_die err_plan_project 2 "$_q_pl_proj" ;;
+  esac
+  case "$_q_pl_proj" in
+    *.|*" ") _q_die err_plan_project 2 "$_q_pl_proj" ;;
   esac
   _q_pl_projdir="$_q_v/$_q_pl_pdir/$_q_pl_proj"
   if [ ! -d "$_q_pl_projdir" ]; then
@@ -8251,6 +8266,14 @@ _q_cmd_card() {
   case "$_q_cd_name" in
     ""|.|..|*/*|*\\*|*:*|*\**|*\?*|*\<*|*\>*|*\|*|*\"*|*[[:cntrl:]]*) _q_die err_card_name 2 "$_q_cd_name" ;;
   esac
+  # Windows device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9) are reserved with or without an
+  # extension, and a trailing dot or space is dropped there: refuse both everywhere.
+  case "${_q_cd_name%%.*}" in
+    [Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9]) _q_die err_card_name 2 "$_q_cd_name" ;;
+  esac
+  case "$_q_cd_name" in
+    *.|*" ") _q_die err_card_name 2 "$_q_cd_name" ;;
+  esac
 
   # Project resolution is `plan`'s: --project wins, else the project folder
   # the caller is working in, else an error.
@@ -8271,6 +8294,13 @@ _q_cmd_card() {
   fi
   case "$_q_cd_proj" in
     .|..|*/*|*\\*|*[[:cntrl:]]*) _q_die err_card_project 2 "$_q_cd_proj" ;;
+  esac
+  # Same two Windows rules as the name: a reserved device name and a trailing dot or space.
+  case "${_q_cd_proj%%.*}" in
+    [Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9]) _q_die err_card_project 2 "$_q_cd_proj" ;;
+  esac
+  case "$_q_cd_proj" in
+    *.|*" ") _q_die err_card_project 2 "$_q_cd_proj" ;;
   esac
   _q_cd_projdir="$_q_v/$_q_cd_pdir/$_q_cd_proj"
   if [ ! -d "$_q_cd_projdir" ]; then

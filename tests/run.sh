@@ -15256,6 +15256,59 @@ pl_pwd=$(cd "$TMP/plv/$pl_pdir/Demo" && env -u QUIPU_VAULT -u KNOTLOG_VAULT QUIP
 t; assert_eq "T-1505: the project taken from the working directory still works" '0 yes' \
   "$pl_pwd $([ -f "$TMP/plv/$pl_pdir/Demo/Plans/fromcwd.md" ] && printf yes || printf no)"
 # ---- end plan name check ----
+# ---- card and plan: Windows reserved names and trailing dot/space (T-1510..) ----
+# Depends on: mkvault, t, assert_eq, mi18n, memfmt, $TMP, $ROOT, $TAB.
+rnrun() { # cmd dir args... -> $RNRC, output in $RNOUT
+  _rn_c=$1; _rn_d=$2; shift 2
+  RNOUT=$(cd "$_rn_d" && env -u QUIPU_VAULT -u KNOTLOG_VAULT QUIPU_LANG=en sh "$ROOT/knotlog" "$_rn_c" "$@" </dev/null 2>&1)
+  RNRC=$?
+}
+rnsaw() { # key arg -> yes when $RNOUT holds that message as a whole line
+  if [ -n "$(mi18n en "$1")" ] && printf '%s\n' "$RNOUT" | grep -qxF -- "$(memfmt en "$1" "$2")"; then printf yes; else printf no; fi
+}
+rnfiles() { find "$1" -print | sort | tr '\n' '|'; }
+mkvault rnv
+printf 'lang=en\nlayout=en\n' > "$TMP/rnv/.knotlog/config"
+rn_pdir=$(awk -F"$TAB" '$1=="projects"{print $2;exit}' "$ROOT/layout/en.txt")
+mkdir -p "$TMP/rnv/$rn_pdir/Demo"
+RN0=$(rnfiles "$TMP/rnv")
+for rn_cmd in card plan; do
+  rn_rc=; rn_msg=
+  for rn_n in CON nul Com1.md LPT9 con.txt.md 'ad.' 'ad '; do
+    rnrun "$rn_cmd" "$TMP/rnv" "$rn_n" --proje Demo
+    rn_rc="$rn_rc $RNRC"
+    rn_msg="$rn_msg $(rnsaw "err_${rn_cmd}_name" "${rn_n%.md}")"
+  done
+  t; assert_eq "T-1510: $rn_cmd names CON, nul, Com1.md, LPT9, con.txt.md, a trailing dot and a trailing space all exit 2" ' 2 2 2 2 2 2 2' "$rn_rc"
+  t; assert_eq "T-1511: $rn_cmd prints err_${rn_cmd}_name for each of those names" ' yes yes yes yes yes yes yes' "$rn_msg"
+  rn_rc=; rn_msg=
+  for rn_n in AUX proje. 'proje '; do
+    rnrun "$rn_cmd" "$TMP/rnv" ok --proje "$rn_n"
+    rn_rc="$rn_rc $RNRC"
+    rn_msg="$rn_msg $(rnsaw "err_${rn_cmd}_project" "$rn_n")"
+  done
+  t; assert_eq "T-1512: $rn_cmd --proje AUX, a trailing dot and a trailing space exit 2, the project folder missing" ' 2 2 2' "$rn_rc"
+  t; assert_eq "T-1513: $rn_cmd prints err_${rn_cmd}_project for each of those projects, not err_plan_project_missing" ' yes yes yes' "$rn_msg"
+done
+t; assert_eq "T-1514: none of those calls wrote a file or folder in the vault" "$RN0" "$(rnfiles "$TMP/rnv")"
+rn_rc=; rn_got=
+for rn_n in CONSOLE nulx COM10 COM0 LPT con-notu auxiliary.md; do
+  rnrun card "$TMP/rnv" "$rn_n" --proje Demo
+  rn_rc="$rn_rc $RNRC"
+  # shellcheck disable=SC2012,SC2010
+  rn_got="$rn_got $(ls "$TMP/rnv/$rn_pdir/Demo/Cards" 2>/dev/null | grep -c -- "^[0-9][0-9][0-9]-${rn_n%.md}\.md$")"
+done
+t; assert_eq "T-1515: card accepts names that only look like reserved ones (CONSOLE, nulx, COM10, COM0, LPT, con-notu, auxiliary.md)" ' 0 0 0 0 0 0 0' "$rn_rc"
+t; assert_eq "T-1515: each of those cards exists as a file" ' 1 1 1 1 1 1 1' "$rn_got"
+rn_rc=; rn_got=
+for rn_n in CONSOLE nulx COM10 COM0 LPT con-notu auxiliary.md; do
+  rnrun plan "$TMP/rnv" "$rn_n" --proje Demo
+  rn_rc="$rn_rc $RNRC"
+  rn_got="$rn_got $([ -f "$TMP/rnv/$rn_pdir/Demo/Plans/${rn_n%.md}.md" ] && printf 1 || printf 0)"
+done
+t; assert_eq "T-1516: plan accepts names that only look like reserved ones (CONSOLE, nulx, COM10, COM0, LPT, con-notu, auxiliary.md)" ' 0 0 0 0 0 0 0' "$rn_rc"
+t; assert_eq "T-1516: each of those plans exists as a file" ' 1 1 1 1 1 1 1' "$rn_got"
+# ---- end reserved name check ----
 # ---- knotlog mcp: answers while stdin stays open (T-1700..T-1702) ----
 # A real client keeps the server's stdin open and waits for the `initialize` reply. A server
 # that buffers its input until EOF (Debian/Ubuntu mawk reads a pipe in blocks) never answers,
