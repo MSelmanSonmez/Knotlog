@@ -15256,6 +15256,184 @@ pl_pwd=$(cd "$TMP/plv/$pl_pdir/Demo" && env -u QUIPU_VAULT -u KNOTLOG_VAULT QUIP
 t; assert_eq "T-1505: the project taken from the working directory still works" '0 yes' \
   "$pl_pwd $([ -f "$TMP/plv/$pl_pdir/Demo/Plans/fromcwd.md" ] && printf yes || printf no)"
 # ---- end plan name check ----
+# ---- board: read-only work card board (knotlog board) ---------------------------
+# board reads <Projects>/*/<Cards>/*.md and writes nothing. The expected tables
+# below are written out by hand; every column is padded by characters, not bytes.
+bdrun() { # dir args... -> $BDRC, output in $BDOUT (the vault language comes from its config)
+  _bd_d=$1; shift
+  BDOUT=$(cd "$_bd_d" && env -u QUIPU_VAULT -u KNOTLOG_VAULT sh "$ROOT/knotlog" board "$@" </dev/null 2>&1)
+  BDRC=$?
+}
+bdmk() { # file status typeline waitline -> a card with the given bold lines
+  mkdir -p "${1%/*}"
+  printf -- '---\ntitle: x\ncreated: 2026-11-11\nmodified: 2026-11-11\ntype: card\nstatus: %s\ntags: []\n---\n\n# x\n\n%s\n**Proje:** z\n%s\n\n## Body\n' "$2" "$3" "$4" > "$1"
+}
+bdsame() { # expected-file -> yes when $BDOUT is that file byte for byte
+  printf '%s\n' "$BDOUT" > "$TMP/bd.got"
+  if cmp -s "$TMP/bd.got" "$1"; then printf yes; else printf no; fi
+}
+bdsnap() { # dir -> every path and every file's checksum, .knotlog/ included
+  (cd "$1" && find . | LC_ALL=C sort && find . -type f -exec cksum {} + | LC_ALL=C sort)
+}
+bdis() { # expected-text -> yes when $BDOUT is exactly that text
+  if [ "$BDOUT" = "$1" ]; then printf yes; else printf no; fi
+}
+bd_pdir_tr=$(awk -F"$(printf '\t')" '$1=="projects"{print $2;exit}' "$ROOT/layout/tr.txt")
+bd_pdir_en=$(awk -F"$(printf '\t')" '$1=="projects"{print $2;exit}' "$ROOT/layout/en.txt")
+mkvault bdvtr; printf 'lang=tr\nlayout=tr\n' > "$TMP/bdvtr/.knotlog/config"
+mkvault bdven; printf 'lang=en\nlayout=en\n' > "$TMP/bdven/.knotlog/config"
+BDK="$TMP/bdvtr/$bd_pdir_tr/Alpha/Kartlar"
+BDQ="$TMP/bdvtr/$bd_pdir_tr/Beta/Kartlar"
+bdmk "$BDK/001-sample.md" 'done' '**Tür:** içerik' '**Bekliyor:** yok'
+bdmk "$BDK/002-build.md" running '**Tür:** kod' '**Bekliyor:** `001-sample`'
+bdmk "$BDK/003-review.md" ready '**Tür:** kod' '**Bekliyor:** 002-build'
+bdmk "$BDQ/004-audit.md" stuck '**Tür:** içerik' '**Bekliyor:** yok'
+cat > "$TMP/bd.exp.tr" <<'BDEOF'
+KART        DURUM    TÜR     BEKLİYOR    PROJE
+001-sample  done     içerik  yok         Alpha
+002-build   running  kod     001-sample  Alpha
+003-review  ready    kod     002-build   Alpha
+004-audit   stuck    içerik  yok         Beta
+
+özet: 1 ready, 1 running, 1 done, 1 stuck
+dikkat: 004-audit takıldı, ana oturuma sor
+BDEOF
+cat > "$TMP/bd.exp.q" <<'BDEOF'
+KART       DURUM  TÜR     BEKLİYOR  PROJE
+004-audit  stuck  içerik  yok       Beta
+
+özet: 1 stuck
+dikkat: 004-audit takıldı, ana oturuma sor
+BDEOF
+bdrun "$TMP/bdvtr"
+t; assert_eq "T-1600: four cards across two projects give the table, the summary and the attention line, byte for byte" '0 yes' \
+  "$BDRC $(bdsame "$TMP/bd.exp.tr")"
+# The same table when awk counts bytes (a C-locale awk, mawk): the width is
+# still characters, so the columns after içerik and BEKLİYOR do not slide.
+BDOUT=$(cd "$TMP/bdvtr" && env -u QUIPU_VAULT -u KNOTLOG_VAULT LC_ALL=C sh "$ROOT/knotlog" board </dev/null 2>&1)
+t; assert_eq "T-1601: the table is identical in the C locale" 'yes' "$(bdsame "$TMP/bd.exp.tr")"
+bdrun "$TMP/bdvtr" --proje Beta
+t; assert_eq "T-1602: --proje limits the board to one project, summary and attention follow" '0 yes' \
+  "$BDRC $(bdsame "$TMP/bd.exp.q")"
+bdrun "$TMP/bdvtr" --project Beta
+t; assert_eq "T-1602: --project is the same as --proje" 'yes' "$(bdsame "$TMP/bd.exp.q")"
+bdrun "$TMP/bdvtr" --status stuck
+t; assert_eq "T-1603: --status stuck lists the stuck card only" '0 yes' "$BDRC $(bdsame "$TMP/bd.exp.q")"
+bdrun "$TMP/bdvtr" --status review
+t; assert_eq "T-1603: a valid status with no card says there are no cards, exit 0" '0 yes' \
+  "$BDRC $(bdis "$(mi18n tr board_empty)")"
+bdrun "$TMP/bdvtr" --status bogus
+t; assert_eq "T-1604: an unknown status exits 2 with the status message" '2 yes' \
+  "$BDRC $(bdis "$(memfmt tr err_board_status bogus)")"
+bdrun "$TMP/bdvtr" --proje Yok
+t; assert_eq "T-1604: a missing project folder exits 2" '2 yes' \
+  "$BDRC $(printf '%s\n' "$BDOUT" | grep -qF "Yok" && printf yes || printf no)"
+bdrun "$TMP/bdvtr" --proje 'a/b'
+t; assert_eq "T-1604: a project name with a slash exits 2 with the project message" '2 yes' \
+  "$BDRC $(bdis "$(memfmt tr err_card_project 'a/b')")"
+bdrun "$TMP/bdvtr" --proje '..'
+t; assert_eq "T-1604: a project name of .. exits 2" '2' "$BDRC"
+bdrun "$TMP/bdvtr" --proje 'a\b'
+t; assert_eq "T-1604: a project name with a backslash exits 2 with the project message" '2 yes' \
+  "$BDRC $(bdis "$(memfmt tr err_card_project 'a\b')")"
+bdrun "$TMP/bdvtr" --proje 'x*'
+t; assert_eq "T-1604: a name that only ends in * is not a bad name, it is a missing folder" '2 yes' \
+  "$BDRC $(printf '%s\n' "$BDOUT" | grep -qF 'x*' && ! printf '%s\n' "$BDOUT" | grep -qxF "$(memfmt tr err_card_project 'x*')" && printf yes || printf no)"
+bdrun "$TMP/bdvtr" --proje ''
+t; assert_eq "T-1604: an empty --proje exits 2 like card, and prints no board" '2 yes' \
+  "$BDRC $(bdis "$(mi18n tr err_plan_project_required)")"
+bdrun "$TMP/bdvtr" --nope
+t; assert_eq "T-1604: an unknown flag exits 2" '2' "$BDRC"
+
+# --ready: ready and not waiting, or waiting on a scanned card that is done.
+BDR="$TMP/bdvtr/$bd_pdir_tr/Hazir/Kartlar"
+bdmk "$BDR/010-serbest.md" ready '**Tür:** kod' '**Bekliyor:** yok'
+bdmk "$BDR/011-bitmis-bekler.md" ready '**Tür:** kod' '**Bekliyor:** `001-sample`'
+bdmk "$BDR/012-surenle-bekler.md" ready '**Tür:** kod' '**Bekliyor:** 002-build'
+bdmk "$BDR/013-kayip-bekler.md" ready '**Tür:** kod' '**Bekliyor:** 999-yok-boyle-kart'
+bdmk "$BDR/014-taslak.md" draft '**Tür:** kod' '**Bekliyor:** yok'
+bdmk "$BDR/015-bos-bekler.md" ready '**Tür:** kod' '**Bekliyor:**'
+bdmk "$BDR/016-commented.md" ready '**Tür:** kod' "**Bekliyor:** yok (see card 001)"
+bdmk "$BDR/017-hashed.md" ready '**Tür:** kod' '**Bekliyor:** 001-sample # not'
+bdrun "$TMP/bdvtr" --ready
+t; assert_eq "T-1605: --ready prints card names only: ready and free, or waiting on a done card; not missing, not running, not draft" '0 yes' \
+  "$BDRC $(bdis "$(printf '%s\n%s\n%s\n%s' 010-serbest 011-bitmis-bekler 015-bos-bekler 016-commented)")"
+bdrun "$TMP/bdvtr" --ready --proje Hazir
+t; assert_eq "T-1605: --ready with --proje scans that project only, so a card waiting on another project's done card is not ready" '0 yes' \
+  "$BDRC $(bdis "$(printf '%s\n%s\n%s' 010-serbest 015-bos-bekler 016-commented)")"
+bdrun "$TMP/bdvtr" --ready --status draft
+t; assert_eq "T-1605: --ready with a status other than ready prints nothing" '0 empty' \
+  "$BDRC $([ -z "$BDOUT" ] && printf empty || printf other)"
+bdrun "$TMP/bdvtr" --proje Hazir
+t; assert_eq "T-1605: a waiting value that starts with yok and goes on stays whole in the table; a # is not a comment" 'yes yes' \
+  "$(printf '%s\n' "$BDOUT" | grep -qF "yok (see card 001)" && printf yes || printf no) $(printf '%s\n' "$BDOUT" | grep -qF '001-sample # not' && printf yes || printf no)"
+
+# An en vault: Cards/, English fields and the none word, other-language field
+# names on an old card, a card with no fields at all is a draft.
+BDE="$TMP/bdven/$bd_pdir_en/Demo/Cards"
+bdmk "$BDE/001-first.md" 'done' '**Type:** code' '**Waiting on:** none'
+bdmk "$BDE/002-second.md" review '**Type:** content' '**Waiting on:** 001-first'
+bdmk "$BDE/003-old-tr.md" draft '**Tür:** kod' '**Bekliyor:** yok'
+printf -- '---\ntitle: bare\n---\n\nno fields here\n' > "$BDE/004-bare.md"
+cat > "$TMP/bd.exp.en" <<'BDEOF'
+CARD        STATUS  TYPE     WAITING ON  PROJECT
+001-first   done    code     none        Demo
+002-second  review  content  001-first   Demo
+003-old-tr  draft   kod      none        Demo
+004-bare    draft   -        none        Demo
+
+summary: 2 draft, 1 review, 1 done
+BDEOF
+bdrun "$TMP/bdven"
+t; assert_eq "T-1606: an en vault gets English headers, the none word, old Turkish field names read, a bare card is a draft" '0 yes' \
+  "$BDRC $(bdsame "$TMP/bd.exp.en")"
+
+# An empty cards folder, and no vault at all.
+mkvault bdvempty; printf 'lang=tr\nlayout=tr\n' > "$TMP/bdvempty/.knotlog/config"
+mkdir -p "$TMP/bdvempty/$bd_pdir_tr/Bos/Kartlar"
+bdrun "$TMP/bdvempty"
+t; assert_eq "T-1607: no cards prints the one-line message, exit 0" '0 yes' \
+  "$BDRC $(bdis "$(mi18n tr board_empty)")"
+bdrun "$TMP/bdvempty" --ready
+t; assert_eq "T-1607: --ready with no cards prints nothing, exit 0" '0 empty' \
+  "$BDRC $([ -z "$BDOUT" ] && printf empty || printf other)"
+mkdir -p "$TMP/bdnovault"
+BDOUT=$(cd "$TMP/bdnovault" && env -u QUIPU_VAULT -u KNOTLOG_VAULT QUIPU_LANG=tr sh "$ROOT/knotlog" board </dev/null 2>&1); BDRC=$?
+t; assert_eq "T-1607: no vault is err_no_vault, exit 1" '1 yes' \
+  "$BDRC $(printf '%s\n' "$BDOUT" | grep -qF "$(mi18n tr err_no_vault)" && printf yes || printf no)"
+
+# Read-only: the vault tree (paths and contents, .knotlog/ too) is the same after.
+bd_before=$(bdsnap "$TMP/bdvtr")
+bdrun "$TMP/bdvtr"; bdrun "$TMP/bdvtr" --ready; bdrun "$TMP/bdvtr" --status stuck --proje Beta; bdrun "$TMP/bdvtr" --status bogus
+bd_after=$(bdsnap "$TMP/bdvtr")
+t; assert_eq "T-1608: board leaves the vault byte-identical: same paths, same checksums, no index, no state file" 'yes' \
+  "$([ "$bd_before" = "$bd_after" ] && printf yes || printf no)"
+
+# 200 rows at most; the rest is one line.
+BDM="$TMP/bdvtr/$bd_pdir_tr/Cok/Kartlar"
+mkdir -p "$BDM"
+bd_i=0
+while [ "$bd_i" -lt 205 ]; do
+  bd_i=$((bd_i + 1))
+  bdmk "$BDM/$(printf '%03d' "$bd_i")-k.md" draft '**Tür:** kod' '**Bekliyor:** yok'
+done
+bdrun "$TMP/bdvtr" --proje Cok
+t; assert_eq "T-1609: 205 cards print the header and 200 rows, then the … N kart daha line, then the summary" '0 204 yes yes' \
+  "$BDRC $(printf '%s\n' "$BDOUT" | awk 'END{print NR}') $(printf '%s\n' "$BDOUT" | sed -n '202p' | grep -qxF "$(memfmt tr board_more 5)" && printf yes || printf no) $(printf '%s\n' "$BDOUT" | tail -n 1 | grep -qxF 'özet: 205 draft' && printf yes || printf no)"
+
+# The keys exist in all six languages, help lists board in two of them.
+bd_keys=
+for bd_l in tr en es pt-br ja zh-cn; do
+  bd_n=0
+  for bd_k in usage_board board_col_card board_col_status board_col_type board_col_waiting board_col_project board_none board_summary board_attention board_more board_empty err_board_status; do
+    [ -z "$(mi18n "$bd_l" "$bd_k")" ] || bd_n=$((bd_n + 1))
+  done
+  bd_keys="$bd_keys$bd_n "
+done
+t; assert_eq "T-1610: the twelve board keys exist in all six language files" '12 12 12 12 12 12 ' "$bd_keys"
+t; assert_eq "T-1610: help lists board in both languages" 'yes yes' \
+  "$([ -n "$(mtr usage_board)" ] && "$ROOT/knotlog" help --tr 2>&1 | grep -qxF "$(mtr usage_board)" && printf yes || printf no) $([ -n "$(men usage_board)" ] && "$ROOT/knotlog" help 2>&1 | grep -qxF "$(men usage_board)" && printf yes || printf no)"
+# ---- end board ----
 # ---- card and plan: Windows reserved names and trailing dot/space (T-1510..) ----
 # Depends on: mkvault, t, assert_eq, mi18n, memfmt, $TMP, $ROOT, $TAB.
 rnrun() { # cmd dir args... -> $RNRC, output in $RNOUT

@@ -152,6 +152,7 @@ Claude Code は `CLAUDE.md` を、他の多くのエージェントは `AGENTS.m
 | `knotlog tui` | 最新のセッションノートをターミナルで閲覧 |
 | `knotlog plan <name> --project <Project>` | プロジェクト内にプランノートを作成 |
 | `knotlog card <name> --project <Project>` | プロジェクト内に番号付きの作業カード (`NNN-<name>.md`) を作成 |
+| `knotlog board [--project <Project>] [--status <status>] [--ready]` | 全作業カードを表示する読み取り専用ボード（概要行付き） |
 | `knotlog help [--<コード>]` | 英語のヘルプ。`--<コード>` で同梱の他の言語 (例: `--tr`) |
 
 ## 最初のセッション
