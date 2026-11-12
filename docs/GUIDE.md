@@ -172,6 +172,30 @@ $ knotlog plan roadmap --proje Knotlog
 wrote: 🗂️ Projects/Knotlog/Plans/roadmap.md
 ```
 
+**`knotlog card <name> --project <Project>`** — open a numbered work card,
+`<projects>/<Project>/<Cards>/NNN-<name>.md`, from the localized template
+(`status: draft`). `--type code|content` sets the type (`--proje` and
+`--tur kod|icerik` are accepted as aliases). A missing project folder is an
+error, and an existing card is never overwritten.
+
+**`knotlog board [--project <Project>] [--status <status>] [--ready]`** — read
+those cards and print a table with a summary line; `--ready` prints only the
+names of cards ready to start. It never writes. Details:
+[REFERENCE.md](REFERENCE.md#board).
+
+```
+$ knotlog card login-fix --project Knotlog
+wrote: 🗂️ Projects/Knotlog/Cards/001-login-fix.md
+$ knotlog card docs --project Knotlog --type content
+wrote: 🗂️ Projects/Knotlog/Cards/002-docs.md
+$ knotlog board
+CARD           STATUS  TYPE     WAITING ON  PROJECT
+001-login-fix  draft   code     none        Knotlog
+002-docs       draft   content  none        Knotlog
+
+summary: 2 draft
+```
+
 **`knotlog tone [--list|<slug>]`** — show or set the tone preset. No arguments
 prints which source is active and why (a preset slug, or companion.md's own
 Tone section, or neither); `--list` browses the nine shipped presets

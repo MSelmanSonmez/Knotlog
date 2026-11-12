@@ -138,6 +138,27 @@ $ knotlog plan roadmap --proje Knotlog
 wrote: 🗂️ Projects/Knotlog/Plans/roadmap.md
 ```
 
+**`knotlog card <name> --project <Project>`** — 番号付きの作業カード `<projects>/<Project>/<Cards>/NNN-<name>.md` を、
+ローカライズされたテンプレート (`status: draft`) から作成します。`--type code|content` で種別を指定します
+(`--proje` と `--tur kod|icerik` もエイリアスとして使えます)。プロジェクトフォルダがない場合はエラーになり、
+既存のカードが上書きされることはありません。
+
+**`knotlog board [--project <Project>] [--status <status>] [--ready]`** — それらのカードを読み、概要行付きの表を表示します。
+`--ready` は着手できるカードの名前だけを表示します。何も書き込みません。詳細: [REFERENCE.md](REFERENCE.md#board)。
+
+```
+$ knotlog card login-fix --project Knotlog
+wrote: 🗂️ Projects/Knotlog/Cards/001-login-fix.md
+$ knotlog card docs --project Knotlog --type content
+wrote: 🗂️ Projects/Knotlog/Cards/002-docs.md
+$ knotlog board
+CARD           STATUS  TYPE     WAITING ON  PROJECT
+001-login-fix  draft   code     none        Knotlog
+002-docs       draft   content  none        Knotlog
+
+summary: 2 draft
+```
+
 **`knotlog tone [--list|<slug>]`** — トーンプリセットを表示または設定します。引数なしでは、どのソースが有効でその理由 (プリセットのスラッグか、
 companion.md 自身の Tone セクションか、どちらでもないか) を表示します。`--list` は同梱の 9 つのプリセット
 (Default、Professional、Friendly、Candid、Quirky、Efficient、Snarky、Teaching、Kaomoji) を一覧し、有効なものに印を付けます。
