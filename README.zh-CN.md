@@ -27,7 +27,7 @@
   <img src="https://img.shields.io/badge/dependencies-zero-brightgreen" alt="Zero dependencies">
   <img src="https://img.shields.io/badge/network-offline-lightgrey" alt="Works offline">
   <!-- badge counts are re-measured at the release commit: tests = `sh tests/run.sh` -> "# pass N"; scripts = `git ls-files | grep -cE '^(knotlog|lib/.*\.awk|fold/.*\.sed)$'`; LongMemEval-S = `tests/bench/longmemeval.sh` -->
-  <img src="https://img.shields.io/badge/tests-2153%20passing-brightgreen" alt="2153 项测试通过">
+  <img src="https://img.shields.io/badge/tests-2276%20passing-brightgreen" alt="2276 项测试通过">
   <img src="https://img.shields.io/badge/agents-9-blue" alt="支持 9 种代理">
   <img src="https://img.shields.io/badge/scripts-30-lightgrey" alt="30 个发布脚本">
   <img src="https://img.shields.io/badge/LongMemEval--S-recall__any%405%2060.4%25-blue" alt="LongMemEval-S recall_any@5 60.4%">
