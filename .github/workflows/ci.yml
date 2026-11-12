@@ -27,3 +27,40 @@ jobs:
           esac
       - name: Run tests
         run: sh tests/run.sh
+      - name: MCP tests under mawk
+        if: runner.os == 'Linux'
+        # The runner's awk is gawk, which hides the mawk bug the T-1700 block measures
+        # (mawk reads a pipe in blocks, so a server whose stdin stays open never replies).
+        # Put a real mawk first on PATH and run only the MCP tests, not the whole suite.
+        run: |
+          command -v mawk >/dev/null 2>&1 || { sudo apt-get update -qq && sudo apt-get install -y -qq mawk; }
+          mkdir -p "$RUNNER_TEMP/mawk-bin"
+          ln -sf "$(command -v mawk)" "$RUNNER_TEMP/mawk-bin/awk"
+          export PATH="$RUNNER_TEMP/mawk-bin:$PATH"
+          v=$(awk -W version 2>&1 </dev/null | sed -n 1p)
+          echo "awk is: $v"
+          case "$v" in mawk*) ;; *) echo "awk is not mawk"; exit 1 ;; esac
+          # Build the runner from tests/run.sh by marker lines, not line numbers. An
+          # empty range (a marker that moved) must fail the step, not run nothing.
+          out=tests/mcp-mawk.sh
+          part() { # name, first-line regex, line-after-the-range regex (that line is left out)
+            [ "$(grep -c -- "$2" tests/run.sh)" -eq 1 ] && grep -q -- "$3" tests/run.sh || { echo "marker missing or not unique for $1: $2 .. $3"; exit 1; }
+            sed -n "/$2/,/$3/{/$3/!p;}" tests/run.sh > "$RUNNER_TEMP/part.$1"
+            [ -s "$RUNNER_TEMP/part.$1" ] || { echo "empty range: $1"; exit 1; }
+            cat "$RUNNER_TEMP/part.$1" >> "$out"
+          }
+          : > "$out"
+          sed -n '1,/^TAB=/p' tests/run.sh > "$RUNNER_TEMP/part.header"
+          grep -q '^TAB=' "$RUNNER_TEMP/part.header" || { echo "marker missing: TAB="; exit 1; }
+          cat "$RUNNER_TEMP/part.header" >> "$out"
+          grep '^mkvault() ' tests/run.sh >> "$out" || { echo "marker missing: mkvault()"; exit 1; }
+          part ag84 '^ag84_balanced() ' '^}$'
+          echo '}' >> "$out"
+          part core '^# ---- knotlog mcp: stdio server core (T-860' '^# Rename completeness'
+          part signal '^# ---- knotlog mcp: a client.s signal ends' '^# ---- validity: rejected'
+          part openstdin '^# ---- knotlog mcp: answers while stdin stays open' "^printf .# pass "
+          sed -n '/^printf .# pass /,$p' tests/run.sh > "$RUNNER_TEMP/part.tail"
+          [ "$(wc -l < "$RUNNER_TEMP/part.tail" | tr -d ' ')" -eq 3 ] || { echo "run.sh tail is not three lines"; exit 1; }
+          cat "$RUNNER_TEMP/part.tail" >> "$out"
+          sh -n "$out"
+          sh "$out"

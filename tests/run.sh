@@ -15434,6 +15434,29 @@ t; assert_eq "T-1610: the twelve board keys exist in all six language files" '12
 t; assert_eq "T-1610: help lists board in both languages" 'yes yes' \
   "$([ -n "$(mtr usage_board)" ] && "$ROOT/knotlog" help --tr 2>&1 | grep -qxF "$(mtr usage_board)" && printf yes || printf no) $([ -n "$(men usage_board)" ] && "$ROOT/knotlog" help 2>&1 | grep -qxF "$(men usage_board)" && printf yes || printf no)"
 # ---- end board ----
+# ---- knotlog mcp: answers while stdin stays open (T-1700..T-1702) ----
+# A real client keeps the server's stdin open and waits for the `initialize` reply. A server
+# that buffers its input until EOF (Debian/Ubuntu mawk reads a pipe in blocks) never answers,
+# and the client gives up (Glama's mcp-proxy: 60 s). The tests above close stdin at once, so
+# they cannot see this. Here the writer sends `initialize` and keeps stdin open until the reply
+# shows up in the server's output file, or until about 120 s have passed; only then it closes.
+MO="$TMP/mc170"; rm -rf "$MO"; mkdir -p "$MO"
+if sleep 0.1 2>/dev/null; then MO_STEP=0.1; else MO_STEP=1; fi
+# shellcheck disable=SC2094 # the writer polls the file the server writes; that is what the test measures
+{
+  printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}'
+  _mo_end=$(( $(date +%s) + 120 ))   # wall clock: a process spawn costs far more than 0.1 s on Windows, a loop counter would run for minutes
+  while [ ! -s "$MO/out" ] && [ "$(date +%s)" -lt "$_mo_end" ]; do sleep "$MO_STEP"; done
+  if [ -s "$MO/out" ]; then : > "$MO/seen-open"; else : > "$MO/timeout"; fi
+} | QUIPU_LANG=en sh "$ROOT/knotlog" mcp > "$MO/out" 2> "$MO/err"
+mo_rc=$?   # the server is the last command of the pipeline, so this is its status after stdin closed
+t; assert_eq "T-1700: the initialize reply arrives while stdin is still open (seen open, no timeout)" 'yes no' \
+  "$([ -f "$MO/seen-open" ] && printf yes || printf no) $([ -f "$MO/timeout" ] && printf yes || printf no)"
+t; assert_eq "T-1701: that reply is the result of request id 1 (protocolVersion, tools capability, serverInfo)" 'yes' \
+  "$(sed -n 1p "$MO/out" | grep -qF '{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{}},"serverInfo":{"name":"knotlog","version":"' && printf yes || printf no)"
+t; assert_eq "T-1702: after stdin closes the server exits 0 with exactly one balanced JSON-RPC line and an empty stderr" '0 1 yes 0' \
+  "$mo_rc $(wc -l < "$MO/out" | tr -d ' ') $(mc86_lines_ok "$MO/out") $(wc -c < "$MO/err" | tr -d ' ')"
+# ---- end mcp open stdin ----
 printf '# pass %d, fail %d, skip %d\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
 exit 0

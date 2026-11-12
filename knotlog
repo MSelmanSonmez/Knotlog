@@ -9381,8 +9381,14 @@ _q_cmd_mcp() {
   # construction (_q_ctx_max), so it is safe to hand to awk with -v.
   # shortcut: read at server start; a ctx_max edit needs an MCP restart.
   _q_ctx_max "$(_q_vault)"
+  # mawk (Debian/Ubuntu's default awk) reads a non-terminal stdin in blocks, so a
+  # client that keeps stdin open never gets a reply; -W interactive line-buffers
+  # stdin and unbuffers stdout. Detected, not passed to every awk: BWK awk (macOS)
+  # would take `interactive` as the program text. $@ is empty here (checked above).
+  set --
+  case $(awk -W version 2>&1 </dev/null) in *mawk*) set -- -W interactive ;; esac
   KNOTLOG_MCP_SELF="$_q_HOME/knotlog" KNOTLOG_MCP_ERR="$_q_mcp_err" \
-    awk -v ver="$_q_version" -v maxline="${QUIPU_MAX_STDIN:-65536}" -v ctxmax="$_q_cm" \
+    awk "$@" -v ver="$_q_version" -v maxline="${QUIPU_MAX_STDIN:-65536}" -v ctxmax="$_q_cm" \
     -f "$_q_HOME/lib/jsonfield.awk" -f "$_q_HOME/lib/jsonemit.awk" -f "$_q_HOME/lib/mcp.awk" <&3 3<&- &
   _q_mcp_pid=$!
   exec 3<&-
