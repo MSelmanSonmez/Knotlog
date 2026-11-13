@@ -18,6 +18,7 @@ usage_mcp=  mcp       executa o servidor MCP em stdin/stdout (JSON-RPC, uma mens
 usage_note=  note      acrescenta uma linha ao bloco de reflexão da sessão de hoje (note "texto")
 usage_digest=  digest    resume a atividade de uma data (--date YYYY-MM-DD) ou de um intervalo (--since YYYY-MM-DD [--until YYYY-MM-DD]); --dry-run, --limit N
 usage_note_thread=  note --thread  acrescenta uma linha à seção de threads ativas (note --thread "texto")
+usage_note_sha=  note --sha256 | --expect-sha256 <hex>  imprime o SHA-256 do arquivo em que note escreve; ou escreve só se ele ainda tiver esse hash (saída 2 = mudou, leia de novo); ambos aceitam --thread
 usage_pending=  pending   lista as notas aguardando revisão (write_approval=on); --approve N [--to note|facts|thread] [--dry-run] grava uma, --reject N a descarta
 usage_propose=  propose   deixa um achado da revisão aguardando aprovação (propose --kind lesson|skill|fix "texto"; knotlog pending)
 usage_import=  import    converte uma exportação local de conversa em JSON em uma nota de sessão (FILE, --date YYYY-MM-DD; claude [--project DIR] [--apply]: transcrições do Claude Code)
@@ -32,6 +33,10 @@ err_no_vault=nenhum cofre encontrado (falta o .knotlog/); execute: knotlog init
 err_missing_arg=falta um argumento obrigatório
 err_unknown_flag=flag desconhecida: %s
 err_note_args=note aceita exatamente um argumento de texto entre aspas
+err_note_sha_args=note --sha256 não aceita texto e não combina com --expect-sha256
+err_note_expect_hex=--expect-sha256 exige 64 caracteres hexadecimais (a saída de note --sha256); nada foi escrito
+err_note_conflict=conflito: %s mudou desde que você o leu (esperado %s, encontrado %s); leia de novo; nada foi escrito
+err_sha_tool=nenhuma ferramenta SHA-256 encontrada (é preciso sha256sum, shasum ou openssl); nada foi escrito
 err_note_newline=o texto do note deve ter uma única linha (sem quebra de linha nem retorno de carro)
 err_note_control=o texto contém um caractere de controle (como ESC), que pode esconder texto num terminal; nada foi gravado
 err_note_block=o arquivo da sessão de hoje tem um marcador de início de reflexão sem o marcador de fim; nada foi gravado

@@ -18,6 +18,7 @@ usage_mcp=  mcp       MCP sunucusunu stdin/stdout üzerinde çalıştır (JSON-R
 usage_note=  note      bugünün oturum yansıma bloğuna tek satır ekle (note "metin")
 usage_digest=  digest    tek bir tarihin etkinliklerini özetle (--date YYYY-MM-DD) ya da aralık (--since YYYY-MM-DD [--until YYYY-MM-DD]); --dry-run, --limit N
 usage_note_thread=  note --thread  açık konular bölümüne tek satır ekle (note --thread "metin")
+usage_note_sha=  note --sha256 | --expect-sha256 <hex>  note'un yazdığı dosyanın SHA-256 özetini bas; ya da dosya hâlâ bu özetteyse yaz (çıkış 2 = değişmiş, yeniden oku); ikisi de --thread alır
 usage_pending=  pending   onay bekleyen notları listeler (write_approval=on); --approve N [--to note|facts|thread] [--dry-run] birini yazar, --reject N düşürür
 usage_propose=  propose   inceleme bulgusunu onaya sıraya koyar (propose --kind lesson|skill|fix "metin"; knotlog pending)
 usage_import=  import    yerel JSON sohbet dışa aktarımını oturum notuna çevir (DOSYA, --date YYYY-MM-DD; claude [--project DİZİN] [--apply]: Claude Code dökümleri)
@@ -32,6 +33,10 @@ err_no_vault=kasa bulunamadı (.knotlog/ yok); çalıştır: knotlog init
 err_missing_arg=zorunlu argüman eksik
 err_unknown_flag=bilinmeyen bayrak: %s
 err_note_args=note tam olarak bir tırnaklı metin argümanı alır
+err_note_sha_args=note --sha256 metin almaz ve --expect-sha256 ile birleştirilemez
+err_note_expect_hex=--expect-sha256 64 onaltılık karakter ister (note --sha256 çıktısı); hiçbir şey yazılmadı
+err_note_conflict=çakışma: %s siz okuduktan sonra değişti (beklenen %s, bulunan %s); yeniden okuyun; hiçbir şey yazılmadı
+err_sha_tool=SHA-256 aracı bulunamadı (sha256sum, shasum veya openssl gerekir); hiçbir şey yazılmadı
 err_note_newline=not metni tek satır olmalı (satır sonu ya da satır başı karakteri olamaz)
 err_note_control=metinde terminalde yazıyı gizleyebilen bir denetim karakteri (ESC gibi) var; hiçbir şey yazılmadı
 err_note_block=bugünkü oturum dosyasında yansıma başlangıç işareti var, bitiş işareti yok; hiçbir şey yazılmadı

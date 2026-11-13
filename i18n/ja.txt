@@ -18,6 +18,7 @@ usage_mcp=  mcp       標準入出力で MCP サーバーを実行 (JSON-RPC、1
 usage_note=  note      今日のセッションの振り返りブロックに 1 行追加 (note "テキスト")
 usage_digest=  digest    1 日分の活動 (--date YYYY-MM-DD) または期間 (--since YYYY-MM-DD [--until YYYY-MM-DD]) を要約; --dry-run, --limit N
 usage_note_thread=  note --thread  進行中スレッドのセクションに 1 行追加 (note --thread "テキスト")
+usage_note_sha=  note --sha256 | --expect-sha256 <hex>  note の書き込み先ファイルの SHA-256 を表示。または同じハッシュのままの場合だけ書き込む (終了コード 2 = 変更あり、読み直す)。どちらも --thread を取れる
 usage_pending=  pending   レビュー待ちのノートを一覧表示します (write_approval=on); --approve N [--to note|facts|thread] [--dry-run] で1件を書き込み、--reject N で破棄します
 usage_propose=  propose   レビューで得た知見を承認待ちに入れる (propose --kind lesson|skill|fix "テキスト"、knotlog pending)
 usage_import=  import    ローカルの JSON 会話エクスポートをセッションノートに変換 (FILE, --date YYYY-MM-DD; claude [--project DIR] [--apply]: Claude Code のトランスクリプト)
@@ -32,6 +33,10 @@ err_no_vault=ボールトが見つかりません (.knotlog/ がありません)
 err_missing_arg=必須の引数がありません
 err_unknown_flag=不明なフラグ: %s
 err_note_args=note には引用符で囲んだテキストを 1 つだけ指定してください
+err_note_sha_args=note --sha256 はテキストを取らず、--expect-sha256 と併用できません
+err_note_expect_hex=--expect-sha256 には 16 進 64 文字 (note --sha256 の出力) が必要です。何も書き込んでいません
+err_note_conflict=競合: %s は読み込み後に変更されました (期待 %s、実際 %s)。読み直してください。何も書き込んでいません
+err_sha_tool=SHA-256 ツールが見つかりません (sha256sum、shasum、openssl のいずれかが必要です)。何も書き込んでいません
 err_note_newline=note のテキストは 1 行にしてください (改行・復帰文字は不可)
 err_note_control=テキストに制御文字 (ESC など) が含まれています。ターミナルで文字を隠せるため、何も書き込んでいません
 err_note_block=今日のセッションファイルに振り返りの開始マーカーはありますが終了マーカーがありません; 何も書き込みませんでした

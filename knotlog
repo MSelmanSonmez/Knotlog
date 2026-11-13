@@ -520,6 +520,7 @@ usage() {
   _q_msg usage_mcp
   _q_msg usage_note
   _q_msg usage_note_thread
+  _q_msg usage_note_sha
   _q_msg usage_pending
   _q_msg help_write_approval
   _q_msg usage_propose
@@ -6466,6 +6467,42 @@ _q_fts_fit() {
   printf '%s %s\n' "$_q_fts_len" "$_q_fts_bud"
 }
 
+_q_sha256() {
+  # _q_sha256 FILE -- SHA-256 of FILE (the empty file's when FILE is missing)
+  # as 64 lowercase hex in $_q_sha_hex. Tries sha256sum, shasum -a 256, then
+  # openssl dgst -sha256, in that order; a tool that is absent, fails or prints
+  # no 64-hex digest is skipped. Returns 1 when none works. Only the commands
+  # that ask for a hash call this; a plain `note` never does.
+  _q_sha_src=/dev/null
+  [ ! -f "$1" ] || _q_sha_src=$1
+  _q_sha_hex=
+  if command -v sha256sum >/dev/null 2>&1; then
+    _q_sha_hex=$(sha256sum < "$_q_sha_src" 2>/dev/null | _q_sha_pick)
+  fi
+  if [ -z "$_q_sha_hex" ] && command -v shasum >/dev/null 2>&1; then
+    _q_sha_hex=$(shasum -a 256 < "$_q_sha_src" 2>/dev/null | _q_sha_pick)
+  fi
+  if [ -z "$_q_sha_hex" ] && command -v openssl >/dev/null 2>&1; then
+    _q_sha_hex=$(openssl dgst -sha256 < "$_q_sha_src" 2>/dev/null | _q_sha_pick)
+  fi
+  [ -n "$_q_sha_hex" ]
+}
+
+_q_sha_pick() {
+  # stdin: a digest line ("<hex>  -", or openssl's "SHA2-256(stdin)= <hex>").
+  # Prints the 64-hex digest in lowercase, or nothing.
+  sed -n 's/.*\([0-9A-Fa-f]\{64\}\).*/\1/p' | head -n 1 | LC_ALL=C tr 'A-F' 'a-f'
+}
+
+_q_note_expect_check() {
+  # _q_note_expect_check FILE REL -- under the remember lock: with
+  # --expect-sha256, refuse (exit 2, nothing written) when FILE no longer has
+  # the hash the caller read. Without it, does nothing and touches no hash tool.
+  [ "${_q_note_hasexp:-0}" = 1 ] || return 0
+  _q_sha256 "$1" || _q_die err_sha_tool 1
+  [ "$_q_sha_hex" = "$_q_note_expect" ] || _q_die err_note_conflict 2 "$2" "$_q_note_expect" "$_q_sha_hex"
+}
+
 _q_note_thread_write() {
   # _q_note_thread_write VAULT TEXT — `note --thread`: one list line appended
   # at the END of the active section of the threads block
@@ -6491,6 +6528,7 @@ _q_note_thread_write() {
     rmdir "$_q_nt_lock" 2>/dev/null || true
   }
   trap '_q_nt_cleanup' EXIT HUP INT TERM
+  _q_note_expect_check "$_q_nt_tp" "${_q_nt_tp#"$_q_nt_v"/}"
 
   # Insertion point: the line after the last non-blank line of the active
   # section (or right after its heading when the section is empty). Exit 1
@@ -6572,10 +6610,45 @@ _q_cmd_note() {
   # a shell-expanded format, so \ % & $ survive byte for byte.
   # `--thread` as the first argument routes the line to the active threads
   # section instead (_q_note_thread_write); without it nothing changes.
+  # `--sha256` and `--expect-sha256 <hex>` (hash-guarded write) may stand in
+  # any order before the text; each is taken once, a repeat falls through to
+  # the text check below as an unknown flag, like a repeated `--thread`.
   _q_note_thread=0
-  if [ "${1:-}" = --thread ]; then
-    _q_note_thread=1
-    shift
+  _q_note_sha=0
+  _q_note_expect=
+  _q_note_hasexp=0
+  while :; do
+    case "${1:-}" in
+      --thread) [ "$_q_note_thread" = 0 ] || break; _q_note_thread=1; shift ;;
+      --sha256) [ "$_q_note_sha" = 0 ] || break; _q_note_sha=1; shift ;;
+      --expect-sha256)
+        [ "$_q_note_hasexp" = 0 ] || break
+        [ "$#" -ge 2 ] || _q_die err_missing_arg 2
+        _q_note_hasexp=1
+        _q_note_expect=$(printf '%s' "$2" | LC_ALL=C tr 'A-F' 'a-f')
+        case "$_q_note_expect" in
+          *[!0-9a-f]*) _q_die err_note_expect_hex 2 ;;
+        esac
+        [ "${#_q_note_expect}" -eq 64 ] || _q_die err_note_expect_hex 2
+        shift 2
+        ;;
+      *) break ;;
+    esac
+  done
+  if [ "$_q_note_sha" = 1 ]; then
+    [ "$_q_note_hasexp" = 0 ] && [ "$#" -eq 0 ] || _q_die err_note_sha_args 2
+    _q_v=$(_q_vault)
+    [ -n "$_q_v" ] || _q_die err_no_vault
+    if [ "$_q_note_thread" = 1 ]; then
+      _q_note_file=$(_q_threads_path "$_q_v")
+      _q_safe_target "$_q_v" "$_q_note_file" || _q_die err_unsafe_write 1 "${_q_note_file#"$_q_v"/}"
+      _q_sha256 "$_q_note_file" || _q_die err_sha_tool 1
+      printf '%s\n' "$_q_sha_hex"
+      return 0
+    fi
+    _q_np_sha=1
+    _q_note_plain_write "$_q_v" ""
+    return 0
   fi
   case "$#" in
     0) _q_die err_missing_arg 2 ;;
@@ -6636,6 +6709,15 @@ _q_note_plain_write() {
   _q_now=$(date +%H:%M)
   _q_note_file="$_q_v/$_q_rel"
 
+  # `note --sha256`: print the hash of the file a write would open (the empty
+  # hash while it does not exist yet); no lock, nothing written.
+  if [ "${_q_np_sha:-0}" = 1 ]; then
+    _q_safe_target "$_q_v" "$_q_note_file" || _q_die err_unsafe_write 1 "$_q_rel"
+    _q_sha256 "$_q_note_file" || _q_die err_sha_tool 1
+    printf '%s\n' "$_q_sha_hex"
+    return 0
+  fi
+
   # `pending --approve --dry-run`: name the target and the line, take no lock, write nothing.
   if [ "${_q_np_dry:-0}" = 1 ]; then
     _q_safe_target "$_q_v" "$_q_note_file" || _q_die err_unsafe_write 1 "$_q_rel"
@@ -6658,6 +6740,7 @@ _q_note_plain_write() {
   trap '_q_note_cleanup' EXIT HUP INT TERM
 
   _q_safe_target "$_q_v" "$_q_note_file" || _q_die err_unsafe_write 1 "$_q_rel"
+  _q_note_expect_check "$_q_note_file" "$_q_rel"
   mkdir -p "$_q_v/$_q_sessions"
   : >> "$_q_note_file"
   if ! awk 'index($0, "knotlog:reflect:start") || index($0, "quipu:reflect:start") { found = 1 } END { exit !found }' "$_q_note_file"; then

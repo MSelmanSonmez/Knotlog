@@ -10423,6 +10423,152 @@ t; assert_eq "T-691: CRLF archive -- exit 0, the archived lines keep their CRs (
 t; assert_eq "T-692: CRLF source after archive -- the 12 kept lines keep their CRs and equal head + tail of the original" '12 yes' \
   "$(LC_ALL=C tr -cd "$CRC" < "$TMP/vrac/Threads.md" | wc -c | tr -d ' ') $({ head -n 8 "$TMP/rac-orig.md"; tail -n +13 "$TMP/rac-orig.md"; } | cmp -s - "$TMP/vrac/Threads.md" && printf yes || printf no)"
 
+# ---- note --sha256 / --expect-sha256 (T-14220) ----
+# Hash-guarded write: `note --sha256` prints the SHA-256 of the file note writes
+# to; `note --expect-sha256 <hex>` writes only if the file still has that hash
+# (checked under the remember lock), else exit 2 and nothing written.
+hx_ref() { { sha256sum < "$1" 2>/dev/null || shasum -a 256 < "$1"; } | cut -d' ' -f1; }
+hx_ck() { cksum < "$1"; }
+HX_EMPTY=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
+# (a) plain note: the empty hash while today's file is missing, the file's real hash after a note.
+mkvault vhx1
+t; HX_RC=0; HX_H0=$(nte vhx1 --sha256 2>"$TMP/hx.err") || HX_RC=$?
+assert_eq "T-14220 (a): --sha256 on a missing session file prints the empty hash, exit 0, creates nothing" "0 $HX_EMPTY yes" \
+  "$HX_RC $HX_H0 $([ -z "$(find "$TMP/vhx1" -name "$D.md")" ] && [ ! -e "$TMP/vhx1/.knotlog/remember.lock" ] && printf yes || printf no)"
+nte vhx1 "first" >/dev/null 2>&1
+HX_F=$(find "$TMP/vhx1" -name "$D.md" | head -n 1)
+HX_REL=${HX_F#"$TMP/vhx1/"}
+HX_H1=$(nte vhx1 --sha256 2>&1)
+t; assert_eq "T-14220 (a): --sha256 after a note equals the independently computed hash of the file" "$(hx_ref "$HX_F")" "$HX_H1"
+t; assert_eq "T-14220 (a): the hash is 64 lowercase hex and differs from the empty hash" 'yes' \
+  "$(printf '%s\n' "$HX_H1" | grep -qx '[0-9a-f]\{64\}' && [ "$HX_H1" != "$HX_EMPTY" ] && printf yes || printf no)"
+
+# (b) the right hash writes, exit 0; upper-case hex is accepted.
+t; HX_RC=0; nte vhx1 --expect-sha256 "$HX_H1" "second" >/dev/null 2>&1 || HX_RC=$?
+assert_eq "T-14220 (b): a correct --expect-sha256 writes the line, exit 0" '0 yes' \
+  "$HX_RC $(grep -q -- '- [0-9:]* second$' "$HX_F" && printf yes || printf no)"
+HX_H2=$(hx_ref "$HX_F")
+HX_UP=$(printf '%s' "$HX_H2" | tr 'a-f' 'A-F')
+t; HX_RC=0; nte vhx1 --expect-sha256 "$HX_UP" "third" >/dev/null 2>&1 || HX_RC=$?
+assert_eq "T-14220 (b): upper-case hex is accepted" '0 yes' \
+  "$HX_RC $(grep -q -- '- [0-9:]* third$' "$HX_F" && printf yes || printf no)"
+
+# (c) a stale hash: exit 2, the conflict message on stderr, the file byte for byte unchanged, no lock left.
+HX_H3=$(hx_ref "$HX_F")
+HX_CK=$(hx_ck "$HX_F")
+t; HX_RC=0; nte vhx1 --expect-sha256 "$HX_H1" "stale write" >"$TMP/hx.out" 2>"$TMP/hx.err" || HX_RC=$?
+assert_eq "T-14220 (c): a stale hash exits 2 with the conflict message on stderr and nothing on stdout" "2 yes yes" \
+  "$HX_RC $([ "$(cat "$TMP/hx.err")" = "$(printf "$(i18n err_note_conflict)" "$HX_REL" "$HX_H1" "$HX_H3")" ] && printf yes || printf no) $([ ! -s "$TMP/hx.out" ] && printf yes || printf no)"
+t; assert_eq "T-14220 (c): the file is unchanged (cksum), the line is absent, the lock is released" 'yes' \
+  "$([ "$(hx_ck "$HX_F")" = "$HX_CK" ] && ! grep -q 'stale write' "$HX_F" && [ ! -e "$TMP/vhx1/.knotlog/remember.lock" ] && printf yes || printf no)"
+t; HX_RC=0; nte vhx1 --expect-sha256 "$HX_EMPTY" "stale write" >/dev/null 2>&1 || HX_RC=$?
+assert_eq "T-14220 (c): the empty hash against an existing file is a conflict too" '2' "$HX_RC"
+
+# (c2) with the file missing, the empty hash lets the write happen.
+mkvault vhx2
+t; HX_RC=0; nte vhx2 --expect-sha256 "$HX_EMPTY" "born" >/dev/null 2>&1 || HX_RC=$?
+assert_eq "T-14220 (c): the empty hash and no session file yet -> the write happens" '0 yes' \
+  "$HX_RC $(grep -q -- '- [0-9:]* born$' "$(find "$TMP/vhx2" -name "$D.md" | head -n 1)" && printf yes || printf no)"
+
+# (d) --thread, either option order.
+mkvault vhx3
+printf '%s\n' '# Threads' '<!-- knotlog:threads:start -->' '### Active threads' '- a' '### Closed threads' '<!-- knotlog:threads:end -->' > "$TMP/vhx3/Threads.md"
+HX_T="$TMP/vhx3/Threads.md"
+HX_TA=$(nte vhx3 --thread --sha256 2>&1)
+HX_TB=$(nte vhx3 --sha256 --thread 2>&1)
+t; assert_eq "T-14220 (d): --sha256 --thread (either order) prints the Threads.md hash" "$(hx_ref "$HX_T") $(hx_ref "$HX_T")" "$HX_TA $HX_TB"
+t; HX_RC=0; nte vhx3 --thread --expect-sha256 "$HX_TA" "tw" >/dev/null 2>&1 || HX_RC=$?
+assert_eq "T-14220 (d): --thread with the right hash writes the line" '0 yes' \
+  "$HX_RC $(grep -q -- '^- [0-9-]* [0-9:]* tw$' "$HX_T" && printf yes || printf no)"
+HX_TN=$(hx_ref "$HX_T"); HX_CK=$(hx_ck "$HX_T")
+t; HX_RC=0; nte vhx3 --expect-sha256 "$HX_TA" --thread "tstale" >/dev/null 2>"$TMP/hx.err" || HX_RC=$?
+assert_eq "T-14220 (d): --thread with a stale hash exits 2, conflict message, file unchanged" "2 yes yes" \
+  "$HX_RC $([ "$(cat "$TMP/hx.err")" = "$(printf "$(i18n err_note_conflict)" Threads.md "$HX_TA" "$HX_TN")" ] && printf yes || printf no) $([ "$(hx_ck "$HX_T")" = "$HX_CK" ] && printf yes || printf no)"
+
+# (e) invalid hex and misuse -> exit 2, nothing written.
+HX_CK=$(hx_ck "$HX_F")
+hx_rc() { HX_RC=0; nte vhx1 "$@" >"$TMP/hx.out" 2>"$TMP/hx.err" || HX_RC=$?; }
+t; hx_rc --expect-sha256 abc123 "bad"
+assert_eq "T-14220 (e): a short hex exits 2 with err_note_expect_hex" "2 $(i18n err_note_expect_hex)" "$HX_RC $(cat "$TMP/hx.err")"
+t; hx_rc --expect-sha256 "$(printf 'z%.0s' $(seq 1 64))" "bad"
+assert_eq "T-14220 (e): 64 non-hex characters exit 2" '2' "$HX_RC"
+t; hx_rc --expect-sha256 "${HX_H1}0" "bad"
+assert_eq "T-14220 (e): 65 hex characters exit 2" '2' "$HX_RC"
+t; hx_rc --expect-sha256
+assert_eq "T-14220 (e): --expect-sha256 without a value exits 2 (err_missing_arg)" "2 $(i18n err_missing_arg)" "$HX_RC $(cat "$TMP/hx.err")"
+t; hx_rc --sha256 "text"
+assert_eq "T-14220 (e): --sha256 with a text exits 2 (err_note_sha_args)" "2 $(i18n err_note_sha_args)" "$HX_RC $(cat "$TMP/hx.err")"
+t; hx_rc --sha256 --expect-sha256 "$HX_H1"
+assert_eq "T-14220 (e): --sha256 with --expect-sha256 exits 2" '2' "$HX_RC"
+t; hx_rc --expect-sha256 "$HX_H1"
+assert_eq "T-14220 (e): --expect-sha256 without a text exits 2 (err_missing_arg)" "2 $(i18n err_missing_arg)" "$HX_RC $(cat "$TMP/hx.err")"
+t; assert_eq "T-14220 (e): none of those wrote anything" "$HX_CK" "$(hx_ck "$HX_F")"
+
+# (f) two writers hold the same starting hash and write at once: exactly one wins
+# (exit 0), the other is refused with the conflict (exit 2, not the busy lock
+# warning), and the file holds only the winner's line. Repeated rounds.
+mkvault vhx4
+nte vhx4 "base" >/dev/null 2>&1
+HX_F4=$(find "$TMP/vhx4" -name "$D.md" | head -n 1)
+HX_ROUND=0; HX_BAD=
+while [ "$HX_ROUND" -lt 4 ]; do
+  HX_ROUND=$((HX_ROUND + 1))
+  HX_S=$(nte vhx4 --sha256)
+  nte vhx4 --expect-sha256 "$HX_S" "race A$HX_ROUND" >"$TMP/hx-a.out" 2>"$TMP/hx-a.err" </dev/null & HX_PA=$!
+  nte vhx4 --expect-sha256 "$HX_S" "race B$HX_ROUND" >"$TMP/hx-b.out" 2>"$TMP/hx-b.err" </dev/null & HX_PB=$!
+  HX_RA=0; HX_RB=0
+  wait "$HX_PA" || HX_RA=$?
+  wait "$HX_PB" || HX_RB=$?
+  HX_NA=$(grep -c "race A$HX_ROUND\$" "$HX_F4"); HX_NB=$(grep -c "race B$HX_ROUND\$" "$HX_F4")
+  HX_LOSE=$(cat "$TMP/hx-a.err" "$TMP/hx-b.err")
+  HX_GOT="$(printf '%s\n%s\n' "$HX_RA" "$HX_RB" | sort | tr '\n' ' ')$((HX_NA + HX_NB)) $(printf '%s\n' "$HX_LOSE" | grep -c '^conflict: ') $(printf '%s\n' "$HX_LOSE" | grep -c 'skipped')"
+  [ "$HX_GOT" = "0 2 1 1 0" ] || HX_BAD="$HX_BAD [round $HX_ROUND: $HX_GOT]"
+done
+t; assert_eq "T-14220 (f): in 4 rounds of two simultaneous writers, one exits 0 and one exits 2 (conflict, not busy), one line written" '' "$HX_BAD"
+
+# (g) tool chain, driven by PATH: fake sha256sum / shasum / openssl in front.
+HX_REFB=$(command -v sha256sum 2>/dev/null || true)
+HX_REFA=
+if [ -z "$HX_REFB" ]; then HX_REFB=$(command -v shasum); HX_REFA="-a 256"; fi
+HX_FK="$TMP/hx-fk"; HX_LOG="$TMP/hx-fk.log"
+hx_fake() { # name mode -- mode: dead | sum | shasum | ossl | osslold
+  mkdir -p "$HX_FK"
+  case "$2" in
+    dead) printf '#!/bin/sh\nprintf "%%s\\n" "%s called" >> "%s"\nexit 127\n' "$1" "$HX_LOG" ;;
+    sum) printf '#!/bin/sh\nprintf "%%s\\n" "%s called" >> "%s"\nexec "%s" %s\n' "$1" "$HX_LOG" "$HX_REFB" "$HX_REFA" ;;
+    shasum) printf '#!/bin/sh\nprintf "%%s\\n" "shasum $*" >> "%s"\n[ "$1 $2" = "-a 256" ] || exit 2\nexec "%s" %s\n' "$HX_LOG" "$HX_REFB" "$HX_REFA" ;;
+    ossl) printf '#!/bin/sh\nprintf "%%s\\n" "openssl $*" >> "%s"\n[ "$1 $2" = "dgst -sha256" ] || exit 2\nh=$("%s" %s | cut -d" " -f1)\nprintf "SHA2-256(stdin)= %%s\\n" "$h"\n' "$HX_LOG" "$HX_REFB" "$HX_REFA" ;;
+    osslold) printf '#!/bin/sh\nprintf "%%s\\n" "openssl $*" >> "%s"\n[ "$1 $2" = "dgst -sha256" ] || exit 2\nh=$("%s" %s | cut -d" " -f1)\nprintf "SHA256(stdin)= %%s\\n" "$h"\n' "$HX_LOG" "$HX_REFB" "$HX_REFA" ;;
+  esac > "$HX_FK/$1"
+  chmod +x "$HX_FK/$1"
+}
+hx_chain() { # sum-mode shasum-mode openssl-mode args... -- run note with that chain in front of PATH
+  rm -rf "$HX_FK"; : > "$HX_LOG"
+  hx_fake sha256sum "$1"; hx_fake shasum "$2"; hx_fake openssl "$3"; shift 3
+  PATH="$HX_FK:$PATH" nte vhx1 "$@"
+}
+HX_NOW=$(hx_ref "$HX_F")
+t; HX_OUT=$(hx_chain dead shasum dead --sha256 2>&1); HX_RC=$?
+assert_eq "T-14220 (g): with only shasum (-a 256) the hash is the same" "0 $HX_NOW yes" "$HX_RC $HX_OUT $(grep -qx 'shasum -a 256' "$HX_LOG" && printf yes || printf no)"
+t; HX_OUT=$(hx_chain dead dead ossl --sha256 2>&1); HX_RC=$?
+assert_eq "T-14220 (g): with only openssl (SHA2-256(stdin)= form) the hash is the same" "0 $HX_NOW yes" "$HX_RC $HX_OUT $(grep -qx 'openssl dgst -sha256' "$HX_LOG" && printf yes || printf no)"
+t; HX_OUT=$(hx_chain dead dead osslold --sha256 2>&1); HX_RC=$?
+assert_eq "T-14220 (g): with only openssl (SHA256(stdin)= form) the hash is the same" "0 $HX_NOW" "$HX_RC $HX_OUT"
+t; HX_OUT=$(hx_chain sum shasum ossl --sha256 2>&1); HX_RC=$?
+assert_eq "T-14220 (g): sha256sum wins when it works; shasum and openssl are not called" "0 $HX_NOW sha256sum called" "$HX_RC $HX_OUT $(cat "$HX_LOG")"
+HX_CK=$(hx_ck "$HX_F")
+t; HX_OUT=$(hx_chain dead dead dead --sha256 2>&1 >/dev/null); HX_RC=$?
+assert_eq "T-14220 (g): with no hash tool, --sha256 exits 1 with err_sha_tool" "1 $(i18n err_sha_tool)" "$HX_RC $HX_OUT"
+t; HX_OUT=$(hx_chain dead dead dead --expect-sha256 "$HX_NOW" "no tool" 2>&1 >/dev/null); HX_RC=$?
+assert_eq "T-14220 (g): with no hash tool, --expect-sha256 exits 1, writes nothing, leaves no lock" "1 $(i18n err_sha_tool) yes" \
+  "$HX_RC $HX_OUT $([ "$(hx_ck "$HX_F")" = "$HX_CK" ] && [ ! -e "$TMP/vhx1/.knotlog/remember.lock" ] && printf yes || printf no)"
+t; : > "$HX_LOG"; HX_RC=0
+PATH="$HX_FK:$PATH" nte vhx1 "plain still works" >/dev/null 2>&1 || HX_RC=$?
+assert_eq "T-14220 (g): with no hash tool a plain note still works and never calls one" "0 yes 0" \
+  "$HX_RC $(grep -q -- '- [0-9:]* plain still works$' "$HX_F" && printf yes || printf no) $(wc -l < "$HX_LOG" | tr -d ' ')"
+rm -rf "$HX_FK"
+
 # ---- doctor reflection nudge (T-693..T-701): one warn row when today's events
 # exceed note_nudge_events= and today's reflection block is empty or missing --
 # silent otherwise. Each case builds its own vault; D and YD are refreshed here.
