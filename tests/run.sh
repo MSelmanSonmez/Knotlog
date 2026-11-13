@@ -10985,6 +10985,32 @@ assert_eq "T-780 (b): Gomulu is dropped at any depth; Diger and a.md stay" 'yes'
 assert_eq "T-781: glob and slash tokens are ignored, Gomx/e.md stays indexed" 'yes' \
   "$(printf '%s' "$IX780" | grep -qF 'Gomx/e.md' && printf yes || printf no)"
 
+# ---- index_exclude_prefix= in .knotlog/config (T-14200) ----
+# T-14200 (a): a prefix with a space and UTF-8 drops that folder; siblings with a similar name stay.
+# T-14200 (b): two lines, two prefixes, both apply.
+# T-14200 (c): a CRLF config works the same.
+# T-14200 (d): removing the prefixes brings the notes back on the next `index --full` (an unchanged note is not re-read by a plain index).
+# T-14200 (e): search does not find a dropped note.
+mkdir -p "$TMP/ixp/.knotlog" "$TMP/ixp/Kişisel İşler" "$TMP/ixp/Kişisel" "$TMP/ixp/Diğer"
+: > "$TMP/ixp/.knotlog/config"
+for f in "Kişisel İşler/a.md" "Kişisel/b.md" "Diğer/c.md" "top.md"; do printf 'pfxneedle\n' > "$TMP/ixp/$f"; touch_at 1000000000 "$TMP/ixp/$f"; done
+ixp_run() { QUIPU_VAULT="$TMP/ixp" QUIPU_LANG=en sh "$ROOT/knotlog" index $1 </dev/null >/dev/null 2>&1; }
+ixp_list() { awk -F'\t' '{print $1}' "$TMP/ixp/.knotlog/index.tsv" | sort | tr '\n' '|'; }
+printf 'index_exclude_prefix=Kişisel İşler/\n' > "$TMP/ixp/.knotlog/config"
+t; ixp_run
+assert_eq "T-14200 (a): the spaced UTF-8 prefix drops its folder; Kişisel/ and Diğer/ stay" 'Diğer/c.md|Kişisel/b.md|top.md|' "$(ixp_list)"
+t; assert_eq "T-14200 (e): search does not find the dropped note" 'Diğer/c.md|Kişisel/b.md|top.md|' \
+  "$(QUIPU_VAULT="$TMP/ixp" QUIPU_LANG=en sh "$ROOT/knotlog" search pfxneedle --paths </dev/null 2>/dev/null | sort | tr '\n' '|')"
+printf 'index_exclude_prefix=Kişisel İşler/\nindex_exclude_prefix=Diğer/\n' > "$TMP/ixp/.knotlog/config"
+t; ixp_run
+assert_eq "T-14200 (b): two prefix lines both apply" 'Kişisel/b.md|top.md|' "$(ixp_list)"
+printf 'index_exclude_prefix=Kişisel İşler/\r\nindex_exclude_prefix=Diğer/\r\nindex_exclude_prefix=\r\n' > "$TMP/ixp/.knotlog/config"
+t; ixp_run
+assert_eq "T-14200 (c): a CRLF config with an empty value works the same" 'Kişisel/b.md|top.md|' "$(ixp_list)"
+: > "$TMP/ixp/.knotlog/config"
+t; ixp_run --full
+assert_eq "T-14200 (d): removing the prefixes and running index --full brings the notes back" 'Diğer/c.md|Kişisel İşler/a.md|Kişisel/b.md|top.md|' "$(ixp_list)"
+
 # ---- index.version stamp (T-785..T-789) ----
 # T-785: a successful index writes .knotlog/index.version = the Knotlog version; index.schema is "3".
 # T-786: same version -> incremental; a sentinel title in an unchanged row survives.

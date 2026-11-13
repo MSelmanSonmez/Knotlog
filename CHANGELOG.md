@@ -5,6 +5,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- `index_exclude_prefix=` config key: one vault-relative path prefix per line, spaces and UTF-8 allowed, drops every note under it from `knotlog index` and `search` (`index_exclude=` splits on whitespace and cannot name a folder like `Personal Projects`). CRLF config lines are tolerated, an empty value is ignored, notes dropped earlier return on `knotlog index --full`, and without such a line the index pass is unchanged (T-14200).
+
 ## [1.7.0] - 2026-11-12
 
 ### Added

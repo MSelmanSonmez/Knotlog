@@ -807,6 +807,15 @@ _q_mdlist() {
   if [ -f "$_q_SD/config" ]; then
     _q_ml_ex=$(awk -F= -v k=index_exclude '$1==k{sub(/^[^=]*=/,"");print;exit}' "$_q_SD/config" 2>/dev/null || true)
   fi
+  # index_exclude_prefix= (2026-11-13): one vault-relative path prefix per line,
+  # spaces and UTF-8 allowed (index_exclude splits on whitespace, so it cannot
+  # carry a folder like "Kisisel Isler"). A note whose relative path starts with
+  # a prefix is dropped. CRLF line ends are tolerated; an empty value is ignored.
+  # The awk pass runs only when the config holds such a line.
+  _q_ml_px=
+  if [ -f "$_q_SD/config" ] && grep -q '^index_exclude_prefix=' "$_q_SD/config" 2>/dev/null; then
+    _q_ml_px=1
+  fi
   if [ -n "${1:-}" ]; then
     find . \( -name .git -o -name .knotlog -o -name .quipu -o -name node_modules \) -prune -o \
       -type f -name '*.md' -newer "$1" -print
@@ -833,6 +842,19 @@ _q_mdlist() {
         for (i = 1; i <= m; i++) if (parts[i] in names) next
         print
       }
+    '
+  else
+    cat
+  fi | if [ -n "$_q_ml_px" ]; then
+    awk -v cf="$_q_SD/config" '
+      BEGIN {
+        while ((getline l < cf) > 0) {
+          sub(/\r$/, "", l)
+          if (index(l, "index_exclude_prefix=") == 1 && length(l) > 21) pre[++np] = substr(l, 22)
+        }
+        close(cf)
+      }
+      { for (i = 1; i <= np; i++) if (index($0, pre[i]) == 1) next; print }
     '
   else
     cat
