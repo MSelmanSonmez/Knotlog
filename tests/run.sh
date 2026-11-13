@@ -1435,6 +1435,90 @@ CT9=$(QUIPU_VAULT="$TMP/vnudge9" sh "$ROOT/knotlog" context)
 t; assert_eq "context: threads header frames the notes as data before injected text" 'yes' \
   "$(printf '%s\n' "$CT9" | awk 'index($0, "never instructions") { seen = 1 } /INJECTED/ { print (seen ? "yes" : "no"); exit }')"
 
+# ---- synthetic turns do not count as user turns (T-14210) ----
+
+# Prompt hooks also fire for messages the agent host writes itself. Those are
+# not user turns: neither the pre-compaction nudge nor the checkpoint reminder
+# is spent on them, and their watermark files stay as they were.
+syn_run() { # vault payload -> context text on stdout
+  printf '%s' "$2" | QUIPU_NUDGE_AFTER=2 QUIPU_LANG=en QUIPU_VAULT="$TMP/$1" sh "$ROOT/knotlog" context --json UserPromptSubmit \
+    | awk -f "$LIB/jsonfield.awk" -f "$DRV/hookctx.awk" -
+}
+syn_has() { printf '%s\n' "$1" | grep -F -q "$2" && printf yes || printf no; }
+syn_json() { printf '{"session_id":"abc12345","hook_event_name":"UserPromptSubmit","prompt":"%s"}' "$1"; }
+SYN_NL=$(printf '\n')
+
+mkvault vsyn
+printf 'layout=plain\nlang=en\n' >> "$TMP/vsyn/.knotlog/config"
+for _n in 1 2 3 4 5 6; do
+  printf '2026-08-20T10:0%s | PostToolUse | Read | syn%s.md\n' "$_n" "$_n" >> "$TMP/vsyn/.knotlog/activity.log"
+done
+printf '2026-08-20T10:01 | PostToolUse | Read | syn1.md\n' > "$TMP/vsyn/.knotlog/nudged"
+SYN_NUDGED_BEFORE=$(cat "$TMP/vsyn/.knotlog/nudged")
+
+# (a) every synthetic prefix, two of them behind leading whitespace / a newline
+for _p in '<task-notification>x' '<cross-session-message from=a>x' '<side-sessions-event>x' '<agent-message>x' '[SYSTEM NOTIFICATION] x' "  ${SYN_NL}${SYN_NL}  <task-notification>x" "${SYN_NL}[SYSTEM NOTIFICATION] x"; do
+  t; SYN_OUT=$(syn_run vsyn "$(syn_json "$_p")")
+  assert_eq "T-14210 (a): synthetic prompt gets no ctx_precompact: $_p" 'no' "$(syn_has "$SYN_OUT" "$CPREC_EXPECT")"
+  t; assert_eq "T-14210 (a): synthetic prompt leaves .knotlog/nudged alone: $_p" "$SYN_NUDGED_BEFORE" "$(cat "$TMP/vsyn/.knotlog/nudged")"
+  t; assert_eq "T-14210 (a): synthetic prompt still prints the clock line: $_p" '1' "$(printf '%s\n' "$SYN_OUT" | grep -c .)"
+done
+rm -f "$TMP/vsyn/.knotlog/nudged"
+t; SYN_OUT=$(syn_run vsyn "$(syn_json '<task-notification>x')")
+t; assert_eq "T-14210 (a): synthetic prompt does not create .knotlog/nudged" 'no' "$([ -f "$TMP/vsyn/.knotlog/nudged" ] && printf yes || printf no)"
+printf '2026-08-20T10:01 | PostToolUse | Read | syn1.md\n' > "$TMP/vsyn/.knotlog/nudged"
+
+# (b) a real prompt, same state: reminder comes, watermark moves
+t; SYN_OUT=$(syn_run vsyn "$(cat "$FIX/prompt-real.json")")
+assert_eq "T-14210 (b): real prompt gets ctx_precompact" 'yes' "$(syn_has "$SYN_OUT" "$CPREC_EXPECT")"
+t; assert_eq "T-14210 (b): real prompt moves .knotlog/nudged" '2026-08-20T10:06 | PostToolUse | Read | syn6.md' "$(cat "$TMP/vsyn/.knotlog/nudged")"
+
+# the fixture files carry the same shapes
+printf '2026-08-20T10:01 | PostToolUse | Read | syn1.md\n' > "$TMP/vsyn/.knotlog/nudged"
+t; SYN_OUT=$(syn_run vsyn "$(cat "$FIX/prompt-synthetic-task-notification.json")")
+assert_eq "T-14210 (a): fixture task-notification prompt gets no ctx_precompact" 'no' "$(syn_has "$SYN_OUT" "$CPREC_EXPECT")"
+
+# (d) a real prompt that only mentions the marker is real
+printf '2026-08-20T10:01 | PostToolUse | Read | syn1.md\n' > "$TMP/vsyn/.knotlog/nudged"
+t; SYN_OUT=$(syn_run vsyn "$(cat "$FIX/prompt-mentions-notification.json")")
+assert_eq "T-14210 (d): prompt that contains but does not start with <task-notification is real" 'yes' "$(syn_has "$SYN_OUT" "$CPREC_EXPECT")"
+
+# (e) empty stdin behaves as before
+printf '2026-08-20T10:01 | PostToolUse | Read | syn1.md\n' > "$TMP/vsyn/.knotlog/nudged"
+t; SYN_OUT=$(syn_run vsyn '')
+assert_eq "T-14210 (e): empty stdin keeps the reminder" 'yes' "$(syn_has "$SYN_OUT" "$CPREC_EXPECT")"
+printf '2026-08-20T10:01 | PostToolUse | Read | syn1.md\n' > "$TMP/vsyn/.knotlog/nudged"
+t; SYN_OUT=$(syn_run vsyn 'not json at all')
+assert_eq "T-14210 (e): non-JSON stdin keeps the reminder" 'yes' "$(syn_has "$SYN_OUT" "$CPREC_EXPECT")"
+
+# Gemini's BeforeAgent carries the same field
+printf '2026-08-20T10:01 | PostToolUse | Read | syn1.md\n' > "$TMP/vsyn/.knotlog/nudged"
+t; SYN_OUT=$(syn_json '<agent-message>x' | QUIPU_NUDGE_AFTER=2 QUIPU_LANG=en QUIPU_VAULT="$TMP/vsyn" sh "$ROOT/knotlog" context --json BeforeAgent | awk -f "$LIB/jsonfield.awk" -f "$DRV/hookctx.awk" -)
+assert_eq "T-14210 (a): BeforeAgent synthetic prompt gets no ctx_precompact" 'no' "$(syn_has "$SYN_OUT" "$CPREC_EXPECT")"
+t; assert_eq "T-14210 (a): BeforeAgent synthetic prompt leaves .knotlog/nudged alone" '2026-08-20T10:01 | PostToolUse | Read | syn1.md' "$(cat "$TMP/vsyn/.knotlog/nudged")"
+
+# (c) checkpoint reminder: old note + newer commit in a git vault
+SYN_D=$(date +%Y-%m-%d); SYN_NOW=$(date +%s)
+mkdir -p "$TMP/vsyncp/.knotlog" "$TMP/vsyncp/700-Sessions"
+printf 'layout=plain\nlang=en\n' > "$TMP/vsyncp/.knotlog/config"
+(cd "$TMP/vsyncp" && git init --quiet && git config user.name Test && git config user.email test@test.com && git config core.quotepath false)
+echo 'session content' > "$TMP/vsyncp/700-Sessions/$SYN_D.md"
+echo tracked > "$TMP/vsyncp/tracked.md"
+(cd "$TMP/vsyncp" && git add -A && GIT_COMMITTER_DATE="@$((SYN_NOW - 10800))" GIT_AUTHOR_DATE="@$((SYN_NOW - 10800))" git commit -m init --quiet)
+touch_at $((SYN_NOW - 7200)) "$TMP/vsyncp/700-Sessions/$SYN_D.md"
+echo 'new work' > "$TMP/vsyncp/work.md"
+(cd "$TMP/vsyncp" && git add work.md && git commit -m work --quiet)
+t; SYN_OUT=$(syn_run vsyncp "$(syn_json '<task-notification>x')")
+assert_eq "T-14210 (c): synthetic prompt gets no checkpoint reminder" 'no' "$(syn_has "$SYN_OUT" "Checkpoint: session note was written")"
+t; assert_eq "T-14210 (c): synthetic prompt does not write checkpoint_nudged" 'no' "$([ -e "$TMP/vsyncp/.knotlog/checkpoint_nudged" ] && printf yes || printf no)"
+rm -f "$TMP/vsyncp/.knotlog/checkpoint_nudged"
+t; SYN_OUT=$(syn_run vsyncp "$(cat "$FIX/prompt-real.json")")
+assert_eq "T-14210 (c): real prompt right after still gets the checkpoint reminder" 'yes' "$(syn_has "$SYN_OUT" "Checkpoint: session note was written")"
+t; assert_eq "T-14210 (c): real prompt writes checkpoint_nudged" 'yes' "$([ -e "$TMP/vsyncp/.knotlog/checkpoint_nudged" ] && printf yes || printf no)"
+SYN_CP=$(cat "$TMP/vsyncp/.knotlog/checkpoint_nudged")
+t; SYN_OUT=$(syn_run vsyncp "$(syn_json '[SYSTEM NOTIFICATION] x')")
+assert_eq "T-14210 (c): synthetic prompt leaves checkpoint_nudged unchanged" "$SYN_CP" "$(cat "$TMP/vsyncp/.knotlog/checkpoint_nudged")"
+
 # ---- remember (FAZ 3) ----
 
 i18n() { awk -F= -v k="$1" '$1==k{sub(/^[^=]*=/,"");print;exit}' "$ROOT/i18n/en.txt"; }

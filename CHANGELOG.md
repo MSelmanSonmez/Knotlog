@@ -5,6 +5,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- `knotlog context --json UserPromptSubmit` (and Gemini `BeforeAgent`) no longer counts synthetic prompts as user turns: a `prompt` that starts, after leading whitespace, with `<task-notification`, `<cross-session-message`, `<side-sessions-event`, `<agent-message` or `[SYSTEM NOTIFICATION` gets neither the pre-compaction nudge nor the checkpoint reminder, and `.knotlog/nudged` and `.knotlog/checkpoint_nudged` are left untouched, so the next real prompt still gets them. Real prompts, empty stdin and non-JSON stdin behave as before. New `lib/prompt.awk` (T-14210).
+
 ### Added
 - `index_exclude_prefix=` config key: one vault-relative path prefix per line, spaces and UTF-8 allowed, drops every note under it from `knotlog index` and `search` (`index_exclude=` splits on whitespace and cannot name a folder like `Personal Projects`). CRLF config lines are tolerated, an empty value is ignored, notes dropped earlier return on `knotlog index --full`, and without such a line the index pass is unchanged (T-14200).
 

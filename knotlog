@@ -5818,9 +5818,21 @@ _q_cmd_context() {
   esac
   _q_ctx_text
 
+  # Synthetic turn: the agent host fires the prompt hook for its own messages
+  # (task notifications, cross-session messages); those are not user turns, so
+  # neither reminder below is spent on them. Unreadable stdin counts as real.
+  _q_synth=0
+  if [ -n "$_q_now_only" ] && [ ! -t 0 ]; then
+    _q_prompt=$(head -c "${QUIPU_MAX_STDIN:-65536}" 2>/dev/null | awk -f "$_q_HOME/lib/jsonfield.awk" -f "$_q_HOME/lib/prompt.awk" 2>/dev/null || true)
+    _q_prompt=${_q_prompt#"${_q_prompt%%[![:space:]]*}"}
+    case "$_q_prompt" in
+      '<task-notification'*|'<cross-session-message'*|'<side-sessions-event'*|'<agent-message'*|'[SYSTEM NOTIFICATION'*) _q_synth=1 ;;
+    esac
+  fi
+
   # Nudge (C-19/C-20): only --json UserPromptSubmit or BeforeAgent (Gemini), once more than
   # QUIPU_NUDGE_AFTER lines accumulate past the watermarks.
-  if [ -n "$_q_ev" ] && { [ "$_q_ev" = UserPromptSubmit ] || [ "$_q_ev" = BeforeAgent ]; } && [ -s "$_q_log" ]; then
+  if [ "$_q_synth" -eq 0 ] && [ -n "$_q_ev" ] && { [ "$_q_ev" = UserPromptSubmit ] || [ "$_q_ev" = BeforeAgent ]; } && [ -s "$_q_log" ]; then
     _q_nudge_after=${QUIPU_NUDGE_AFTER:-50}
     _q_total=$(wc -l < "$_q_log" | tr -d ' ')
     _q_last=0
@@ -5850,7 +5862,7 @@ _q_cmd_context() {
   fi
 
   # Checkpoint reminder on UserPromptSubmit (and BeforeAgent, Gemini)
-  if [ -n "$_q_ev" ] && { [ "$_q_ev" = UserPromptSubmit ] || [ "$_q_ev" = BeforeAgent ]; }; then
+  if [ "$_q_synth" -eq 0 ] && [ -n "$_q_ev" ] && { [ "$_q_ev" = UserPromptSubmit ] || [ "$_q_ev" = BeforeAgent ]; }; then
     _q_now_epoch=$(date +%s)
     _q_cp_nudged=0
     if [ -f "$_q_v/$_q_SD/checkpoint_nudged" ]; then
