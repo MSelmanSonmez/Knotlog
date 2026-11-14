@@ -18,6 +18,7 @@ usage_mcp=  mcp       run the MCP server on stdin/stdout (JSON-RPC, one message 
 usage_note=  note      add one line to today's session reflection block (note "text")
 usage_digest=  digest    summarize one date's activity (--date YYYY-MM-DD) or a range (--since YYYY-MM-DD [--until YYYY-MM-DD]); --dry-run, --limit N
 usage_note_thread=  note --thread  add one line to the active threads section (note --thread "text")
+usage_note_sha=  note --sha256 | --expect-sha256 <hex>  print the SHA-256 of the file note writes to; or write only if it still has that hash (exit 2 = changed, read it again); both take --thread
 usage_pending=  pending   list notes waiting for review (write_approval=on); --approve N [--to note|facts|thread] [--dry-run] writes one, --reject N drops it
 usage_propose=  propose   queue a review finding for approval (propose --kind lesson|skill|fix "text"; knotlog pending)
 usage_import=  import    convert a local JSON conversation export into a session note (FILE, --date YYYY-MM-DD; claude [--project DIR] [--apply]: Claude Code transcripts)
@@ -32,6 +33,10 @@ err_no_vault=no vault found (.knotlog/ missing); run: knotlog init
 err_missing_arg=missing required argument
 err_unknown_flag=unknown flag: %s
 err_note_args=note takes exactly one quoted text argument
+err_note_sha_args=note --sha256 takes no text and cannot be combined with --expect-sha256
+err_note_expect_hex=--expect-sha256 needs 64 hex characters (the output of note --sha256); nothing was written
+err_note_conflict=conflict: %s changed since you read it (expected %s, found %s); read it again; nothing was written
+err_sha_tool=no SHA-256 tool found (sha256sum, shasum or openssl is needed); nothing was written
 err_note_newline=note text must be one line (no newline or carriage return)
 err_note_control=the text holds a control character (such as ESC), which can hide text in a terminal; nothing was written
 err_note_block=today's session file has a reflection start marker without an end marker; nothing was written
