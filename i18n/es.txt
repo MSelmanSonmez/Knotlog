@@ -18,6 +18,7 @@ usage_mcp=  mcp       ejecuta el servidor MCP en stdin/stdout (JSON-RPC, un mens
 usage_note=  note      añade una línea al bloque de reflexión de la sesión de hoy (note "texto")
 usage_digest=  digest    resume la actividad de una fecha (--date YYYY-MM-DD) o de un rango (--since YYYY-MM-DD [--until YYYY-MM-DD]); --dry-run, --limit N
 usage_note_thread=  note --thread  añade una línea a la sección de hilos activos (note --thread "texto")
+usage_note_sha=  note --sha256 | --expect-sha256 <hex>  imprime el SHA-256 del archivo donde escribe note; o escribe solo si conserva ese hash (salida 2 = cambió, vuelve a leerlo); ambos admiten --thread
 usage_pending=  pending   lista las notas en espera de revisión (write_approval=on); --approve N [--to note|facts|thread] [--dry-run] escribe una, --reject N la descarta
 usage_propose=  propose   pone en espera de aprobación un hallazgo de revisión (propose --kind lesson|skill|fix "texto"; knotlog pending)
 usage_import=  import    convierte una exportación JSON local de una conversación en una nota de sesión (FILE, --date YYYY-MM-DD; claude [--project DIR] [--apply]: transcripciones de Claude Code)
@@ -32,6 +33,10 @@ err_no_vault=no se encontró ninguna bóveda (falta .knotlog/); ejecuta: knotlog
 err_missing_arg=falta un argumento obligatorio
 err_unknown_flag=opción desconocida: %s
 err_note_args=note admite exactamente un argumento de texto entre comillas
+err_note_sha_args=note --sha256 no admite texto y no se combina con --expect-sha256
+err_note_expect_hex=--expect-sha256 necesita 64 caracteres hexadecimales (la salida de note --sha256); no se escribió nada
+err_note_conflict=conflicto: %s cambió desde que lo leíste (esperado %s, encontrado %s); léelo de nuevo; no se escribió nada
+err_sha_tool=no se encontró una herramienta SHA-256 (hace falta sha256sum, shasum u openssl); no se escribió nada
 err_note_newline=el texto de note debe ser una sola línea (sin salto de línea ni retorno de carro)
 err_note_control=el texto contiene un carácter de control (como ESC), que puede ocultar texto en una terminal; no se escribió nada
 err_note_block=el archivo de sesión de hoy tiene un marcador de inicio del bloque de reflexión sin marcador de fin; no se escribió nada

@@ -18,6 +18,7 @@ usage_mcp=  mcp       在 stdin/stdout 上运行 MCP 服务器（JSON-RPC，每�
 usage_note=  note      向今天会话反思块添加一行（note "文本"）
 usage_digest=  digest    汇总某一天的活动（--date YYYY-MM-DD）或一个范围（--since YYYY-MM-DD [--until YYYY-MM-DD]）；--dry-run、--limit N
 usage_note_thread=  note --thread  向活跃线索部分添加一行（note --thread "文本"）
+usage_note_sha=  note --sha256 | --expect-sha256 <hex>  打印 note 所写文件的 SHA-256；或仅在文件仍是该哈希时写入（退出码 2 = 已变化，请重新读取）；两者都可加 --thread
 usage_pending=  pending   列出等待审核的笔记（write_approval=on）；--approve N [--to note|facts|thread] [--dry-run] 写入一条，--reject N 丢弃
 usage_propose=  propose   把一条审查发现放入待批准队列（propose --kind lesson|skill|fix "文本"；knotlog pending）
 usage_import=  import    将本地 JSON 对话导出转换为会话笔记（FILE、--date YYYY-MM-DD；claude [--project DIR] [--apply]：Claude Code 记录）
@@ -32,6 +33,10 @@ err_no_vault=未找到知识库（缺少 .knotlog/）；请运行：knotlog init
 err_missing_arg=缺少必需的参数
 err_unknown_flag=未知标志：%s
 err_note_args=note 只接受一个带引号的文本参数
+err_note_sha_args=note --sha256 不接受文本，也不能与 --expect-sha256 同时使用
+err_note_expect_hex=--expect-sha256 需要 64 个十六进制字符（note --sha256 的输出）；未写入任何内容
+err_note_conflict=冲突：%s 在你读取后已变化（期望 %s，实际 %s）；请重新读取；未写入任何内容
+err_sha_tool=未找到 SHA-256 工具（需要 sha256sum、shasum 或 openssl）；未写入任何内容
 err_note_newline=note 文本必须为单行（不能包含换行或回车）
 err_note_control=文本包含控制字符（如 ESC），它可能在终端中隐藏文字；未写入任何内容
 err_note_block=今天的会话文件有反思起始标记但没有结束标记；未写入任何内容
