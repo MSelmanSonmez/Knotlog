@@ -11224,7 +11224,7 @@ assert_eq "T-781: glob and slash tokens are ignored, Gomx/e.md stays indexed" 'y
 mkdir -p "$TMP/ixp/.knotlog" "$TMP/ixp/Kişisel İşler" "$TMP/ixp/Kişisel" "$TMP/ixp/Diğer"
 : > "$TMP/ixp/.knotlog/config"
 for f in "Kişisel İşler/a.md" "Kişisel/b.md" "Diğer/c.md" "top.md"; do printf 'pfxneedle\n' > "$TMP/ixp/$f"; touch_at 1000000000 "$TMP/ixp/$f"; done
-ixp_run() { QUIPU_VAULT="$TMP/ixp" QUIPU_LANG=en sh "$ROOT/knotlog" index $1 </dev/null >/dev/null 2>&1; }
+ixp_run() { QUIPU_VAULT="$TMP/ixp" QUIPU_LANG=en sh "$ROOT/knotlog" index "$@" </dev/null >/dev/null 2>&1; }
 ixp_list() { awk -F'\t' '{print $1}' "$TMP/ixp/.knotlog/index.tsv" | sort | tr '\n' '|'; }
 printf 'index_exclude_prefix=Kişisel İşler/\n' > "$TMP/ixp/.knotlog/config"
 t; ixp_run
