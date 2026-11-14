@@ -14,6 +14,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - A plain `knotlog index` no longer leaves out, for good, a note that the old `index.tsv` does not list and that is not newer than it. It used to build the new index only from the old rows plus the newer notes, so an index cut short (by an interrupted or overlapping run) stayed short until `--full`, and the summary still said "dropped 0". Three other cases had the same cause: a note copied in with an old timestamp was never indexed, notes that predate the empty index `init` writes were missed by the first run, and removing an `index_exclude=` or `index_exclude_prefix=` entry did not bring its notes back. Such notes are now re-read as stale, and the set is empty on a normal run (T-14230).
+- `knotlog index` no longer truncates `index.tsv`, `links.tsv` and `blocks.tsv` in place. Each file is written to a temporary file beside it and moved over the old one, so a search, or a second index run started by another session ending, never reads a half-written file, and a run killed mid-write leaves the old file whole (T-14231).
 
 ## [1.7.0] - 2026-11-12
 

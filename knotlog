@@ -7424,7 +7424,7 @@ _q_cmd_index() {
   _q_prof=$(_q_fold_prof "$_q_v")
 
   _q_tmp=$(mktemp -d "${TMPDIR:-/tmp}/quipu-index-XXXXXX") || exit 1
-  trap 'rm -rf "$_q_tmp"' EXIT HUP INT TERM
+  trap 'rm -rf "$_q_tmp"; rm -f "$_q_v/$_q_SD/index.tsv.$$" "$_q_v/$_q_SD/links.tsv.$$" "$_q_v/$_q_SD/blocks.tsv.$$"' EXIT HUP INT TERM
 
   _q_tab=$(printf '\t')
 
@@ -7564,7 +7564,11 @@ _q_cmd_index() {
   # (and so matching the pre-FAZ11 per-file loop's order too).
   awk -v mode=assemble -v joinfile="$_q_tmp/joined.tsv" -v planfile="$_q_tmp/plan.txt" \
     -v keptout="$_q_tmp/kept_paths.txt" -v countsout="$_q_tmp/counts.txt" \
-    -f "$_q_HOME/lib/index.awk" "$_q_tmp/joined.tsv" "$_q_tmp/plan.txt" > "$_q_v/$_q_SD/index.tsv"
+    -f "$_q_HOME/lib/index.awk" "$_q_tmp/joined.tsv" "$_q_tmp/plan.txt" > "$_q_v/$_q_SD/index.tsv.$$"
+  # Written beside the target and moved into place, never truncated in
+  # place: a second run (two SessionEnd hooks) or a reader never sees a
+  # half-written index.tsv, and a run killed here leaves the old one whole.
+  mv -f "$_q_v/$_q_SD/index.tsv.$$" "$_q_v/$_q_SD/index.tsv"
 
   read -r R S D < "$_q_tmp/counts.txt"
   N=$((R + S))
@@ -7580,7 +7584,8 @@ _q_cmd_index() {
   else
     : > "$_q_tmp/links_carried.tsv"
   fi
-  cat "$_q_tmp/links_carried.tsv" "$_q_tmp/links_new.tsv" > "$_q_v/$_q_SD/links.tsv"
+  cat "$_q_tmp/links_carried.tsv" "$_q_tmp/links_new.tsv" > "$_q_v/$_q_SD/links.tsv.$$"
+  mv -f "$_q_v/$_q_SD/links.tsv.$$" "$_q_v/$_q_SD/links.tsv"
 
   # Same carry for block rows: a kept note keeps its old rows, a dropped or
   # rebuilt note's old rows are not carried (only the fresh ones are added).
@@ -7592,7 +7597,8 @@ _q_cmd_index() {
   else
     : > "$_q_tmp/blocks_carried.tsv"
   fi
-  cat "$_q_tmp/blocks_carried.tsv" "$_q_tmp/blocks_new.tsv" > "$_q_v/$_q_SD/blocks.tsv"
+  cat "$_q_tmp/blocks_carried.tsv" "$_q_tmp/blocks_new.tsv" > "$_q_v/$_q_SD/blocks.tsv.$$"
+  mv -f "$_q_v/$_q_SD/blocks.tsv.$$" "$_q_v/$_q_SD/blocks.tsv"
   printf '3\n' > "$_q_v/$_q_SD/index.schema"
   printf '%s\n' "$_q_version" > "$_q_v/$_q_SD/index.version"
 

@@ -11281,6 +11281,37 @@ for f in a b c; do printf '# %s\n\ntext\n' "$f" > "$TMP/ixi/$f.md"; touch_at 100
 t; ixh_run ixi >/dev/null
 assert_eq "T-14230 (d): notes older than an empty index.tsv are indexed by the first plain index" '3' "$(ixh_rows ixi)"
 
+# ---- index files are replaced, not rewritten in place (T-14231) ----
+# A hard link taken before the run keeps naming the old file. Truncating and
+# rewriting in place would show the new bytes through it (and a reader or a
+# second run in the middle of the write would see a short file); a write to a
+# temp file plus mv leaves the linked old file whole.
+# T-14231 (a): index.tsv, links.tsv and blocks.tsv each change, and the hard link to each still holds the old bytes.
+# T-14231 (b): no index.tsv.<pid>-style temp file is left in .knotlog.
+mk_index_vault ixa
+ixh_run ixa >/dev/null
+_ixa_ln=yes
+for _f in index links blocks; do
+  cp "$TMP/ixa/.knotlog/$_f.tsv" "$TMP/ixa-$_f.copy"
+  ln "$TMP/ixa/.knotlog/$_f.tsv" "$TMP/ixa-$_f.lnk" 2>/dev/null || _ixa_ln=no
+done
+{ printf '# Big\n\nSee [[fm]].\n'; _i=0; while [ "$_i" -lt 40 ]; do printf '## Part %s\n\n' "$_i"; printf 'ixabig words words words words words words words words words words words words\n'; _i=$((_i + 1)); done; } > "$TMP/ixa/big.md"
+t
+if [ "$_ixa_ln" = yes ]; then
+  ixh_run ixa >/dev/null
+  _ixa_r=
+  for _f in index links blocks; do
+    _ixa_r="$_ixa_r$_f:$(cmp -s "$TMP/ixa/.knotlog/$_f.tsv" "$TMP/ixa-$_f.copy" && printf same || printf changed),$(cmp -s "$TMP/ixa-$_f.lnk" "$TMP/ixa-$_f.copy" && printf old || printf new) "
+  done
+  assert_eq "T-14231 (a): each index file changes and a hard link to it keeps the old bytes" \
+    'index:changed,old links:changed,old blocks:changed,old ' "$_ixa_r"
+  t; assert_eq "T-14231 (b): no temp file is left in .knotlog" '' \
+    "$(find "$TMP/ixa/.knotlog" -name '*.tsv.[0-9]*' | sed 's|.*/||')"
+else
+  skip "T-14231 (a): each index file changes and a hard link to it keeps the old bytes" "no hard links on this filesystem"
+  t; skip "T-14231 (b): no temp file is left in .knotlog" "no hard links on this filesystem"
+fi
+
 # ---- index.version stamp (T-785..T-789) ----
 # T-785: a successful index writes .knotlog/index.version = the Knotlog version; index.schema is "3".
 # T-786: same version -> incremental; a sentinel title in an unchanged row survives.
