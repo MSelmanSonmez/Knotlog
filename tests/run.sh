@@ -11219,7 +11219,7 @@ assert_eq "T-781: glob and slash tokens are ignored, Gomx/e.md stays indexed" 'y
 # T-14200 (a): a prefix with a space and UTF-8 drops that folder; siblings with a similar name stay.
 # T-14200 (b): two lines, two prefixes, both apply.
 # T-14200 (c): a CRLF config works the same.
-# T-14200 (d): removing the prefixes brings the notes back on the next `index --full` (an unchanged note is not re-read by a plain index).
+# T-14200 (d): removing the prefixes brings the notes back on `index --full` (the plain-index case is T-14230 (c)).
 # T-14200 (e): search does not find a dropped note.
 mkdir -p "$TMP/ixp/.knotlog" "$TMP/ixp/Kişisel İşler" "$TMP/ixp/Kişisel" "$TMP/ixp/Diğer"
 : > "$TMP/ixp/.knotlog/config"
@@ -11240,6 +11240,46 @@ assert_eq "T-14200 (c): a CRLF config with an empty value works the same" 'Kişi
 : > "$TMP/ixp/.knotlog/config"
 t; ixp_run --full
 assert_eq "T-14200 (d): removing the prefixes and running index --full brings the notes back" 'Diğer/c.md|Kişisel İşler/a.md|Kişisel/b.md|top.md|' "$(ixp_list)"
+
+# ---- incremental index re-reads notes the old index does not list (T-14230) ----
+# A plain `index` used to rebuild only from the old index.tsv plus the notes
+# newer than it, so a note in neither was left out, silently ("dropped 0"),
+# until --full: an index cut short stayed short for good.
+# T-14230 (a): an index.tsv cut to one row is whole again after one plain index; the summary counts the re-read notes as stale.
+# T-14230 (b): a new note with an old mtime (a copy that kept its timestamp) is indexed and found.
+# T-14230 (c): removing an index_exclude_prefix line brings the notes back on a plain index.
+# T-14230 (d): notes older than an empty index.tsv (what init leaves) are indexed by the first plain index.
+# T-14230 (e): removing an index_exclude= folder brings its notes back on a plain index.
+ixh_run() { QUIPU_VAULT="$TMP/$1" QUIPU_LANG=en sh "$ROOT/knotlog" index </dev/null 2>&1; }
+ixh_rows() { awk 'END{print NR}' "$TMP/$1/.knotlog/index.tsv"; }
+mk_index_vault ixh
+ixh_run ixh >/dev/null
+head -n 1 "$TMP/ixh/.knotlog/index.tsv" > "$TMP/ixh-one.tsv"
+cat "$TMP/ixh-one.tsv" > "$TMP/ixh/.knotlog/index.tsv"
+t; ixh_run ixh > "$TMP/ixh.out"
+assert_eq "T-14230 (a): a one-row index is whole after a plain index (3 rows; 1 reused, 2 re-read)" '3|3 1 2 0' \
+  "$(ixh_rows ixh)|$(idx_nums "$TMP/ixh.out")"
+printf '# Old copy\n\nixholdneedle\n' > "$TMP/ixh/old.md"
+touch_at 1000000000 "$TMP/ixh/old.md"
+t; ixh_run ixh >/dev/null
+assert_eq "T-14230 (b): a new note with an old mtime is indexed and found" '1|old.md' \
+  "$(awk -F'\t' '$1=="old.md"' "$TMP/ixh/.knotlog/index.tsv" | awk 'END{print NR}')|$(QUIPU_VAULT="$TMP/ixh" QUIPU_LANG=en sh "$ROOT/knotlog" search ixholdneedle --paths </dev/null 2>/dev/null)"
+printf 'index_exclude_prefix=Kişisel İşler/\n' > "$TMP/ixp/.knotlog/config"
+ixp_run
+: > "$TMP/ixp/.knotlog/config"
+t; ixp_run
+assert_eq "T-14230 (c): removing the prefix line brings the notes back on a plain index" 'Diğer/c.md|Kişisel İşler/a.md|Kişisel/b.md|top.md|' "$(ixp_list)"
+printf 'index_exclude=Diğer\n' > "$TMP/ixp/.knotlog/config"
+ixp_run
+: > "$TMP/ixp/.knotlog/config"
+t; ixp_run
+assert_eq "T-14230 (e): removing an index_exclude= folder brings its notes back on a plain index" 'Diğer/c.md|Kişisel İşler/a.md|Kişisel/b.md|top.md|' "$(ixp_list)"
+mkdir -p "$TMP/ixi/.knotlog"
+: > "$TMP/ixi/.knotlog/config"
+for f in a b c; do printf '# %s\n\ntext\n' "$f" > "$TMP/ixi/$f.md"; touch_at 1000000000 "$TMP/ixi/$f.md"; done
+: > "$TMP/ixi/.knotlog/index.tsv"
+t; ixh_run ixi >/dev/null
+assert_eq "T-14230 (d): notes older than an empty index.tsv are indexed by the first plain index" '3' "$(ixh_rows ixi)"
 
 # ---- index.version stamp (T-785..T-789) ----
 # T-785: a successful index writes .knotlog/index.version = the Knotlog version; index.schema is "3".

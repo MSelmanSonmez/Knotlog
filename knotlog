@@ -7503,6 +7503,17 @@ _q_cmd_index() {
     cp "$_q_tmp/all.txt" "$_q_tmp/changed.txt"
   else
     (cd "$_q_v" && _q_mdlist "$_q_SD/index.tsv") > "$_q_tmp/changed.txt"
+    # A note on disk that the old index does not list and that is not newer
+    # than it is re-read too: an index left short (an interrupted or racing
+    # write), a note copied in with its old mtime, notes that were there
+    # before init made an empty index.tsv. Without this the note stays out of
+    # the index, silently, until --full. Normally the set is empty.
+    awk -F"$_q_tab" -v of="$_q_tmp/old.tsv" -v cf="$_q_tmp/changed.txt" '
+      FILENAME == of { have[$1] = 1; next }
+      FILENAME == cf { have[$0] = 1; next }
+      $0 != "" && !($0 in have)
+    ' "$_q_tmp/old.tsv" "$_q_tmp/changed.txt" "$_q_tmp/all.txt" > "$_q_tmp/missing.txt"
+    cat "$_q_tmp/missing.txt" >> "$_q_tmp/changed.txt"
   fi
 
   # FAZ 11 F-5: batch stat, not one subshell + one `stat` per changed file
