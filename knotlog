@@ -6636,7 +6636,7 @@ _q_cmd_note() {
     esac
   done
   if [ "$_q_note_sha" = 1 ]; then
-    [ "$_q_note_hasexp" = 0 ] && [ "$#" -eq 0 ] || _q_die err_note_sha_args 2
+    { [ "$_q_note_hasexp" = 0 ] && [ "$#" -eq 0 ]; } || _q_die err_note_sha_args 2
     _q_v=$(_q_vault)
     [ -n "$_q_v" ] || _q_die err_no_vault
     if [ "$_q_note_thread" = 1 ]; then
