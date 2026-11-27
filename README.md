@@ -27,6 +27,7 @@
   <img src="https://img.shields.io/badge/agents-9-blue" alt="9 supported agents">
   <img src="https://img.shields.io/badge/scripts-31-lightgrey" alt="31 shipped scripts">
   <img src="https://img.shields.io/badge/LongMemEval--S-recall__any%405%2060.4%25-blue" alt="LongMemEval-S recall_any@5 60.4%">
+  <a href="https://glama.ai/mcp/servers/MSelmanSonmez/Knotlog"><img src="https://glama.ai/mcp/servers/MSelmanSonmez/Knotlog/badges/score.svg" alt="MSelmanSonmez/Knotlog MCP server"></a>
 </p>
 
 <p align="center"><sub>Scripts counts the shipped <code>knotlog</code> entry point plus the <code>lib/*.awk</code> and <code>fold/*.sed</code> files.</sub></p>
